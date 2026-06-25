@@ -16,7 +16,7 @@
     "check": "prettier --check ."
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.18",
+    "@radix-ui/react-icons": "^1.3.2",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
@@ -24,13 +24,14 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "@xyflow/react": "^12.11.1",
+    "antd": "^6.4.5",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18"
+    "sass": "^1.101.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.132.0",

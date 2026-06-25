@@ -83,8 +83,10 @@ body {
   --xy-handle-border-color: #ffffff;
   --xy-controls-button-border-color: #ffffff;
   --xy-node-border: 1px solid #444;
+  --xy-controls-button-background-color: #1e1e1e;
+  --xy-controls-button-color:#fff;
 
-  --xy-edge-stroke-default: #404040;
+  --xy-edge-stroke-default: #444;
   --xy-edge-stroke-width-default: 1;
   --xy-edge-stroke-selected-default: #555;
   --xy-connectionline-stroke-default: #b1b1b7;
