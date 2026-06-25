@@ -2,17 +2,20 @@
 // 用于获取用户输入的内容
 
 import type { NodeProps } from '@xyflow/react'
-import { InputKinds, NodeTypes } from '#/types'
+import { InputKinds } from '#/types'
 import type { InputKind, NUserInput } from '#/types'
 import styles from '../index.module.scss'
 import { useNodeStore } from '#/store/node'
-import { Divider, Typography } from 'antd'
+import { Button } from 'antd'
 import { Icon } from '../../svg'
-import { CrumpledPaperIcon, Link1Icon, TextIcon } from '@radix-ui/react-icons'
+import {
+  CrumpledPaperIcon,
+  Link1Icon,
+  PlusCircledIcon,
+  TextIcon,
+} from '@radix-ui/react-icons'
 import type { ReactNode } from 'react'
 import { FileTextIcon } from 'lucide-react'
-
-const { Text } = Typography
 
 /**
  * # 用户输入节点
@@ -49,6 +52,19 @@ export const UserInputNode = (props: NodeProps<NUserInput>) => {
           <InputItem kind={InputKinds.url} label={url} />
         ))}
       </div>
+
+      <Button
+        type="primary"
+        size="small"
+        className={styles.add_button}
+        styles={{
+          root: {
+            height: 16,
+            width: 16,
+          },
+        }}
+        icon={<PlusCircledIcon height={10} width={10}></PlusCircledIcon>}
+      ></Button>
     </div>
   )
 }
@@ -73,11 +89,9 @@ const Icons = new Map<InputKind, ReactNode>([
 
 export const InputItem = ({ kind, label }: InputItemProps) => {
   return (
-    <div>
-      <div className={styles.row}>
-        {Icons.get(kind)}
-        <span>{label}</span>
-      </div>
+    <div className={styles.row}>
+      {Icons.get(kind)}
+      <span>{label}</span>
     </div>
   )
 }

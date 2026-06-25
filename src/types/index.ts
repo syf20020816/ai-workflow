@@ -2,6 +2,7 @@ import type { Node, NodeProps } from '@xyflow/react'
 
 export const NodeTypes = {
   USER_INPUT: 'userInput',
+  AGENT: 'agent',
 }
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -20,7 +21,7 @@ export const InputKinds = {
   prompt: 'prompt',
 }
 
-export type InputKind = (typeof InputKinds)[keyof typeof InputKinds];
+export type InputKind = (typeof InputKinds)[keyof typeof InputKinds]
 
 export type NUserInputData = {
   input?: {
@@ -37,4 +38,16 @@ export type NUserInputData = {
 
 export type NUserInput = Node<NUserInputData, typeof NodeTypes.USER_INPUT>
 
-export type AppNode = NodeProps<NUserInput> | null
+export type NAgentData = NNode & {
+  modal?: {
+    /** 智能体名称 */
+    name?: string
+    /** 智能体密钥 */
+    key?: string
+  }
+  input?: Pick<NUserInputData, 'input'>
+}
+
+export type NAgent = Node<NAgentData, typeof NodeTypes.AGENT>
+
+export type AppNode = NodeProps<NUserInput | NAgent>  | null
