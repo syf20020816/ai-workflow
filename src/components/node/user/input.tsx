@@ -25,7 +25,7 @@ export const UserInputNode = (props: NodeProps<NUserInput>) => {
     (props.data.input?.urls?.length || 0) > 0
 
   return (
-    <UNode  node={props}>
+    <UNode node={props}>
       {showLines && (
         <div className={styles.line}>
           {props.data.input?.label && (
@@ -69,9 +69,11 @@ const Icons = new Map<InputKind, ReactNode>([
 
 export const InputItem = ({ kind, label }: InputItemProps) => {
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row} ${styles.row_sub}`}>
       {Icons.get(kind)}
-      <span className={styles.row_weak}>{label}</span>
+      <span className={styles.row_weak}>
+        {label.length >= 10 ? `${label.substring(0, 10)}...` : label}
+      </span>
     </div>
   )
 }

@@ -85,6 +85,7 @@ body {
   --xy-node-border: 1px solid #444;
   --xy-controls-button-background-color: #1e1e1e;
   --xy-controls-button-color:#fff;
+  --deep-color: #2f2f2f;
 
   --xy-edge-stroke-default: #444;
   --xy-edge-stroke-width-default: 1;

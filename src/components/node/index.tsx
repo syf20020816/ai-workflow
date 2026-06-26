@@ -5,6 +5,7 @@ import { useNodeStore } from '#/store/node'
 import type { ReactNode } from 'react'
 import { AddNodeBtn } from './edge/add'
 import { NodeHeader } from './header'
+import { RunNode } from './edge/run'
 
 export interface UNodeProps {
   node: Exclude<AppNode, null>
@@ -27,7 +28,10 @@ export const UNode = ({ node, children }: UNodeProps) => {
       <Handle type="target" position={Position.Left} />
       <NodeHeader kind={kind} title={node.data.title || ''} />
       {children}
-      <AddNodeBtn kind={kind} />
+      <>
+        <RunNode />
+        <AddNodeBtn kind={kind} />
+      </>
       <Handle type="source" position={Position.Right} />
     </div>
   )
