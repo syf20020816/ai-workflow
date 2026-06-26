@@ -9,10 +9,14 @@ import type {
   OnConnect,
 } from '@xyflow/react'
 import { create } from 'zustand'
+import { produce } from 'immer'
 
 export interface UseNodeStoreProps {
   currentNode: AppNode
   setCurrentNode: (node: AppNode) => void
+  deleteCurrentNode: () => void
+  /** 使用 immer producer 直接修改当前节点的深层字段 */
+  patchCurrentNode: (recipe: (draft: NonNullable<AppNode>) => void) => void
   nodes: Node[]
   edges: Edge[]
   onNodesChange: (changes: NodeChange<Node>[]) => void
@@ -20,10 +24,22 @@ export interface UseNodeStoreProps {
   onConnect: OnConnect
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
+  // 添加连接节点，新节点会直接与currentNode连接起来
+  addConnectNode: (node: Exclude<AppNode, null>) => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   currentNode: null,
+  // 删除当前节点，并从edges中和nodes删除
+  deleteCurrentNode: () => {
+    const current = get().currentNode
+    if (!current) return
+    set({
+      nodes: get().nodes.filter((n) => n.id !== current.id),
+      edges: get().edges.filter((e) => e.source !== current.id && e.target !== current.id),
+    })
+    set({ currentNode: null })
+  },
   setCurrentNode: (node: AppNode) => {
     if (!node) {
       set({ currentNode: null })
@@ -35,11 +51,20 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       return
     }
 
-    // 使用 applyNodeChanges 更新 nodes 数组，触发 React Flow 重新渲染
     const updatedNodes = get().nodes.map((n) =>
       n.id === node.id ? { ...n, data: node.data } : n,
     )
     set({ currentNode: node, nodes: updatedNodes })
+  },
+  patchCurrentNode: (recipe) => {
+    const current = get().currentNode
+    if (!current) return
+
+    const patched = produce(current, recipe)
+    const updatedNodes = get().nodes.map((n) =>
+      n.id === patched.id ? { ...n, data: patched.data } : n,
+    )
+    set({ currentNode: patched, nodes: updatedNodes })
   },
   nodes: [
     {
@@ -47,6 +72,12 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       type: 'userInput',
       data: { title: '用户输入节点' },
       position: { x: 100, y: 100 },
+    },
+    {
+      id: 'node2',
+      type: 'agent',
+      data: { title: '智能体节点' },
+      position: { x: 300, y: 200 },
     },
   ],
   edges: [],
@@ -71,5 +102,23 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   },
   setEdges: (edges) => {
     set({ edges })
+  },
+  // 添加连接节点，新节点会直接与currentNode连接起来
+  addConnectNode: (node: Exclude<AppNode, null>) => {
+    const currentNode = get().currentNode
+    set({
+      nodes: [...get().nodes, node as unknown as Node],
+      edges: !currentNode
+        ? get().edges
+        : [
+            ...get().edges,
+            {
+              id: `${currentNode.id}-${node.id}`,
+              source: currentNode.id,
+              target: node.id,
+              type: 'connect',
+            },
+          ],
+    })
   },
 }))

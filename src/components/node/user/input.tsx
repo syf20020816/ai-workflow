@@ -5,17 +5,10 @@ import type { NodeProps } from '@xyflow/react'
 import { InputKinds } from '#/types'
 import type { InputKind, NUserInput } from '#/types'
 import styles from '../index.module.scss'
-import { useNodeStore } from '#/store/node'
-import { Button } from 'antd'
-import { Icon } from '../../svg'
-import {
-  CrumpledPaperIcon,
-  Link1Icon,
-  PlusCircledIcon,
-  TextIcon,
-} from '@radix-ui/react-icons'
+import { CrumpledPaperIcon, Link1Icon, TextIcon } from '@radix-ui/react-icons'
 import type { ReactNode } from 'react'
 import { FileTextIcon } from 'lucide-react'
+import { UNode } from '..'
 
 /**
  * # 用户输入节点
@@ -25,47 +18,34 @@ import { FileTextIcon } from 'lucide-react'
  * 3. URL 链接
  */
 export const UserInputNode = (props: NodeProps<NUserInput>) => {
-  const setCurrentNode = useNodeStore((state) => state.setCurrentNode)
+  const showLines =
+    props.data.input?.label ||
+    (props.data.input?.files?.length || 0) > 0 ||
+    props.data.input?.prompt ||
+    (props.data.input?.urls?.length || 0) > 0
 
   return (
-    <div
-      className={styles.node}
-      onClick={() => {
-        setCurrentNode(props)
-      }}
-    >
-      <div className={styles.row}>
-        <Icon.UserInput height={16} width={16} />
-        <h4 className={styles.node_title}>{props.data.title}</h4>
-      </div>
-      <div className={styles.line}>
-        {props.data.input?.label && (
-          <InputItem kind={InputKinds.text} label={props.data.input.label} />
-        )}
-        {props.data.input?.files?.map((file) => (
-          <InputItem kind={InputKinds.file} label={file.name} />
-        ))}
-        {props.data.input?.prompt && (
-          <InputItem kind={InputKinds.prompt} label={props.data.input.prompt} />
-        )}
-        {props.data.input?.urls?.map((url) => (
-          <InputItem kind={InputKinds.url} label={url} />
-        ))}
-      </div>
-
-      <Button
-        type="primary"
-        size="small"
-        className={styles.add_button}
-        styles={{
-          root: {
-            height: 16,
-            width: 16,
-          },
-        }}
-        icon={<PlusCircledIcon height={10} width={10}></PlusCircledIcon>}
-      ></Button>
-    </div>
+    <UNode  node={props}>
+      {showLines && (
+        <div className={styles.line}>
+          {props.data.input?.label && (
+            <InputItem kind={InputKinds.text} label={props.data.input.label} />
+          )}
+          {props.data.input?.files?.map((file) => (
+            <InputItem kind={InputKinds.file} label={file.name} />
+          ))}
+          {props.data.input?.prompt && (
+            <InputItem
+              kind={InputKinds.prompt}
+              label={props.data.input.prompt}
+            />
+          )}
+          {props.data.input?.urls?.map((url) => (
+            <InputItem kind={InputKinds.url} label={url} />
+          ))}
+        </div>
+      )}
+    </UNode>
   )
 }
 
@@ -91,7 +71,7 @@ export const InputItem = ({ kind, label }: InputItemProps) => {
   return (
     <div className={styles.row}>
       {Icons.get(kind)}
-      <span>{label}</span>
+      <span className={styles.row_weak}>{label}</span>
     </div>
   )
 }

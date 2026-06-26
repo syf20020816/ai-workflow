@@ -1,6 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import { InputKinds } from '#/types'
-import type { InputKind, NUserInput } from '#/types'
+import type { InputKind, NUserInput, NUserInputData } from '#/types'
 import { PlusCircledIcon } from '@radix-ui/react-icons'
 import styles from '../index.module.scss'
 import { Button, Radio } from 'antd'
@@ -15,73 +15,58 @@ const options: CheckboxGroupProps<string>['options'] = [
   { label: '链接', value: 'url' },
 ]
 
+/** 在 immer recipe 中快捷获取 NUserInputData 类型的数据 */
+const d = (
+  draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>,
+) => draft.data as NUserInputData
+
 export const EditUserInput = () => {
   const currentNode = useNodeStore(
     (state) => state.currentNode,
-  ) as NodeProps<NUserInput> | null
-  const setCurrentNode = useNodeStore((state) => state.setCurrentNode)
+  ) as NodeProps<NUserInput>
+  const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
   const [nodeInput, setNodeInput] = useState<InputKind>('prompt')
-
-  if (!currentNode) {
-    return null
-  }
 
   const addInput = () => {
     if (nodeInput === 'prompt') {
-      setCurrentNode({
-        ...currentNode,
-        data: {
-          ...currentNode.data,
-          input: {
-            ...currentNode.data.input,
-            prompt: '',
-          },
-        },
+      patchCurrentNode((draft) => {
+        const data = d(draft)
+        data.input ??= {}
+        data.input.prompt = ''
       })
     } else if (nodeInput === 'file') {
-      setCurrentNode({
-        ...currentNode,
-        data: {
-          ...currentNode.data,
-          input: {
-            ...currentNode.data.input,
-            files: [],
-          },
-        },
+      patchCurrentNode((draft) => {
+        const data = d(draft)
+        data.input ??= {}
+        data.input.files = []
       })
     } else if (nodeInput === 'url') {
-      const urls = currentNode.data.input?.urls || []
-      urls.push('')
-
-      setCurrentNode({
-        ...currentNode,
-        data: {
-          ...currentNode.data,
-          input: {
-            ...currentNode.data.input,
-            urls,
-          },
-        },
+      patchCurrentNode((draft) => {
+        const data = d(draft)
+        data.input ??= {}
+        data.input.urls ??= []
+        data.input.urls.push('')
       })
     }
   }
 
-  const changeUrl = (index: number, v: string) => {
-    if (!currentNode.data.input?.urls) {
-      return
-    }
-    // 更新指定索引的url
-    currentNode.data.input.urls[index] = v
+  const removeItem = (key: string) => {
+    patchCurrentNode((draft) => {
+      const data = d(draft)
+      data.input ??= {}
+      delete (data.input as any)[key]
+    })
+  }
 
-    setCurrentNode({
-      ...currentNode,
-      data: {
-        ...currentNode.data,
-        input: {
-          ...currentNode.data.input,
-          urls: currentNode.data.input.urls,
-        },
-      },
+  const removeFile = (index: number) => {
+    patchCurrentNode((draft) => {
+      d(draft).input?.files?.splice(index, 1)
+    })
+  }
+
+  const removeUrl = (index: number) => {
+    patchCurrentNode((draft) => {
+      d(draft).input?.urls?.splice(index, 1)
     })
   }
 
@@ -98,37 +83,30 @@ export const EditUserInput = () => {
         <Button icon={<PlusCircledIcon />} onClick={addInput}></Button>
       </div>
       <EditItem
+        inputType="textArea"
         kind={InputKinds.text}
         value={currentNode.data.input?.label}
-        onChange={(v?: string | File) => {
-          setCurrentNode({
-            ...currentNode,
-            data: {
-              ...currentNode.data,
-              input: {
-                ...currentNode.data.input,
-                label: (v || '') as string,
-              },
-            },
+        onChange={(v) => {
+          patchCurrentNode((draft) => {
+            const data = d(draft)
+            data.input ??= {}
+            data.input.label = (v || '') as string
           })
         }}
+        onDelete={() => removeItem('label')}
       />
       {currentNode.data.input?.prompt !== undefined && (
         <EditItem
           kind={InputKinds.prompt}
           value={currentNode.data.input.prompt}
-          onChange={(v?: string | File) => {
-            setCurrentNode({
-              ...currentNode,
-              data: {
-                ...currentNode.data,
-                input: {
-                  ...currentNode.data.input,
-                  prompt: (v || '') as string,
-                },
-              },
+          onChange={(v) => {
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              data.input ??= {}
+              data.input.prompt = (v || '') as string
             })
           }}
+          onDelete={() => removeItem('prompt')}
         />
       )}
 
@@ -136,21 +114,14 @@ export const EditUserInput = () => {
         <EditItem
           kind={InputKinds.file}
           value={file}
-          onChange={(v?: string | File) => {
-            setCurrentNode({
-              ...currentNode,
-              data: {
-                ...currentNode.data,
-                input: {
-                  ...currentNode.data.input,
-                  files: [
-                    ...(currentNode.data.input?.files || []),
-                    (v || '') as File,
-                  ],
-                },
-              },
+          onChange={(v) => {
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              if (!data.input?.files) return
+              data.input.files[index] = (v || '') as File
             })
           }}
+          onDelete={() => removeFile(index)}
         />
       ))}
 
@@ -158,9 +129,14 @@ export const EditUserInput = () => {
         <EditItem
           kind={InputKinds.url}
           value={url}
-          onChange={(v?: string | File) => {
-            changeUrl(index, v as string)
+          onChange={(v) => {
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              if (!data.input?.urls) return
+              data.input.urls[index] = (v || '') as string
+            })
           }}
+          onDelete={() => removeUrl(index)}
         />
       ))}
     </>
