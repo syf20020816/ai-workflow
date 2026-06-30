@@ -21,14 +21,14 @@ const isDisabledNode = (parent: NodeType, child: NodeType) => {
   if (parent === NodeTypes.AGENT) {
     return child === NodeTypes.USER_INPUT || child === NodeTypes.AGENT
   }
-   
-//   if (parent === NodeTypes.AI_OUTPUT) {
-//     return child === NodeTypes.ANSWER
-//   }
-//   // 回答节点只能连接 AI输出节点
-//   if (parent === NodeTypes.ANSWER) {
-//     return child === NodeTypes.AI_OUTPUT
-//   }
+
+  //   if (parent === NodeTypes.AI_OUTPUT) {
+  //     return child === NodeTypes.ANSWER
+  //   }
+  //   // 回答节点只能连接 AI输出节点
+  //   if (parent === NodeTypes.ANSWER) {
+  //     return child === NodeTypes.AI_OUTPUT
+  //   }
   return false
 }
 
@@ -45,7 +45,7 @@ export const AddNodeBtn = ({ kind }: AddNodeBtnProps) => {
 
   const addNode = (builderFn: (pos: { x: number; y: number }) => AppNode) => {
     const node = builderFn(pos)
-    console.error(node);
+    console.error(node)
     if (node) {
       addConnectNode(node)
     }
@@ -103,10 +103,12 @@ export const AddNodeBtn = ({ kind }: AddNodeBtnProps) => {
           root: {
             height: 12,
             width: 12,
+            padding: 0
           },
         }}
-        icon={<PlusCircledIcon height={8} width={8}></PlusCircledIcon>}
-      ></Button>
+      >
+        <PlusCircledIcon height={8} width={8}></PlusCircledIcon>
+      </Button>
     </Dropdown>
   )
 }

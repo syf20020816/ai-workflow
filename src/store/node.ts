@@ -1,4 +1,5 @@
-import type { AppNode, NodeType } from '#/types'
+import type { AppNode } from '#/types'
+import { NodeTypes } from '#/types'
 import { addEdge, applyEdgeChanges, applyNodeChanges } from '@xyflow/react'
 
 import type {
@@ -8,8 +9,11 @@ import type {
   EdgeChange,
   OnConnect,
 } from '@xyflow/react'
+import { v4 as uuidv4 } from 'uuid'
 import { create } from 'zustand'
 import { produce } from 'immer'
+import type { PipelineContext } from '#/types/engine'
+import { createPipelineContext, executeWorkflow, resumeWorkflow } from '#/engine/workflow'
 
 export interface UseNodeStoreProps {
   currentNode: AppNode
@@ -26,6 +30,20 @@ export interface UseNodeStoreProps {
   setEdges: (edges: Edge[]) => void
   // 添加连接节点，新节点会直接与currentNode连接起来
   addConnectNode: (node: Exclude<AppNode, null>) => void
+  /** 为当前 AgentNode 创建一个 BMadAgentNode 子节点并连接 */
+  addBmadAgentForCurrent: (agent: { title: string; name: string; description: string }) => void
+
+  // ---- 执行引擎集成 ----
+  /** 执行管线上下文 */
+  pipelineContext: PipelineContext
+  /** 执行全部工作流 */
+  runAll: () => void
+  /** 从指定节点开始执行子图 */
+  runFrom: (nodeId: string) => void
+  /** 恢复执行（Answer 节点用户回复后恢复） */
+  resumeFrom: (nodeId: string, reply: string) => void
+  /** 重置执行状态 */
+  resetExecution: () => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
@@ -120,5 +138,69 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
             },
           ],
     })
+  },
+  /** 为当前 AgentNode 创建一个 BMadAgentNode 子节点并连接 */
+  addBmadAgentForCurrent: (agent) => {
+    const current = get().currentNode
+    if (!current) return
+
+    const nodeEntry = get().nodes.find((n) => n.id === current.id)
+    if (!nodeEntry) return
+
+    const id = uuidv4()
+    const x = nodeEntry.position.x + 200
+    const y = nodeEntry.position.y
+
+    const bmadNode = {
+      id,
+      type: NodeTypes.BMAD_AGENT,
+      position: { x, y },
+      deletable: true,
+      draggable: true,
+      selectable: true,
+      selected: false,
+      data: {
+        title: agent.title,
+        role: agent.title,
+        roleDescription: agent.description,
+      },
+    } as unknown as Node
+
+    set({
+      nodes: [...get().nodes, bmadNode],
+      edges: [
+        ...get().edges,
+        {
+          id: `${current.id}-${id}`,
+          source: current.id,
+          target: id,
+          type: 'connect',
+        },
+      ],
+    })
+  },
+
+  // ---- 执行引擎 ----
+  pipelineContext: createPipelineContext(),
+  runAll: () => {
+    const { nodes, edges } = get()
+    executeWorkflow(nodes, edges, (ctx) => {
+      set({ pipelineContext: { ...ctx } })
+    })
+  },
+  runFrom: (nodeId: string) => {
+    const { nodes, edges } = get()
+    executeWorkflow(nodes, edges, (ctx) => {
+      set({ pipelineContext: { ...ctx } })
+    }, { startNodeId: nodeId })
+  },
+  resumeFrom: (nodeId: string, reply: string) => {
+    const { nodes, edges, pipelineContext } = get()
+    resumeWorkflow(nodeId, reply, pipelineContext, nodes, edges, (ctx) => {
+      set({ pipelineContext: { ...ctx } })
+    })
+  },
+  resetExecution: () => {
+    set({ pipelineContext: createPipelineContext() })
   },
 }))

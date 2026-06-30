@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port 3030",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
@@ -24,7 +24,7 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "@xyflow/react": "^12.11.1",
-    "antd": "^6.4.5",
+    "antd": "^6.5.0",
     "immer": "^11.1.8",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",

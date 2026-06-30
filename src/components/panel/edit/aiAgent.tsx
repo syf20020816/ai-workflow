@@ -1,8 +1,12 @@
 import { useNodeStore } from '#/store/node'
+import { useModelStore } from '#/store/model'
+import { useBmadAgentStore } from '#/store/bmad'
+import { useRouteStore } from '#/store/route'
 import type { NAgent, NAgentData } from '#/types'
-import { Typography } from 'antd'
 import type { NodeProps } from '@xyflow/react'
+import { Select, Button, Space, Typography } from 'antd'
 import { EditItem } from './item'
+import { useEffect } from 'react'
 
 const { Text } = Typography
 
@@ -14,6 +18,21 @@ export const EditAgent = () => {
     (state) => state.currentNode,
   ) as NodeProps<NAgent>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
+  const addBmadAgentForCurrent = useNodeStore((state) => state.addBmadAgentForCurrent)
+
+  const models = useModelStore((state) => state.models)
+  const fetchModels = useModelStore((state) => state.fetchModels)
+  const agents = useBmadAgentStore((state) => state.agents)
+  const fetchAgents = useBmadAgentStore((state) => state.fetchAgents)
+  const switchTo = useRouteStore((state) => state.switchTo)
+
+  useEffect(() => {
+    fetchModels()
+    fetchAgents()
+  }, [])
+
+  const selectedModelId = currentNode.data.modal?.name || undefined
+  const selectedRole = currentNode.data.modal?.alias || undefined
 
   return (
     <>
@@ -29,79 +48,83 @@ export const EditAgent = () => {
           })
         }}
       />
-      <EditItem
-        label="模型 ID"
-        placeholder="如：claude-3-5-sonnet"
-        value={currentNode.data.modal?.name}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            data.modal ??= {}
-            data.modal.name = (v || '') as string
-          })
-        }}
-      />
-      <EditItem
-        label="API Key"
-        placeholder="输入 API 密钥"
-        inputType="password"
-        value={currentNode.data.modal?.key}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            data.modal ??= {}
-            data.modal.key = (v || '') as string
-          })
-        }}
-      />
-      <EditItem
-        label="API URL"
-        placeholder="https://api.example.com"
-        value={currentNode.data.modal?.url}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            data.modal ??= {}
-            data.modal.url = (v || '') as string
-          })
-        }}
-      />
-      <div className="line_row">
-        <Text>Token 范围</Text>
+
+      {/* 模型选择 */}
+      <div className="line">
+        <Text>选择模型</Text>
+        <Space.Compact style={{ width: '100%' }}>
+          <Select
+            style={{ flex: 1 }}
+            placeholder="选择模型..."
+            value={selectedModelId}
+            notFoundContent="暂无模型，请先添加"
+            options={models.map((m) => ({
+              label: `${m.name} (${m.modelName})`,
+              value: m.name,
+            }))}
+            onChange={(value) => {
+              const model = models.find((m) => m.name === value)
+              if (!model) return
+              patchCurrentNode((draft) => {
+                const data = d(draft)
+                data.modal ??= {}
+                data.modal.name = model.modelName
+                data.modal.key = model.apiKey
+                data.modal.url = model.url
+                data.modal.token = model.token
+                  ? { min: model.token.min, max: model.token.max }
+                  : undefined
+              })
+            }}
+          />
+          <Button onClick={() => switchTo('model')}>管理</Button>
+        </Space.Compact>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-        <EditItem
-          label=""
-          placeholder="min"
-          inputType="number"
-          min={0}
-          value={currentNode.data.modal?.token?.min}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              data.modal ??= {}
-              data.modal.token ??= { min: 0, max: 0 }
-              data.modal.token.min = v as number
-            })
-          }}
-        />
-        <span>~</span>
-        <EditItem
-          label=""
-          placeholder="max"
-          inputType="number"
-          min={0}
-          value={currentNode.data.modal?.token?.max}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              data.modal ??= {}
-              data.modal.token ??= { min: 0, max: 0 }
-              data.modal.token.max = v as number
-            })
-          }}
-        />
+
+      {/* 角色选择 */}
+      <div className="line">
+        <Text>选择角色 (BMad)</Text>
+        <Space.Compact style={{ width: '100%' }}>
+          <Select
+            style={{ flex: 1 }}
+            placeholder="选择角色..."
+            value={selectedRole}
+            notFoundContent="暂无角色，请先添加"
+            options={agents.map((a) => ({
+              label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
+              value: a.id,
+            }))}
+            onChange={(agentId) => {
+              const agent = agents.find((a) => a.id === agentId)
+              if (!agent) return
+
+              // 更新当前 AgentNode 的别名
+              patchCurrentNode((draft) => {
+                const data = d(draft)
+                data.modal ??= {}
+                data.modal.alias = agent.title
+              })
+
+              // 自动创建 BMadAgentNode 并连接
+              addBmadAgentForCurrent({
+                title: agent.title || agent.name,
+                name: agent.name,
+                description: agent.description,
+              })
+            }}
+          />
+          <Button onClick={() => switchTo('skill')}>管理</Button>
+        </Space.Compact>
       </div>
+
+      {/* 当前选择的信息展示 */}
+      {selectedModelId && (
+        <div style={{ fontSize: 11, color: 'var(--xy-edge-stroke-default)', marginTop: 4 }}>
+          <Text type="secondary">
+            API URL: {currentNode.data.modal?.url || '未配置'}
+          </Text>
+        </div>
+      )}
     </>
   )
 }
