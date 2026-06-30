@@ -7,7 +7,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   &_title {
     font-size: 12px;
     margin: 0;
@@ -28,6 +28,16 @@
   &_choose {
     border-color: #007bff !important;
   }
+
+  &_running {
+    border-color: #1890ff !important;
+    box-shadow: 0 0 8px rgba(24, 144, 255, 0.4);
+  }
+
+  &_error {
+    border-color: #ff4d4f !important;
+    box-shadow: 0 0 8px rgba(255, 77, 79, 0.4);
+  }
 }
 
 .row {
@@ -38,6 +48,7 @@
   gap: 4px;
   font-size: 10px;
   height: 1.5em;
+  margin-bottom: 4px;
   &_weak {
     color: var(--xy-edge-stroke-default);
   }

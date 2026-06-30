@@ -9,38 +9,91 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ModelsRouteImport } from './routes/models'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSkillRouteImport } from './routes/api/skill'
+import { Route as ApiModelRouteImport } from './routes/api/model'
+import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
+const ModelsRoute = ModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSkillRoute = ApiSkillRouteImport.update({
+  id: '/api/skill',
+  path: '/api/skill',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModelRoute = ApiModelRouteImport.update({
+  id: '/api/model',
+  path: '/api/model',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
+  id: '/api/bmad/agents',
+  path: '/api/bmad/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/models': typeof ModelsRoute
+  '/api/model': typeof ApiModelRoute
+  '/api/skill': typeof ApiSkillRoute
+  '/api/bmad/agents': typeof ApiBmadAgentsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/models': typeof ModelsRoute
+  '/api/model': typeof ApiModelRoute
+  '/api/skill': typeof ApiSkillRoute
+  '/api/bmad/agents': typeof ApiBmadAgentsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/models': typeof ModelsRoute
+  '/api/model': typeof ApiModelRoute
+  '/api/skill': typeof ApiSkillRoute
+  '/api/bmad/agents': typeof ApiBmadAgentsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/models' | '/api/model' | '/api/skill' | '/api/bmad/agents'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/models' | '/api/model' | '/api/skill' | '/api/bmad/agents'
+  id:
+    | '__root__'
+    | '/'
+    | '/models'
+    | '/api/model'
+    | '/api/skill'
+    | '/api/bmad/agents'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ModelsRoute: typeof ModelsRoute
+  ApiModelRoute: typeof ApiModelRoute
+  ApiSkillRoute: typeof ApiSkillRoute
+  ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/models': {
+      id: '/models'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof ModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +101,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/skill': {
+      id: '/api/skill'
+      path: '/api/skill'
+      fullPath: '/api/skill'
+      preLoaderRoute: typeof ApiSkillRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/model': {
+      id: '/api/model'
+      path: '/api/model'
+      fullPath: '/api/model'
+      preLoaderRoute: typeof ApiModelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bmad/agents': {
+      id: '/api/bmad/agents'
+      path: '/api/bmad/agents'
+      fullPath: '/api/bmad/agents'
+      preLoaderRoute: typeof ApiBmadAgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ModelsRoute: ModelsRoute,
+  ApiModelRoute: ApiModelRoute,
+  ApiSkillRoute: ApiSkillRoute,
+  ApiBmadAgentsRoute: ApiBmadAgentsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

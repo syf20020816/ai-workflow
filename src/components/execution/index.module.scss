@@ -1,0 +1,49 @@
+.panel {
+  .header {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .status_bar {
+    margin: 8px 0;
+  }
+
+  .answer_input {
+    margin: 8px 0;
+    padding: 8px;
+    border: 1px solid var(--xy-edge-stroke-default);
+    border-radius: 4px;
+    background-color: var(--xy-node-background-color);
+  }
+
+  .log_container {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+  }
+
+  .log_item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--xy-edge-stroke-default);
+  }
+}
+
+.output_pre {
+  font-size: 12px;
+  max-height: 120px;
+  overflow: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background-color: var(--deep-color);
+  padding: 4px;
+  border-radius: 4px;
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "model-001",
+    "kind": "cloud",
+    "name": "GPT-4o",
+    "description": "OpenAI GPT-4o 通用模型",
+    "url": "https://api.openai.com/v1",
+    "apiKey": "",
+    "modelName": "gpt-4o",
+    "token": { "min": 100, "max": 4096 }
+  },
+  {
+    "id": "model-002",
+    "kind": "cloud",
+    "name": "Claude-3.5",
+    "description": "Anthropic Claude 3.5 Sonnet",
+    "url": "https://api.anthropic.com/v1",
+    "apiKey": "",
+    "modelName": "claude-3-5-sonnet-20241022",
+    "token": { "min": 100, "max": 8192 }
+  },
+  {
+    "id": "model-003",
+    "kind": "local",
+    "name": "DeepSeek 本地",
+    "description": "本地 Ollama 部署的 DeepSeek 模型",
+    "url": "http://localhost:11434",
+    "apiKey": "",
+    "modelName": "deepseek-r1:7b",
+    "token": { "min": 100, "max": 2048 }
+  }
+]
