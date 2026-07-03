@@ -4,6 +4,7 @@ import { Button, Typography, Collapse, Tag, Input, Space } from 'antd'
 import { PlayIcon, ResetIcon } from '@radix-ui/react-icons'
 import type { LogEntry } from '#/types/engine'
 import { useState } from 'react'
+import { WorkflowImportExport } from './import-export'
 
 const { Text } = Typography
 
@@ -16,6 +17,7 @@ const levelColorMap: Record<LogEntry['level'], string> = {
 
 export const ExecutionPanel = () => {
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
+  const nodes = useNodeStore((state) => state.nodes)
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const resumeFrom = useNodeStore((state) => state.resumeFrom)
@@ -41,6 +43,7 @@ export const ExecutionPanel = () => {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
+        <WorkflowImportExport />
         {pipelineContext.globalStatus === 'idle' && (
           <Button block type="primary" icon={<PlayIcon />} onClick={runAll}>
             运行
@@ -163,23 +166,28 @@ export const ExecutionPanel = () => {
           }}
           ghost
           size="small"
-          items={Object.entries(pipelineContext.nodeOutputs).map(
-            ([nodeId, output]) => ({
-              key: nodeId,
-              label: (
-                <Text style={{ fontSize: 12 }}>
-                  节点 {nodeId.slice(0, 8)} 输出
-                </Text>
-              ),
-              children: (
-                <pre className={styles.output_pre}>
-                  {JSON.stringify(output, null, 2)}
-                </pre>
-              ),
-            }),
-          )}
+          items={nodes
+            .filter((n) => pipelineContext.nodeOutputs[n.id] !== undefined)
+            .map((node) => {
+              const output = pipelineContext.nodeOutputs[node.id]
+              const title = node.data.title
+              return {
+                key: node.id,
+                label: (
+                  <Text style={{ fontSize: 12 }}>
+                    {typeof title === 'string' ? title : '未命名节点'} 输出
+                  </Text>
+                ),
+                children: output ? (
+                  <pre className={styles.output_pre}>
+                    {JSON.stringify(output, null, 2)}
+                  </pre>
+                ) : null,
+              }
+            })}
         />
       )}
     </div>
   )
 }
+

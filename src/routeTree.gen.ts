@@ -13,6 +13,8 @@ import { Route as ModelsRouteImport } from './routes/models'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSkillRouteImport } from './routes/api/skill'
 import { Route as ApiModelRouteImport } from './routes/api/model'
+import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
+import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
 const ModelsRoute = ModelsRouteImport.update({
@@ -35,6 +37,16 @@ const ApiModelRoute = ApiModelRouteImport.update({
   path: '/api/model',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
+  id: '/api/execute/lark',
+  path: '/api/execute/lark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteAgentRoute = ApiExecuteAgentRouteImport.update({
+  id: '/api/execute/agent',
+  path: '/api/execute/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
   id: '/api/bmad/agents',
   path: '/api/bmad/agents',
@@ -47,6 +59,8 @@ export interface FileRoutesByFullPath {
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +68,8 @@ export interface FileRoutesByTo {
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +78,28 @@ export interface FileRoutesById {
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/models' | '/api/model' | '/api/skill' | '/api/bmad/agents'
+  fullPaths:
+    | '/'
+    | '/models'
+    | '/api/model'
+    | '/api/skill'
+    | '/api/bmad/agents'
+    | '/api/execute/agent'
+    | '/api/execute/lark'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/models' | '/api/model' | '/api/skill' | '/api/bmad/agents'
+  to:
+    | '/'
+    | '/models'
+    | '/api/model'
+    | '/api/skill'
+    | '/api/bmad/agents'
+    | '/api/execute/agent'
+    | '/api/execute/lark'
   id:
     | '__root__'
     | '/'
@@ -75,6 +107,8 @@ export interface FileRouteTypes {
     | '/api/model'
     | '/api/skill'
     | '/api/bmad/agents'
+    | '/api/execute/agent'
+    | '/api/execute/lark'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,6 +117,8 @@ export interface RootRouteChildren {
   ApiModelRoute: typeof ApiModelRoute
   ApiSkillRoute: typeof ApiSkillRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
+  ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
+  ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -115,6 +151,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiModelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/execute/lark': {
+      id: '/api/execute/lark'
+      path: '/api/execute/lark'
+      fullPath: '/api/execute/lark'
+      preLoaderRoute: typeof ApiExecuteLarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/agent': {
+      id: '/api/execute/agent'
+      path: '/api/execute/agent'
+      fullPath: '/api/execute/agent'
+      preLoaderRoute: typeof ApiExecuteAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bmad/agents': {
       id: '/api/bmad/agents'
       path: '/api/bmad/agents'
@@ -131,6 +181,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiModelRoute: ApiModelRoute,
   ApiSkillRoute: ApiSkillRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
+  ApiExecuteAgentRoute: ApiExecuteAgentRoute,
+  ApiExecuteLarkRoute: ApiExecuteLarkRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

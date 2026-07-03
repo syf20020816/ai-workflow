@@ -72,7 +72,7 @@ export const EditPanel = () => {
         items={items}
         onChange={(k) => setActiveKey(k as ActiveKey)}
         styles={{
-          body: { height: '100%' },
+          body: { height: '100%', padding: 0 },
           content: { height: '100%' },
           root: { height: '100%' },
         }}

@@ -55,8 +55,32 @@ export async function executeWorkflow(
   const ctx = createPipelineContext()
   ctx.globalStatus = 'running'
 
-  // 拓扑排序
-  const { sortedIds, cycles } = topologicalSort(nodes, edges)
+  // 找出有连线参与的节点（DAG 中的节点），孤立节点不执行
+  const connectedNodeIds = new Set<string>()
+  for (const edge of edges) {
+    connectedNodeIds.add(edge.source)
+    connectedNodeIds.add(edge.target)
+  }
+
+  // 如果指定了 startNodeId，需要确保它也包含在内（可能新节点还没连上线）
+  if (options?.startNodeId) {
+    connectedNodeIds.add(options.startNodeId)
+  }
+
+  // 如果没有连线但用户点了单节点执行，允许执行单个节点
+  const dagNodes = connectedNodeIds.size > 0 || options?.startNodeId
+    ? nodes.filter((n) => connectedNodeIds.has(n.id))
+    : []
+
+  if (dagNodes.length === 0 && !options?.startNodeId) {
+    ctx.globalStatus = 'completed'
+    addLog(ctx, '', '', 'warn', '没有需要执行的节点（请用连线连接节点后再运行）')
+    onUpdate(ctx)
+    return ctx
+  }
+
+  // 拓扑排序（只对 DAG 中的节点）
+  const { sortedIds, cycles } = topologicalSort(dagNodes, edges)
   if (cycles.length > 0) {
     ctx.globalStatus = 'error'
     addLog(ctx, '', '', 'error', `检测到循环依赖: ${cycles.join(', ')}`)
@@ -73,12 +97,12 @@ export async function executeWorkflow(
     }
   }
 
-  // 初始化节点状态
-  for (const node of nodes) {
+  // 初始化节点状态（只初始化 DAG 中的节点）
+  for (const node of dagNodes) {
     ctx.nodeStatuses[node.id] = 'idle'
   }
 
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+  const nodeMap = new Map(dagNodes.map((n) => [n.id, n]))
 
   // 逐节点执行
   for (const nodeId of executionOrder) {

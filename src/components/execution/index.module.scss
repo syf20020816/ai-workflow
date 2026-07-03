@@ -1,4 +1,7 @@
 .panel {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
   .header {
     display: flex;
     align-items: center;
@@ -21,6 +24,7 @@
   .log_container {
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-width: thin;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -38,9 +42,8 @@
 
 .output_pre {
   font-size: 12px;
-  max-height: 120px;
   overflow: auto;
-  margin: 0;
+  margin: 0 8px 0 0;
   white-space: pre-wrap;
   word-break: break-all;
   background-color: var(--deep-color);

@@ -2,7 +2,7 @@ import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/
 
 /**
  * Lark 文档节点执行器
- * 后续对接 lark-cli 命令。
+ * 调用后端 API 执行真实的 lark-cli 命令。
  */
 export const larkExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
@@ -13,24 +13,49 @@ export const larkExecutor: NodeExecutor = {
     const url = data.url || ''
     const content = data.content || ''
 
-    // Phase 1: 模拟 Lark CLI 调用
-    const result =
-      action === 'read'
-        ? `[模拟] 读取飞书文档: ${url}\n内容: 这是模拟的飞书文档内容示例...`
-        : action === 'write'
-          ? `[模拟] 已写入飞书文档: ${url}\n写入内容长度: ${content.length} 字符`
-          : `[模拟] 已创建新飞书文档`
+    const logs: string[] = []
+    logs.push(`Lark ${action} 操作: ${url || '新建文档'}`)
 
-    return {
-      nodeId: config.nodeId,
-      status: 'success',
-      output: {
-        result,
-        action,
-        url,
-        success: true,
-      },
-      logs: [`Lark ${action} 操作完成: ${url || '新建文档'}`],
+    try {
+      const res = await fetch('/api/execute/lark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, url, content }),
+      })
+
+      const result = await res.json()
+
+      if (result.status === 'error') {
+        return {
+          nodeId: config.nodeId,
+          status: 'error',
+          output: { action, url, success: false },
+          logs: [...logs, ...(result.logs || []), result.error],
+          error: result.error,
+        }
+      }
+
+      logs.push(...(result.logs || []))
+
+      return {
+        nodeId: config.nodeId,
+        status: 'success',
+        output: {
+          result: result.output.result,
+          action,
+          url,
+          success: true,
+        },
+        logs,
+      }
+    } catch (err: any) {
+      return {
+        nodeId: config.nodeId,
+        status: 'error',
+        output: { action, url, success: false },
+        logs: [...logs, `请求失败: ${err.message}`],
+        error: `Lark 操作失败: ${err.message}`,
+      }
     }
   },
 }
