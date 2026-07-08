@@ -26,7 +26,7 @@ function App() {
 
   return (
     <ConfigProvider theme={config}>
-      <Tabs activeKey={activeKey} onChange={switchTo} tabPosition="left" style={{ height: '100vh' }}>
+      <Tabs activeKey={activeKey} onChange={switchTo} tabPlacement="start" style={{ height: '100vh' }}>
         <Tabs.TabPane tab="工作流编排" key="workflow">
           <div className={styles.container}>
             <main className={styles.flow}>

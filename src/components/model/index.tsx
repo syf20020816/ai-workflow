@@ -121,7 +121,7 @@ export const ModelManager = () => {
       render: (_: any, record: Model) => (
         <Space>
           <Button
-            type="link"
+            type="primary"
             size="small"
             icon={<Pencil1Icon />}
             onClick={() => handleEdit(record)}
@@ -129,13 +129,13 @@ export const ModelManager = () => {
             编辑
           </Button>
           <Button
-            type="link"
+            type="text"
             size="small"
             danger
             icon={<TrashIcon />}
             onClick={() => handleDelete(record)}
           >
-            删除
+       
           </Button>
         </Space>
       ),
