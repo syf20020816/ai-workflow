@@ -1,10 +1,10 @@
 import { useNodeStore } from '#/store/node'
 import styles from './index.module.scss'
-import { Button, Typography, Collapse, Tag, Input, Space } from 'antd'
+import { Button, Typography, Tag, Input, Space } from 'antd'
 import { PlayIcon, ResetIcon } from '@radix-ui/react-icons'
 import type { LogEntry } from '#/types/engine'
 import { useState } from 'react'
-import { WorkflowImportExport } from './import-export'
+import { WorkflowImportExport } from './importExport'
 
 const { Text } = Typography
 
@@ -145,6 +145,7 @@ export const ExecutionPanel = () => {
                   style={{
                     fontSize: 12,
                     color: '#888',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {log.nodeTitle}
@@ -156,37 +157,6 @@ export const ExecutionPanel = () => {
         </div>
       )}
 
-      {/* 节点输出预览 */}
-      {Object.keys(pipelineContext.nodeOutputs).length > 0 && (
-        <Collapse
-          styles={{
-            root: { padding: 0 },
-            header: { padding: '4px 0' },
-            body: { padding: 0 },
-          }}
-          ghost
-          size="small"
-          items={nodes
-            .filter((n) => pipelineContext.nodeOutputs[n.id] !== undefined)
-            .map((node) => {
-              const output = pipelineContext.nodeOutputs[node.id]
-              const title = node.data.title
-              return {
-                key: node.id,
-                label: (
-                  <Text style={{ fontSize: 12 }}>
-                    {typeof title === 'string' ? title : '未命名节点'} 输出
-                  </Text>
-                ),
-                children: output ? (
-                  <pre className={styles.output_pre}>
-                    {JSON.stringify(output, null, 2)}
-                  </pre>
-                ) : null,
-              }
-            })}
-        />
-      )}
     </div>
   )
 }

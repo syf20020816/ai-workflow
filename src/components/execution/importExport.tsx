@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal, Button, Input, Upload, message, Space, Typography } from 'antd'
-import { UploadOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons'
+import { UploadOutlined, DownloadOutlined, CopyOutlined, SaveOutlined } from '@ant-design/icons'
 import { useNodeStore } from '#/store/node'
 import type { RcFile } from 'antd/es/upload'
 import type { Node, Edge } from '@xyflow/react'
@@ -21,6 +21,8 @@ export const WorkflowImportExport = () => {
 
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveName, setSaveName] = useState('')
   const [importJson, setImportJson] = useState('')
   const [importError, setImportError] = useState('')
   const [exportJson, setExportJson] = useState('')
@@ -81,6 +83,34 @@ export const WorkflowImportExport = () => {
     message.success('工作流已下载')
   }
 
+  const handleSaveTemplate = async () => {
+    if (!saveName.trim()) {
+      message.warning('请输入工作流名称')
+      return
+    }
+    try {
+      const res = await fetch('/api/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveName.trim(),
+          nodes,
+          edges,
+        }),
+      })
+      if (res.ok) {
+        message.success(`工作流模板「${saveName}」已保存`)
+        setSaveOpen(false)
+        setSaveName('')
+      } else {
+        const err = await res.json()
+        message.error('保存失败: ' + (err.error || '未知错误'))
+      }
+    } catch (err: any) {
+      message.error('保存失败: ' + err.message)
+    }
+  }
+
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -109,6 +139,9 @@ export const WorkflowImportExport = () => {
         </Button>
         <Button block onClick={openExport}>
           导出工作流
+        </Button>
+        <Button block onClick={() => setSaveOpen(true)}>
+          保存工作流模板
         </Button>
       </Space>
 
@@ -192,6 +225,28 @@ export const WorkflowImportExport = () => {
         >
           下载为 JSON 文件
         </Button>
+      </Modal>
+
+      {/* 保存模板弹窗 */}
+      <Modal
+        title="保存工作流模板"
+        open={saveOpen}
+        onCancel={() => { setSaveOpen(false); setSaveName('') }}
+        onOk={handleSaveTemplate}
+        okText="保存"
+        okButtonProps={{ disabled: !saveName.trim() }}
+        width={440}
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text>工作流名称</Text>
+        </div>
+        <Input
+          placeholder="请输入工作流模板名称"
+          value={saveName}
+          onChange={(e) => setSaveName(e.target.value)}
+          onPressEnter={handleSaveTemplate}
+          autoFocus
+        />
       </Modal>
     </>
   )

@@ -14,7 +14,10 @@ export interface UNodeProps {
   children: ReactNode
 }
 
-const statusBadgeMap: Record<NodeStatus, 'processing' | 'success' | 'error' | 'default'> = {
+const statusBadgeMap: Record<
+  NodeStatus,
+  'processing' | 'success' | 'error' | 'default'
+> = {
   idle: 'default',
   running: 'processing',
   success: 'success',

@@ -8,6 +8,7 @@ import { ConfigProvider, Tabs, theme } from 'antd'
 import type { ThemeConfig } from 'antd'
 import { ModelManager } from '#/components/model'
 import { SkillManager } from '#/components/skill'
+import { WorkflowManager } from '#/components/workflow-manager'
 import { useRouteStore } from '#/store/route'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -26,13 +27,16 @@ function App() {
   return (
     <ConfigProvider theme={config}>
       <Tabs activeKey={activeKey} onChange={switchTo} tabPosition="left" style={{ height: '100vh' }}>
-        <Tabs.TabPane tab="工作流" key="workflow">
+        <Tabs.TabPane tab="工作流编排" key="workflow">
           <div className={styles.container}>
             <main className={styles.flow}>
               <Flow />
             </main>
             <EditPanel />
           </div>
+        </Tabs.TabPane>
+        <Tabs.TabPane tab="工作流管理" key="manage">
+          <WorkflowManager />
         </Tabs.TabPane>
         <Tabs.TabPane tab="模型管理" key="model">
           <ModelManager />

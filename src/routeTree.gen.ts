@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiSkillRouteImport } from './routes/api/skill'
 import { Route as ApiModelRouteImport } from './routes/api/model'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
@@ -25,6 +26,11 @@ const ModelsRoute = ModelsRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkflowsRoute = ApiWorkflowsRouteImport.update({
+  id: '/api/workflows',
+  path: '/api/workflows',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSkillRoute = ApiSkillRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/models': typeof ModelsRoute
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
+  '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/models': typeof ModelsRoute
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
+  '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/models': typeof ModelsRoute
   '/api/model': typeof ApiModelRoute
   '/api/skill': typeof ApiSkillRoute
+  '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/api/model'
     | '/api/skill'
+    | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
     | '/api/execute/lark'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/api/model'
     | '/api/skill'
+    | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
     | '/api/execute/lark'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/api/model'
     | '/api/skill'
+    | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
     | '/api/execute/lark'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   ModelsRoute: typeof ModelsRoute
   ApiModelRoute: typeof ApiModelRoute
   ApiSkillRoute: typeof ApiSkillRoute
+  ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workflows': {
+      id: '/api/workflows'
+      path: '/api/workflows'
+      fullPath: '/api/workflows'
+      preLoaderRoute: typeof ApiWorkflowsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/skill': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModelsRoute: ModelsRoute,
   ApiModelRoute: ApiModelRoute,
   ApiSkillRoute: ApiSkillRoute,
+  ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,

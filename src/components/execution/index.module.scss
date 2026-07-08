@@ -33,7 +33,8 @@
 
   .log_item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 2px 0;
     border-bottom: 1px solid var(--xy-edge-stroke-default);

@@ -13,7 +13,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { create } from 'zustand'
 import { produce } from 'immer'
 import type { PipelineContext } from '#/types/engine'
-import { createPipelineContext, executeWorkflow, resumeWorkflow } from '#/engine/workflow'
+import {
+  createPipelineContext,
+  executeWorkflow,
+  resumeWorkflow,
+} from '#/engine/workflow'
 
 export interface UseNodeStoreProps {
   currentNode: AppNode
@@ -30,8 +34,14 @@ export interface UseNodeStoreProps {
   setEdges: (edges: Edge[]) => void
   // 添加连接节点，新节点会直接与currentNode连接起来
   addConnectNode: (node: Exclude<AppNode, null>) => void
+  // 添加未连接节点，新节点不会与currentNode连接起来
+  addUnConnectNode: (node: Exclude<AppNode, null>) => void
   /** 为当前 AgentNode 创建一个 BMadAgentNode 子节点并连接 */
-  addBmadAgentForCurrent: (agent: { title: string; name: string; description: string }) => void
+  addBmadAgentForCurrent: (agent: {
+    title: string
+    name: string
+    description: string
+  }) => void
 
   // ---- 执行引擎集成 ----
   /** 执行管线上下文 */
@@ -44,9 +54,16 @@ export interface UseNodeStoreProps {
   resumeFrom: (nodeId: string, reply: string) => void
   /** 重置执行状态 */
   resetExecution: () => void
+  /** 删除指定边 */
+  removeEdge: (edgeId: string) => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
+  removeEdge: (edgeId) => {
+    set({
+      edges: get().edges.filter((e) => e.id !== edgeId),
+    })
+  },
   currentNode: null,
   // 删除当前节点，并从edges中和nodes删除
   deleteCurrentNode: () => {
@@ -54,7 +71,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     if (!current) return
     set({
       nodes: get().nodes.filter((n) => n.id !== current.id),
-      edges: get().edges.filter((e) => e.source !== current.id && e.target !== current.id),
+      edges: get().edges.filter(
+        (e) => e.source !== current.id && e.target !== current.id,
+      ),
     })
     set({ currentNode: null })
   },
@@ -104,6 +123,14 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     })
+    // 如果 currentNode 被删除，同步清空
+    const currentNodeId = get().currentNode?.id
+    if (currentNodeId) {
+      const hasCurrentNode = get().nodes.some((n) => n.id === currentNodeId)
+      if (!hasCurrentNode) {
+        set({ currentNode: null })
+      }
+    }
   },
   onEdgesChange: (changes) => {
     set({
@@ -111,8 +138,15 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     })
   },
   onConnect: (connection) => {
+    console.error(connection)
     set({
-      edges: addEdge(connection, get().edges),
+      edges: addEdge(
+        {
+          ...connection,
+          type: 'nodeEdge',
+        },
+        get().edges,
+      ),
     })
   },
   setNodes: (nodes) => {
@@ -134,9 +168,15 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
               id: `${currentNode.id}-${node.id}`,
               source: currentNode.id,
               target: node.id,
-              type: 'connect',
+              type: 'nodeEdge',
             },
           ],
+    })
+  },
+  // 添加未连接节点，新节点不会与currentNode连接起来
+  addUnConnectNode: (node: Exclude<AppNode, null>) => {
+    set({
+      nodes: [...get().nodes, node as unknown as Node],
     })
   },
   /** 为当前 AgentNode 创建一个 BMadAgentNode 子节点并连接 */
@@ -174,7 +214,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
           id: `${current.id}-${id}`,
           source: current.id,
           target: id,
-          type: 'connect',
+          type: 'nodeEdge',
         },
       ],
     })
@@ -190,9 +230,14 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   },
   runFrom: (nodeId: string) => {
     const { nodes, edges } = get()
-    executeWorkflow(nodes, edges, (ctx) => {
-      set({ pipelineContext: { ...ctx } })
-    }, { startNodeId: nodeId })
+    executeWorkflow(
+      nodes,
+      edges,
+      (ctx) => {
+        set({ pipelineContext: { ...ctx } })
+      },
+      { startNodeId: nodeId },
+    )
   },
   resumeFrom: (nodeId: string, reply: string) => {
     const { nodes, edges, pipelineContext } = get()

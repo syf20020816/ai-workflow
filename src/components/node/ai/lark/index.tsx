@@ -1,8 +1,10 @@
 import type { NodeProps } from '@xyflow/react'
+import { InputKinds } from '#/types'
 import type { NLark } from '#/types'
 import styles from '../../index.module.scss'
 import { Tag } from 'antd'
 import { UNode } from '../..'
+import { InputItem } from '../../user/input'
 
 const actionColorMap: Record<string, string> = {
   read: 'blue',
@@ -34,16 +36,18 @@ export const LarkNode = (props: NodeProps<NLark>) => {
             <div className={styles.row}>
               <Tag
                 color={actionColorMap[props.data.action]}
-                bordered={false}
+                variant="filled"
               >
                 {actionLabelMap[props.data.action]}
               </Tag>
             </div>
           )}
+          <hr />
           {props.data.url && (
-            <div className={styles.row}>
-              <span className={styles.row_weak}>{props.data.url}</span>
-            </div>
+            // <div className={styles.row}>
+            //   <span className={styles.row_weak}>{props.data.url}</span>
+            // </div>
+            <InputItem kind={InputKinds.url} label={props.data.url} />
           )}
         </div>
       )}

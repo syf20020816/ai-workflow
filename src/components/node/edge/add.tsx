@@ -7,12 +7,18 @@ import type { NodeType, AppNode } from '#/types'
 import { NodeHeader } from '../header'
 import { useNodeStore } from '#/store/node'
 import { NodeBuilder } from '#/types/builder'
+import type { ReactNode } from 'react'
 
 export interface AddNodeBtnProps {
-  kind: NodeType
+  kind?: NodeType
+  children?: ReactNode
+  trigger?: ('click' | 'contextMenu' | 'hover')[]
 }
 
-const isDisabledNode = (parent: NodeType, child: NodeType) => {
+const isDisabledNode = (parent: NodeType | undefined, child: NodeType) => {
+  if (!parent) {
+    return false
+  }
   // 用户输入节点只能连接 智能体节点
   if (parent === NodeTypes.USER_INPUT) {
     return child !== NodeTypes.AGENT
@@ -32,9 +38,14 @@ const isDisabledNode = (parent: NodeType, child: NodeType) => {
   return false
 }
 
-export const AddNodeBtn = ({ kind }: AddNodeBtnProps) => {
+export const AddNodeBtn = ({
+  kind,
+  children,
+  trigger = ['click'],
+}: AddNodeBtnProps) => {
   const currentNode = useNodeStore((state) => state.currentNode)
   const addConnectNode = useNodeStore((state) => state.addConnectNode)
+  const addUnConnectNode = useNodeStore((state) => state.addUnConnectNode)
 
   const pos = currentNode
     ? {
@@ -45,8 +56,14 @@ export const AddNodeBtn = ({ kind }: AddNodeBtnProps) => {
 
   const addNode = (builderFn: (pos: { x: number; y: number }) => AppNode) => {
     const node = builderFn(pos)
-    console.error(node)
-    if (node) {
+
+    if (!node) {
+      return
+    }
+
+    if (!kind) {
+      addUnConnectNode(node)
+    } else {
       addConnectNode(node)
     }
   }
@@ -94,21 +111,23 @@ export const AddNodeBtn = ({ kind }: AddNodeBtnProps) => {
   ]
 
   return (
-    <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-      <Button
-        type="primary"
-        size="small"
-        className={styles.add_button}
-        styles={{
-          root: {
-            height: 12,
-            width: 12,
-            padding: 0
-          },
-        }}
-      >
-        <PlusCircledIcon height={8} width={8}></PlusCircledIcon>
-      </Button>
+    <Dropdown menu={{ items: menuItems }} trigger={trigger}>
+      {children ?? (
+        <Button
+          type="primary"
+          size="small"
+          className={styles.add_button}
+          styles={{
+            root: {
+              height: 12,
+              width: 12,
+              padding: 0,
+            },
+          }}
+        >
+          <PlusCircledIcon height={8} width={8}></PlusCircledIcon>
+        </Button>
+      )}
     </Dropdown>
   )
 }

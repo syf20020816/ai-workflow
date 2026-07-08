@@ -12,7 +12,9 @@ import { EditAIOutput } from './edit/aiOutput'
 import { EditBMADAgent } from './edit/bmad'
 import { EditLark } from './edit/lark'
 import { ExecutionPanel } from '../execution/panel'
+import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
+import { ExecutionResult } from '../execution/result'
 
 const { Text } = Typography
 
@@ -63,6 +65,16 @@ export const EditPanel = () => {
       label: '执行',
       children: <ExecutionPanel />,
     },
+    {
+      key: 'output',
+      label: '输出',
+      children: <OutputPanel />,
+    },
+    {
+      key: "result",
+      label: "执行结果",
+      children: <ExecutionResult />
+    }
   ]
 
   return (
