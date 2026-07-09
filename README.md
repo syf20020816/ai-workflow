@@ -103,9 +103,10 @@
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| BMad CLI 调用 | ❌ 未实现 | 需要对接 `npx bmad-method` 命令，根据节点编排生成 BMad 指令 |
+| BMad CLI 调用 | ✅ 已完成 | `/api/execute/bmad` 支持 status/skills/agents/map-workflow/analyze-phase/execute-skill 六个操作 |
 | BMad Agent 角色下发 | ✅ 已完成 | 从 `_bmad/config.toml` 解析 agents，选择后自动创建 BMadAgentNode |
-| BMad 工作流映射 | ❌ 未实现 | 需要将画布上的节点编排转化为 BMad Method 的 planning → development 流程 |
+| BMad 工作流映射 | ✅ 已完成 | 将画布上的节点编排映射到 BMad Method 阶段并生成结构化指令 |
+| BMad Skill 解析 | ✅ 已完成 | 从 `bmad-help.csv` 和模块 CSV 解析 50+ 个 Skills，含阶段/依赖/描述 |
 
 ### Qdrant 集成
 

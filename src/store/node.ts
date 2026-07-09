@@ -42,6 +42,8 @@ export interface UseNodeStoreProps {
     name: string
     description: string
   }) => void
+  /** 删除当前 AgentNode 连线的 BMadNode */
+  removeConnectedBmad: () => void
 
   // ---- 执行引擎集成 ----
   /** 执行管线上下文 */
@@ -187,6 +189,66 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const nodeEntry = get().nodes.find((n) => n.id === current.id)
     if (!nodeEntry) return
 
+    // 获取 AgentNode 的模型配置
+    const agentModal = (nodeEntry.data as any).modal
+
+    // 提取模型配置中 bmad 需要的字段
+    const bmadModal = agentModal
+      ? {
+          name: agentModal.name,
+          key: agentModal.key,
+          url: agentModal.url,
+          token: agentModal.token ? { min: agentModal.token.min, max: agentModal.token.max } : undefined,
+        }
+      : undefined
+
+    // 检查当前 AgentNode 是否已经有连线的 BMadNode
+    const existingEdge = get().edges.find(
+      (e) =>
+        e.source === current.id &&
+        get().nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+    )
+
+    if (existingEdge) {
+      // 已有连线 BMadNode → 更新其数据
+      const existingNode = get().nodes.find((n) => n.id === existingEdge.target)
+      if (existingNode) {
+        const updatedNodes = get().nodes.map((n) =>
+          n.id === existingNode.id
+            ? {
+                ...n,
+                data: {
+                  title: agent.title,
+                  role: agent.title,
+                  agentId: agent.name,
+                  roleDescription: agent.description,
+                  modal: bmadModal, // 继承模型配置
+                },
+              }
+            : n,
+        )
+        // 同时更新当前节点（记录关联的 BMad agent 信息）
+        const updatedCurrentNodes = updatedNodes.map((n) =>
+          n.id === current.id
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  _connectedBmadAgent: agent.name,
+                  modal: { ...(n.data as any).modal, alias: agent.title },
+                },
+              }
+            : n,
+        )
+        set({
+          nodes: updatedCurrentNodes,
+          currentNode: updatedCurrentNodes.find((n) => n.id === current.id) as any,
+        })
+      }
+      return
+    }
+
+    // 没有已有连线 → 创建新的 BMadNode
     const id = uuidv4()
     const x = nodeEntry.position.x + 200
     const y = nodeEntry.position.y
@@ -202,12 +264,17 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       data: {
         title: agent.title,
         role: agent.title,
+        agentId: agent.name,
         roleDescription: agent.description,
+        modal: bmadModal, // 从 AgentNode 继承模型配置
       },
     } as unknown as Node
 
     set({
-      nodes: [...get().nodes, bmadNode],
+      nodes: [
+        ...get().nodes,
+        bmadNode,
+      ],
       edges: [
         ...get().edges,
         {
@@ -217,6 +284,27 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
           type: 'nodeEdge',
         },
       ],
+    })
+  },
+
+  /** 删除当前 AgentNode 连线的 BMadNode */
+  removeConnectedBmad: () => {
+    const current = get().currentNode
+    if (!current) return
+
+    const existingEdge = get().edges.find(
+      (e) =>
+        e.source === current.id &&
+        get().nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+    )
+
+    if (!existingEdge) return
+
+    set({
+      nodes: get().nodes.filter((n) => n.id !== existingEdge.target),
+      edges: get().edges.filter(
+        (e) => e.id !== existingEdge.id && e.source !== existingEdge.target,
+      ),
     })
   },
 

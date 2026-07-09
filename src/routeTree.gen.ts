@@ -15,6 +15,7 @@ import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiSkillRouteImport } from './routes/api/skill'
 import { Route as ApiModelRouteImport } from './routes/api/model'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
+import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
 import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
@@ -48,6 +49,11 @@ const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   path: '/api/execute/lark',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecuteBmadRoute = ApiExecuteBmadRouteImport.update({
+  id: '/api/execute/bmad',
+  path: '/api/execute/bmad',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExecuteAgentRoute = ApiExecuteAgentRouteImport.update({
   id: '/api/execute/agent',
   path: '/api/execute/agent',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
+  '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
+    | '/api/execute/bmad'
     | '/api/execute/lark'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
+    | '/api/execute/bmad'
     | '/api/execute/lark'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/execute/agent'
+    | '/api/execute/bmad'
     | '/api/execute/lark'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
+  ApiExecuteBmadRoute: typeof ApiExecuteBmadRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
 }
 
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecuteLarkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/execute/bmad': {
+      id: '/api/execute/bmad'
+      path: '/api/execute/bmad'
+      fullPath: '/api/execute/bmad'
+      preLoaderRoute: typeof ApiExecuteBmadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/execute/agent': {
       id: '/api/execute/agent'
       path: '/api/execute/agent'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
+  ApiExecuteBmadRoute: ApiExecuteBmadRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
 }
 export const routeTree = rootRouteImport

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { parseBmadAgents } from '#/engine/bmad/parser'
 
 /** BMad 项目根目录（ai-workflow 的相邻目录） */
-const BMAD_ROOT = path.resolve(process.cwd(), '..', 'bmad')
+const BMAD_ROOT = path.resolve(process.cwd(),  '.bmad')
 const CONFIG_PATH = path.join(BMAD_ROOT, '_bmad', 'config.toml')
 const CUSTOM_CONFIG_PATH = path.join(BMAD_ROOT, '_bmad', 'custom', 'config.toml')
 

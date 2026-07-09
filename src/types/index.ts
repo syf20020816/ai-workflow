@@ -92,8 +92,19 @@ export type NBMadAgentData = NNode & {
   role?: string
   /** 角色描述/职责说明 */
   roleDescription?: string
-  /** 使用的模型 */
-  model?: string
+  /** BMad Agent ID (如 bmad-agent-analyst) */
+  agentId?: string
+  /** 模型配置（与 AgentNode 共享同一结构，创建时从 AgentNode 继承） */
+  modal?: {
+    name?: string
+    key?: string
+    alias?: string
+    url?: string
+    token?: {
+      min: number
+      max: number
+    }
+  }
   /** 温度参数 */
   temperature?: number
   /** 系统提示词 */

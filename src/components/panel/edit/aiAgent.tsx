@@ -2,9 +2,11 @@ import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
 import { useBmadAgentStore } from '#/store/bmad'
 import { useRouteStore } from '#/store/route'
+import { NodeTypes } from '#/types'
 import type { NAgent, NAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Select, Button, Space, Typography } from 'antd'
+import { Select, Button, Space, Typography, Tooltip } from 'antd'
+import { DisconnectOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { EditItem } from './item'
 import { useEffect } from 'react'
 
@@ -17,8 +19,11 @@ export const EditAgent = () => {
   const currentNode = useNodeStore(
     (state) => state.currentNode,
   ) as NodeProps<NAgent>
+  const nodes = useNodeStore((state) => state.nodes)
+  const edges = useNodeStore((state) => state.edges)
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
   const addBmadAgentForCurrent = useNodeStore((state) => state.addBmadAgentForCurrent)
+  const removeConnectedBmad = useNodeStore((state) => state.removeConnectedBmad)
 
   const models = useModelStore((state) => state.models)
   const fetchModels = useModelStore((state) => state.fetchModels)
@@ -32,7 +37,19 @@ export const EditAgent = () => {
   }, [])
 
   const selectedModelId = currentNode.data.modal?.name || undefined
-  const selectedRole = currentNode.data.modal?.alias || undefined
+
+  // 查找当前 AgentNode 是否已有连线 BMadNode
+  const connectedBmadEdge = edges.find(
+    (e) =>
+      e.source === currentNode.id &&
+      nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+  )
+  const connectedBmadNode = connectedBmadEdge
+    ? nodes.find((n) => n.id === connectedBmadEdge.target)
+    : null
+  const connectedBmadData = connectedBmadNode?.data as any
+  const connectedAgentId = connectedBmadData?.agentId || undefined
+  const hasBmadConnection = !!connectedBmadNode
 
   return (
     <>
@@ -87,8 +104,8 @@ export const EditAgent = () => {
         <Space.Compact style={{ width: '100%' }}>
           <Select
             style={{ flex: 1 }}
-            placeholder="选择角色..."
-            value={selectedRole}
+            placeholder={hasBmadConnection ? '已连接角色（可换选）' : '选择角色...'}
+            value={connectedAgentId}
             notFoundContent="暂无角色，请先添加"
             options={agents.map((a) => ({
               label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
@@ -105,7 +122,7 @@ export const EditAgent = () => {
                 data.modal.alias = agent.title
               })
 
-              // 自动创建 BMadAgentNode 并连接
+              // 自动创建或更新 BMadAgentNode
               addBmadAgentForCurrent({
                 title: agent.title || agent.name,
                 name: agent.name,
@@ -116,6 +133,36 @@ export const EditAgent = () => {
           <Button onClick={() => switchTo('skill')}>管理</Button>
         </Space.Compact>
       </div>
+
+      {/* 已连接 BMad 角色的状态提示 */}
+      {hasBmadConnection && connectedBmadData?.role && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 4,
+          }}
+        >
+          <div style={{ fontSize: 11, color: 'var(--xy-edge-stroke-default)' }}>
+            <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              已连接角色: {connectedBmadData.role}
+            </Text>
+          </div>
+          <Tooltip title="断开 BMad 角色连接">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DisconnectOutlined />}
+              onClick={() => {
+                removeConnectedBmad()
+              }}
+            />
+          </Tooltip>
+        </div>
+      )}
 
       {/* 当前选择的信息展示 */}
       {selectedModelId && (
