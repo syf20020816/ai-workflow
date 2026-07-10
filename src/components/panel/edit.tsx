@@ -11,6 +11,12 @@ import { EditAnswer } from './edit/aiAnswer'
 import { EditAIOutput } from './edit/aiOutput'
 import { EditBMADAgent } from './edit/bmad'
 import { EditLark } from './edit/lark'
+import { EditIf } from './edit/if'
+import { EditIfCondition } from './edit/ifCondition'
+import { EditLoop } from './edit/loop'
+import { EditLoopCondition } from './edit/loopCondition'
+import { EditRetry } from './edit/retry'
+import { EditCode } from './edit/code'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
@@ -42,6 +48,12 @@ export const EditPanel = () => {
                 {currentNode.type === NodeTypes.AI_OUTPUT && <EditAIOutput />}
                 {currentNode.type === NodeTypes.BMAD_AGENT && <EditBMADAgent />}
                 {currentNode.type === NodeTypes.LARK && <EditLark />}
+                {currentNode.type === NodeTypes.IF && <EditIf />}
+                {currentNode.type === NodeTypes.IF_CONDITION && <EditIfCondition />}
+                {currentNode.type === NodeTypes.LOOP && <EditLoop />}
+                {currentNode.type === NodeTypes.LOOP_CONDITION && <EditLoopCondition />}
+                {currentNode.type === NodeTypes.RETRY && <EditRetry />}
+                {currentNode.type === NodeTypes.CODE && <EditCode />}
               </main>
               <footer className={styles.footer}>
                 <Button

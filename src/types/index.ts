@@ -7,7 +7,13 @@ export const NodeTypes = {
   ANSWER: 'answer',
   BMAD_AGENT: 'bmadAgent',
   LARK: 'lark',
-}
+  IF: 'if',
+  IF_CONDITION: 'ifCondition',
+  LOOP: 'loop',
+  LOOP_CONDITION: 'loopCondition',
+  RETRY: 'retry',
+  CODE: 'code',
+} as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
 
@@ -127,6 +133,75 @@ export type NLarkData = NNode & {
 
 export type NLark = Node<NLarkData, typeof NodeTypes.LARK>
 
+// ======== 控制节点 ========
+
+/** ifNode：判断节点，根据条件选择不同分支 */
+export type NIfData = NNode & {
+  /** 判断表达式（描述性文本） */
+  expression?: string
+}
+
+export type NIf = Node<NIfData, typeof NodeTypes.IF>
+
+/** ifConditionNode：if 分支条件节点 */
+export type NIfConditionData = NNode & {
+  /** 条件表达式/描述 */
+  condition?: string
+  /** 分支描述，如 "条件A", "条件B" */
+  label?: string
+}
+
+export type NIfCondition = Node<NIfConditionData, typeof NodeTypes.IF_CONDITION>
+
+/** loopNode：循环节点 */
+export type NLoopData = NNode & {
+  /** 最大循环次数，默认 5 */
+  maxLoopCount: number
+  /** 当前循环次数（运行时） */
+  currentLoopCount?: number
+  /** 循环条件描述 */
+  condition?: string
+}
+
+export type NLoop = Node<NLoopData, typeof NodeTypes.LOOP>
+
+/** loopConditionNode：循环条件判断节点 */
+export type NLoopConditionData = NNode & {
+  /** 循环条件表达式 */
+  condition?: string
+}
+
+export type NLoopCondition = Node<NLoopConditionData, typeof NodeTypes.LOOP_CONDITION>
+
+/** retryNode：错误重试节点 */
+export type NRetryData = NNode & {
+  /** 重试间隔（秒），默认 1 */
+  retryDelay: number
+  /** 最大重试次数，默认 5 */
+  maxRetryCount: number
+  /** 判断模式：manual | ai */
+  judgmentMode: 'manual' | 'ai'
+  /** 人工判断：用于匹配错误状态的关键词/标识 */
+  errorKeywords?: string
+  /** AI 判断：连接的 AgentNode ID */
+  agentNodeId?: string
+}
+
+export type NRetry = Node<NRetryData, typeof NodeTypes.RETRY>
+
+/** codeNode：代码访问节点 */
+export type NCodeData = NNode & {
+  /** 运行模式：local | cloud */
+  mode: 'local' | 'cloud'
+  /** 仓库 URL */
+  repoUrl?: string
+  /** 分支，默认 master */
+  branch: string
+}
+
+export type NCode = Node<NCodeData, typeof NodeTypes.CODE>
+
 export type AppNode = NodeProps<
-  NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
+  | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
+  | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCode
 > | null

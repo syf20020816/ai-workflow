@@ -1,17 +1,44 @@
 import type { Node, Edge } from '@xyflow/react'
+import { NodeTypes } from '#/types'
 
 /**
  * Kahn 算法拓扑排序。
  * 根据 edges 确定节点的执行顺序。
  * 返回按依赖关系排列的节点 ID 数组（无依赖的节点在前）。
+ *
+ * 特殊处理：
+ * - loopNode + loopConditionNode：loop 回边会被特殊标记并处理
+ * - 非 loop 边如果有循环则报错（正常流程禁止循环）
  */
 export function topologicalSort(
   nodes: Node[],
   edges: Edge[],
+  options?: { detectCycles?: boolean },
 ): { sortedIds: string[]; cycles: string[] } {
   const nodeIds = new Set(nodes.map((n) => n.id))
   const inDegree = new Map<string, number>()
   const adjacency = new Map<string, string[]>()
+
+  // 识别 loop 回边：从 loop body 节点回到 loopNode 的边
+  const loopBackEdges = new Set<string>()
+  const loopNodeIds = new Set(
+    nodes.filter((n) => n.type === NodeTypes.LOOP).map((n) => n.id),
+  )
+  const loopConditionIds = new Set(
+    nodes.filter((n) => n.type === NodeTypes.LOOP_CONDITION).map((n) => n.id),
+  )
+
+  // 找到从 loop body 回到 loopNode 或 loopConditionNode 的边
+  for (const edge of edges) {
+    if (loopNodeIds.has(edge.target)) {
+      // 回到 loopNode 的是回边
+      loopBackEdges.add(edge.id)
+    }
+    if (loopConditionIds.has(edge.target) && !loopNodeIds.has(edge.source)) {
+      // 从 body 节点回到 loopConditionNode 也是回边
+      loopBackEdges.add(edge.id)
+    }
+  }
 
   // 初始化
   for (const id of nodeIds) {
@@ -19,10 +46,16 @@ export function topologicalSort(
     adjacency.set(id, [])
   }
 
-  // 构建邻接表和入度
+  // 构建邻接表和入度（排除 loop 回边）
   for (const edge of edges) {
-    const { source, target } = edge
+    const { source, target, id } = edge
     if (!nodeIds.has(source) || !nodeIds.has(target)) continue
+
+    if (options?.detectCycles !== false && loopBackEdges.has(id || '')) {
+      // loop 回边不计入常规排序
+      continue
+    }
+
     adjacency.get(source)!.push(target)
     inDegree.set(target, (inDegree.get(target) || 0) + 1)
   }
@@ -44,10 +77,12 @@ export function topologicalSort(
     }
   }
 
-  // 检测环（入度未归零的节点）
+  // 检测环（入度未归零的节点）- 排除 loop 回边涉及的节点
   const cycles: string[] = []
   for (const [id, degree] of inDegree) {
-    if (degree > 0) cycles.push(id)
+    if (degree > 0 && !loopNodeIds.has(id) && !loopConditionIds.has(id)) {
+      cycles.push(id)
+    }
   }
 
   return { sortedIds, cycles }
@@ -87,8 +122,22 @@ export function getSubgraphOrder(
   }
 
   const subNodes = nodes.filter((n) => reachable.has(n.id))
-  const subEdges = edges.filter((e) => reachable.has(e.source) && reachable.has(e.target))
+  const subEdges = edges.filter(
+    (e) => reachable.has(e.source) && reachable.has(e.target),
+  )
   // 对子图做拓扑排序
   const allNodes = topologicalSort(subNodes, subEdges)
   return allNodes.sortedIds
+}
+
+/**
+ * 验证工作流是否包含非法循环（非 loopNode 引入的循环）
+ * 返回所有形成非法循环的节点 ID
+ */
+export function detectIllegalCycles(
+  nodes: Node[],
+  edges: Edge[],
+): string[] {
+  const result = topologicalSort(nodes, edges, { detectCycles: true })
+  return result.cycles
 }

@@ -28,13 +28,21 @@ const isDisabledNode = (parent: NodeType | undefined, child: NodeType) => {
     return child === NodeTypes.USER_INPUT || child === NodeTypes.AGENT
   }
 
-  //   if (parent === NodeTypes.AI_OUTPUT) {
-  //     return child === NodeTypes.ANSWER
-  //   }
-  //   // 回答节点只能连接 AI输出节点
-  //   if (parent === NodeTypes.ANSWER) {
-  //     return child === NodeTypes.AI_OUTPUT
-  //   }
+  // codeNode 必须连接在 AgentNode 或 BMadNode 之后
+  if (child === NodeTypes.CODE) {
+    return parent !== NodeTypes.AGENT && parent !== NodeTypes.BMAD_AGENT
+  }
+
+  // ifConditionNode 只能跟在 ifNode 之后
+  if (child === NodeTypes.IF_CONDITION) {
+    return parent !== NodeTypes.IF
+  }
+
+  // loopConditionNode 只能跟在 loopNode 之后
+  if (child === NodeTypes.LOOP_CONDITION) {
+    return parent !== NodeTypes.LOOP
+  }
+
   return false
 }
 
@@ -107,6 +115,49 @@ export const AddNodeBtn = ({
       key: NodeTypes.LARK,
       disabled: isDisabledNode(kind, NodeTypes.LARK),
       onClick: () => addNode(NodeBuilder.lark),
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.CODE} title="代码访问节点" />,
+      key: NodeTypes.CODE,
+      disabled: isDisabledNode(kind, NodeTypes.CODE),
+      onClick: () => addNode(NodeBuilder.code),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.IF} title="判断节点" />,
+      key: NodeTypes.IF,
+      disabled: isDisabledNode(kind, NodeTypes.IF),
+      onClick: () => addNode(NodeBuilder.ifNode),
+    },
+    {
+      label: (
+        <NodeHeader kind={NodeTypes.IF_CONDITION} title="条件分支节点" />
+      ),
+      key: NodeTypes.IF_CONDITION,
+      disabled: isDisabledNode(kind, NodeTypes.IF_CONDITION),
+      onClick: () => addNode(NodeBuilder.ifCondition),
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.LOOP} title="循环节点" />,
+      key: NodeTypes.LOOP,
+      disabled: isDisabledNode(kind, NodeTypes.LOOP),
+      onClick: () => addNode(NodeBuilder.loop),
+    },
+    {
+      label: (
+        <NodeHeader kind={NodeTypes.LOOP_CONDITION} title="循环条件节点" />
+      ),
+      key: NodeTypes.LOOP_CONDITION,
+      disabled: isDisabledNode(kind, NodeTypes.LOOP_CONDITION),
+      onClick: () => addNode(NodeBuilder.loopCondition),
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.RETRY} title="重试节点" />,
+      key: NodeTypes.RETRY,
+      disabled: isDisabledNode(kind, NodeTypes.RETRY),
+      onClick: () => addNode(NodeBuilder.retry),
     },
   ]
 

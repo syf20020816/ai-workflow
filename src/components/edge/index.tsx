@@ -3,11 +3,9 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
-  getSmoothStepPath,
 } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
-import { Button } from 'antd'
-import { CircleX, ClosedCaptionIcon } from 'lucide-react'
+import { CircleX } from 'lucide-react'
 
 export const NodeEdge = ({
   id,
@@ -16,32 +14,43 @@ export const NodeEdge = ({
   targetX,
   targetY,
 }: EdgeProps) => {
-  //   const { setEdges } = useReactFlow()
   const removeEdge = useNodeStore((state) => state.removeEdge)
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
   })
 
+  // 手动计算中点：直接用 source/target 的平均值
+  // getBezierPath 返回的 labelX/labelY 受控制点影响，非对称路径下会偏离视觉中心
+  const midX = (sourceX + targetX) / 2
+  const midY = (sourceY + targetY) / 2
+
   return (
     <>
       <BaseEdge id={id} path={edgePath} />
       <EdgeLabelRenderer>
-        <CircleX
-          size={10}
-          color="#ea1919ff"
-          onClick={() => {
-            removeEdge(id)
-          }}
-
+        <div
           style={{
-            transform: `translate(-50%, -100%) translate(${labelX}px,${labelY}px)`,
+            position: 'absolute',
+            left: midX,
+            top: midY,
+            transform: 'translate(-50%, -50%)',
             pointerEvents: 'auto',
             zIndex: 100,
+            lineHeight: 0,
           }}
-        />
+        >
+          <CircleX
+            size={10}
+            color="#ea1919ff"
+            onClick={() => {
+              removeEdge(id)
+            }}
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
       </EdgeLabelRenderer>
     </>
   )

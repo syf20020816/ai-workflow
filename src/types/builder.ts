@@ -82,4 +82,79 @@ export class NodeBuilder {
       },
     }
   }
+
+  // ======== 控制节点 ========
+
+  static ifNode(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.IF,
+      data: {
+        title: '判断节点',
+        expression: '',
+      },
+    }
+  }
+
+  static ifCondition(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.IF_CONDITION,
+      data: {
+        title: '条件分支节点',
+        condition: '',
+        label: '',
+      },
+    }
+  }
+
+  static loop(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.LOOP,
+      data: {
+        title: '循环节点',
+        maxLoopCount: 5,
+        condition: '',
+      },
+    }
+  }
+
+  static loopCondition(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.LOOP_CONDITION,
+      data: {
+        title: '循环条件节点',
+        condition: '',
+      },
+    }
+  }
+
+  static retry(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.RETRY,
+      data: {
+        title: '重试节点',
+        retryDelay: 1,
+        maxRetryCount: 5,
+        judgmentMode: 'manual',
+        errorKeywords: '',
+      },
+    }
+  }
+
+  static code(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.CODE,
+      data: {
+        title: '代码访问节点',
+        mode: 'local',
+        repoUrl: '',
+        branch: 'master',
+      },
+    }
+  }
 }

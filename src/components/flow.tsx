@@ -7,10 +7,17 @@ import { AIOutputNode } from './node/ai/output'
 import { AnswerNode } from './node/ai/answer'
 import { BmadAgentNode } from './node/ai/bmad'
 import { LarkNode } from './node/ai/lark'
+import { CodeNode } from './node/ai/code'
+import { IfNode } from './node/control/if'
+import { IfConditionNode } from './node/control/ifCondition'
+import { LoopNode } from './node/control/loop'
+import { LoopConditionNode } from './node/control/loopCondition'
+import { RetryNode } from './node/control/retry'
 
 import { useNodeStore } from '#/store/node'
 import { NodeEdge } from './edge'
 import { AddNodeBtn } from './node/edge/add'
+import { ToolsPanel } from './panel/tools'
 
 export const NODE_TYPES = {
   userInput: UserInputNode,
@@ -19,6 +26,12 @@ export const NODE_TYPES = {
   answer: AnswerNode,
   bmadAgent: BmadAgentNode,
   lark: LarkNode,
+  code: CodeNode,
+  if: IfNode,
+  ifCondition: IfConditionNode,
+  loop: LoopNode,
+  loopCondition: LoopConditionNode,
+  retry: RetryNode,
 }
 
 const EDGE_TYPES = {
@@ -26,15 +39,21 @@ const EDGE_TYPES = {
 }
 
 export function Flow() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, removeConnectedBmad, setCurrentNode } =
-    useNodeStore()
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    removeConnectedBmad,
+    setCurrentNode,
+  } = useNodeStore()
 
   // 监听 BMad 断开事件
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (detail?.nodeId) {
-        // 先设置断开的目标 BMadNode 为当前节点，再删除
         const bmadNode = nodes.find((n) => n.id === detail.nodeId)
         if (bmadNode) {
           setCurrentNode(bmadNode as any)
@@ -63,6 +82,7 @@ export function Flow() {
         <Background />
         <MiniMap />
         <Controls />
+        <ToolsPanel position="top-left"></ToolsPanel>
       </ReactFlow>
     </AddNodeBtn>
   )

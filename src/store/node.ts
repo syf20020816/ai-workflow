@@ -58,9 +58,17 @@ export interface UseNodeStoreProps {
   resetExecution: () => void
   /** 删除指定边 */
   removeEdge: (edgeId: string) => void
+  /** 清空面板 */
+  clearPanel: () => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
+  clearPanel: () => {
+    set({
+      nodes: [],
+      edges: [],
+    })
+  },
   removeEdge: (edgeId) => {
     set({
       edges: get().edges.filter((e) => e.id !== edgeId),
