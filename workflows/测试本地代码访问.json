@@ -1,0 +1,37 @@
+{
+  "name": "测试本地代码访问",
+  "id": "测试本地代码访问",
+  "nodes": [
+    {
+      "id": "e68129c7-003e-495a-a527-30b83db83f23",
+      "position": {
+        "x": 148.5,
+        "y": 95
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": true,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "code",
+      "data": {
+        "title": "代码访问节点",
+        "mode": "local",
+        "repoUrl": "/Users/lizhi/Desktop/work/workflow/tests/code.ts",
+        "branch": "main",
+        "lines": []
+      },
+      "measured": {
+        "width": 214,
+        "height": 86
+      }
+    }
+  ],
+  "edges": [],
+  "createdAt": "2026-07-13T02:41:11.849Z",
+  "updatedAt": "2026-07-13T02:41:11.849Z"
+}

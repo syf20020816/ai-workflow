@@ -197,6 +197,8 @@ export type NCodeData = NNode & {
   repoUrl?: string
   /** 分支，默认 master */
   branch: string
+  /** 要读取的文件行范围，空数组或 undefined 表示读取整个文件 */
+  lines?: { start: number; end: number }[]
 }
 
 export type NCode = Node<NCodeData, typeof NodeTypes.CODE>

@@ -13,6 +13,7 @@ import { UNode } from '..'
 export const CodeNode = (props: NodeProps<NCode>) => {
   const modeLabel = props.data.mode === 'cloud' ? '云端' : '本地'
   const modeColor = props.data.mode === 'cloud' ? 'green' : 'blue'
+  const lines = props.data.lines || []
 
   return (
     <UNode node={props}>
@@ -28,6 +29,14 @@ export const CodeNode = (props: NodeProps<NCode>) => {
         <div className={styles.row}>
           <span style={{ fontSize: 9, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {props.data.repoUrl}
+          </span>
+        </div>
+      )}
+      {lines.length > 0 && (
+        <div className={styles.row}>
+          <span style={{ fontSize: 9, color: '#888' }}>
+            L{lines[0].start}-L{lines[0].end}
+            {lines.length > 1 ? ` +${lines.length - 1}` : ''}
           </span>
         </div>
       )}

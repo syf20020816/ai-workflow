@@ -154,6 +154,7 @@ export class NodeBuilder {
         mode: 'local',
         repoUrl: '',
         branch: 'master',
+        lines: [],
       },
     }
   }
