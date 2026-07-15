@@ -4,7 +4,8 @@ import { useRouteStore } from '#/store/route'
 import type { NBMadAgent, NBMadAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { Select, Button, Space, Typography } from 'antd'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 
 const { Text } = Typography
@@ -29,34 +30,25 @@ export const EditBMADAgent = () => {
 
   const selectedModelId = currentNode.data.modal?.name || undefined
 
-  return (
-    <>
-      <EditItem
-        label="智能体角色"
-        placeholder="如：需求分析师、架构师、Scrum Master"
-        value={currentNode.data.role}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).role = (v || '') as string
-          })
-        }}
-      />
-      <EditItem
-        label="角色描述"
-        placeholder="描述该角色的职责和关注点"
-        inputType="textArea"
-        rows={3}
-        value={currentNode.data.roleDescription}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).roleDescription = (v || '') as string
-          })
-        }}
-      />
-
-      {/* 模型选择（与 AgentNode 一致的 Select 组件） */}
-      <div className="line">
-        <Text>选择模型</Text>
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'role',
+      label: '智能体角色',
+      value: currentNode.data.role,
+      placeholder: '如：需求分析师、架构师、Scrum Master',
+    },
+    {
+      key: 'roleDescription',
+      label: '角色描述',
+      value: currentNode.data.roleDescription,
+      inputType: 'textArea',
+      rows: 3,
+      placeholder: '描述该角色的职责和关注点',
+    },
+    {
+      key: 'model',
+      label: '选择模型',
+      valueRender: (onChange) => (
         <Space.Compact style={{ width: '100%' }}>
           <Select
             style={{ flex: 1 }}
@@ -80,11 +72,49 @@ export const EditBMADAgent = () => {
                   ? { min: model.token.min, max: model.token.max }
                   : undefined
               })
+              onChange(value)
             }}
           />
           <Button onClick={() => switchTo('model')}>管理</Button>
         </Space.Compact>
-      </div>
+      ),
+      actionRender: null,
+    },
+    {
+      key: 'temperature',
+      label: '温度参数',
+      value: currentNode.data.temperature,
+      inputType: 'number',
+      min: 0,
+      max: 2,
+      step: 0.1,
+      placeholder: '0.0 ~ 2.0',
+    },
+    {
+      key: 'systemPrompt',
+      label: '系统提示词',
+      value: currentNode.data.systemPrompt,
+      inputType: 'textArea',
+      rows: 4,
+      placeholder: '设置系统级提示词，指导智能体行为',
+    },
+  ]
+
+  return (
+    <>
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
+          patchCurrentNode((draft) => {
+            const data = d(draft)
+            if (key === 'role') data.role = (value || '') as string
+            else if (key === 'roleDescription') data.roleDescription = (value || '') as string
+            else if (key === 'temperature') data.temperature = value as number
+            else if (key === 'systemPrompt') data.systemPrompt = (value || '') as string
+            // model 已在 valueRender 中处理
+          })
+        }}
+      />
 
       {/* 当前使用模型的信息展示 */}
       {selectedModelId && (
@@ -94,33 +124,6 @@ export const EditBMADAgent = () => {
           </Text>
         </div>
       )}
-
-      <EditItem
-        label="温度参数"
-        placeholder="0.0 ~ 2.0"
-        inputType="number"
-        min={0}
-        max={2}
-        step={0.1}
-        value={currentNode.data.temperature}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).temperature = v as number
-          })
-        }}
-      />
-      <EditItem
-        label="系统提示词"
-        placeholder="设置系统级提示词，指导智能体行为"
-        inputType="textArea"
-        rows={4}
-        value={currentNode.data.systemPrompt}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).systemPrompt = (v || '') as string
-          })
-        }}
-      />
     </>
   )
 }

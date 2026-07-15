@@ -1,12 +1,12 @@
 import { useNodeStore } from '#/store/node'
-import { InputKinds } from '#/types'
 import type { InputKind, NUserInput, NUserInputData } from '#/types'
 import { PlusCircledIcon } from '@radix-ui/react-icons'
 import styles from '../index.module.scss'
 import { Button, Radio } from 'antd'
 import type { CheckboxGroupProps } from 'antd/es/checkbox'
 import { useState } from 'react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import type { NodeProps } from '@xyflow/react'
 
 const options: CheckboxGroupProps<string>['options'] = [
@@ -70,6 +70,50 @@ export const EditUserInput = () => {
     })
   }
 
+  const rows: DynEditKVRow[] = []
+
+  if (currentNode.data.input?.label !== undefined) {
+    rows.push({
+      key: 'label',
+      label: '用户文本输入',
+      value: currentNode.data.input.label,
+      inputType: 'textArea',
+      placeholder: '输入用户文本',
+      onDelete: () => removeItem('label'),
+    })
+  }
+
+  if (currentNode.data.input?.prompt !== undefined) {
+    rows.push({
+      key: 'prompt',
+      label: '提示词',
+      value: currentNode.data.input.prompt,
+      inputType: 'textArea',
+      placeholder: '输入提示词',
+      onDelete: () => removeItem('prompt'),
+    })
+  }
+
+  currentNode.data.input?.files?.forEach((file, index) => {
+    rows.push({
+      key: `file-${index}`,
+      label: `文件 ${index + 1}`,
+      value: file,
+      placeholder: '上传文件',
+      onDelete: () => removeFile(index),
+    })
+  })
+
+  currentNode.data.input?.urls?.forEach((url, index) => {
+    rows.push({
+      key: `url-${index}`,
+      label: `链接 ${index + 1}`,
+      value: url,
+      placeholder: '输入链接',
+      onDelete: () => removeUrl(index),
+    })
+  })
+
   return (
     <>
       <div className={styles.line_row}>
@@ -82,63 +126,30 @@ export const EditUserInput = () => {
         ></Radio.Group>
         <Button icon={<PlusCircledIcon />} onClick={addInput}></Button>
       </div>
-      <EditItem
-        inputType="textArea"
-        kind={InputKinds.text}
-        value={currentNode.data.input?.label}
-        onChange={(v) => {
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
           patchCurrentNode((draft) => {
             const data = d(draft)
             data.input ??= {}
-            data.input.label = (v || '') as string
+            if (key === 'label') {
+              data.input.label = (value || '') as string
+            } else if (key === 'prompt') {
+              data.input.prompt = (value || '') as string
+            } else if (key.startsWith('file-')) {
+              const index = Number(key.replace('file-', ''))
+              if (data.input.files) {
+                data.input.files[index] = value as File
+              }
+            } else if (key.startsWith('url-')) {
+              const index = Number(key.replace('url-', ''))
+              if (data.input.urls) {
+                data.input.urls[index] = (value || '') as string
+              }
+            }
           })
         }}
-        onDelete={() => removeItem('label')}
       />
-      {currentNode.data.input?.prompt !== undefined && (
-        <EditItem
-          kind={InputKinds.prompt}
-          value={currentNode.data.input.prompt}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              data.input ??= {}
-              data.input.prompt = (v || '') as string
-            })
-          }}
-          onDelete={() => removeItem('prompt')}
-        />
-      )}
-
-      {currentNode.data.input?.files?.map((file, index) => (
-        <EditItem
-          kind={InputKinds.file}
-          value={file}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              if (!data.input?.files) return
-              data.input.files[index] = (v || '') as File
-            })
-          }}
-          onDelete={() => removeFile(index)}
-        />
-      ))}
-
-      {currentNode.data.input?.urls?.map((url, index) => (
-        <EditItem
-          kind={InputKinds.url}
-          value={url}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              if (!data.input?.urls) return
-              data.input.urls[index] = (v || '') as string
-            })
-          }}
-          onDelete={() => removeUrl(index)}
-        />
-      ))}
     </>
   )
 }

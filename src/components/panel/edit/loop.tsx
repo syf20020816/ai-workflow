@@ -2,7 +2,8 @@ import { useNodeStore } from '#/store/node'
 import { NodeTypes } from '#/types'
 import type { NLoop, NLoopData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { Button, Divider, Typography, InputNumber, Tag } from 'antd'
 import { PlusOutlined, DisconnectOutlined } from '@ant-design/icons'
 import { v4 as uuidv4 } from 'uuid'
@@ -59,10 +60,11 @@ export const EditLoop = () => {
     useNodeStore.getState().setEdges(edges.filter((e) => e.id !== conditionEdge.id && e.source !== conditionNode.id))
   }
 
-  return (
-    <>
-      <div className="line">
-        <Text>最大循环次数</Text>
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'maxLoopCount',
+      label: '最大循环次数',
+      valueRender: (onChange) => (
         <InputNumber
           style={{ width: '100%' }}
           min={1}
@@ -72,20 +74,33 @@ export const EditLoop = () => {
             patchCurrentNode((draft) => {
               d(draft).maxLoopCount = v ?? 5
             })
+            onChange(v)
           }}
         />
-      </div>
+      ),
+      actionRender: null,
+    },
+    {
+      key: 'condition',
+      label: '循环条件描述',
+      value: currentNode.data.condition,
+      inputType: 'textArea',
+      rows: 2,
+      placeholder: '什么条件下继续循环',
+    },
+  ]
 
-      <EditItem
-        label="循环条件描述"
-        placeholder="什么条件下继续循环"
-        inputType="textArea"
-        rows={2}
-        value={currentNode.data.condition}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).condition = (v || '') as string
-          })
+  return (
+    <>
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
+          if (key === 'condition') {
+            patchCurrentNode((draft) => {
+              d(draft).condition = (value || '') as string
+            })
+          }
+          // maxLoopCount 的变更已在 valueRender 中处理
         }}
       />
 

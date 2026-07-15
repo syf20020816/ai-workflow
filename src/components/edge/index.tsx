@@ -2,7 +2,7 @@ import { useNodeStore } from '#/store/node'
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getBezierPath,
+  getStraightPath,
 } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import { CircleX } from 'lucide-react'
@@ -15,7 +15,7 @@ export const NodeEdge = ({
   targetY,
 }: EdgeProps) => {
   const removeEdge = useNodeStore((state) => state.removeEdge)
-  const [edgePath] = getBezierPath({
+  const [edgePath] = getStraightPath({
     sourceX,
     sourceY,
     targetX,

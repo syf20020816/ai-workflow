@@ -19,19 +19,19 @@ const isDisabledNode = (parent: NodeType | undefined, child: NodeType) => {
   if (!parent) {
     return false
   }
-  // 用户输入节点只能连接 智能体节点
-  if (parent === NodeTypes.USER_INPUT) {
-    return child !== NodeTypes.AGENT
-  }
+  // // 用户输入节点只能连接 智能体节点
+  // if (parent === NodeTypes.USER_INPUT) {
+  //   return child !== NodeTypes.AGENT
+  // }
   // 智能体节点不能连接 用户输入节点 和 智能体节点自身
   if (parent === NodeTypes.AGENT) {
     return child === NodeTypes.USER_INPUT || child === NodeTypes.AGENT
   }
 
   // codeNode 必须连接在 AgentNode 或 BMadNode 之后
-  if (child === NodeTypes.CODE) {
-    return parent !== NodeTypes.AGENT && parent !== NodeTypes.BMAD_AGENT
-  }
+  // if (child === NodeTypes.CODE) {
+  //   return parent === NodeTypes.AGENT || parent === NodeTypes.BMAD_AGENT || parent === NodeTypes.USER_INPUT
+  // }
 
   // ifConditionNode 只能跟在 ifNode 之后
   if (child === NodeTypes.IF_CONDITION) {

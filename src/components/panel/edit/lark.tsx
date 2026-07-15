@@ -3,7 +3,8 @@ import type { NLark, NLarkData } from '#/types'
 import styles from '../index.module.scss'
 import { Radio, Typography } from 'antd'
 import type { NodeProps } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 
 const { Text } = Typography
 
@@ -23,6 +24,26 @@ export const EditLark = () => {
   ) as NodeProps<NLark>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'url',
+      label: '文档 URL',
+      value: currentNode.data.url,
+      placeholder: 'https://xxx.feishu.cn/docx/xxx',
+    },
+  ]
+
+  if (currentNode.data.action === 'write') {
+    rows.push({
+      key: 'content',
+      label: '写入内容',
+      value: currentNode.data.content,
+      inputType: 'textArea',
+      rows: 4,
+      placeholder: '要写入文档的内容',
+    })
+  }
+
   return (
     <>
       <div className={styles.line}>
@@ -39,30 +60,19 @@ export const EditLark = () => {
           }}
         />
       </div>
-      <EditItem
-        label="文档 URL"
-        placeholder="https://xxx.feishu.cn/docx/xxx"
-        value={currentNode.data.url}
-        onChange={(v) => {
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
           patchCurrentNode((draft) => {
-            d(draft).url = (v || '') as string
+            const data = d(draft)
+            if (key === 'url') {
+              data.url = (value || '') as string
+            } else if (key === 'content') {
+              data.content = (value || '') as string
+            }
           })
         }}
       />
-      {currentNode.data.action === 'write' && (
-        <EditItem
-          label="写入内容"
-          placeholder="要写入文档的内容"
-          inputType="textArea"
-          rows={4}
-          value={currentNode.data.content}
-          onChange={(v) => {
-            patchCurrentNode((draft) => {
-              d(draft).content = (v || '') as string
-            })
-          }}
-        />
-      )}
     </>
   )
 }

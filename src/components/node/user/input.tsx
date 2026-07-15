@@ -72,7 +72,7 @@ export const InputItem = ({ kind, label }: InputItemProps) => {
     <div className={`${styles.row} ${styles.row_sub}`}>
       {Icons.get(kind)}
       <span className={styles.row_weak}>
-        {label.length >= 10 ? `${label.substring(0, 10)}...` : label}
+        {label.length >= 20 ? `${label.substring(0, 20)}...` : label}
       </span>
     </div>
   )

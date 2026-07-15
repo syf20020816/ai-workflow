@@ -5,9 +5,10 @@ import { useRouteStore } from '#/store/route'
 import { NodeTypes } from '#/types'
 import type { NAgent, NAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Select, Button, Space, Typography, Tooltip } from 'antd'
+import { Select, Button, Typography, Tooltip } from 'antd'
 import { DisconnectOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 
 const { Text } = Typography
@@ -51,88 +52,102 @@ export const EditAgent = () => {
   const connectedAgentId = connectedBmadData?.agentId || undefined
   const hasBmadConnection = !!connectedBmadNode
 
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'alias',
+      label: '智能体别名',
+      value: currentNode.data.modal?.alias,
+      placeholder: '给智能体取一个易记的别名',
+    },
+    {
+      key: 'model',
+      label: '选择模型',
+      valueRender: (onChange) => (
+        <Select
+          style={{ width: '100%' }}
+          placeholder="选择模型..."
+          value={selectedModelId}
+          notFoundContent="暂无模型，请先添加"
+          options={models.map((m) => ({
+            label: `${m.name} (${m.modelName})`,
+            value: m.name,
+          }))}
+          onChange={(value) => {
+            const model = models.find((m) => m.name === value)
+            if (!model) return
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              data.modal ??= {}
+              data.modal.name = model.modelName
+              data.modal.key = model.apiKey
+              data.modal.url = model.url
+              data.modal.token = model.token
+                ? { min: model.token.min, max: model.token.max }
+                : undefined
+            })
+            onChange(value)
+          }}
+        />
+      ),
+      actionRender: (
+        <Button size="small" onClick={() => switchTo('model')}>管理</Button>
+      ),
+    },
+    {
+      key: 'agent',
+      label: '选择角色 (BMad)',
+      valueRender: (onChange) => (
+        <Select
+          style={{ width: '100%' }}
+          placeholder={hasBmadConnection ? '已连接角色（可换选）' : '选择角色...'}
+          value={connectedAgentId}
+          notFoundContent="暂无角色，请先添加"
+          options={agents.map((a) => ({
+            label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
+            value: a.id,
+          }))}
+          onChange={(agentId) => {
+            const agent = agents.find((a) => a.id === agentId)
+            if (!agent) return
+
+            // 更新当前 AgentNode 的别名
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              data.modal ??= {}
+              data.modal.alias = agent.title
+            })
+
+            // 自动创建或更新 BMadAgentNode
+            addBmadAgentForCurrent({
+              title: agent.title || agent.name,
+              name: agent.name,
+              description: agent.description,
+            })
+            onChange(agentId)
+          }}
+        />
+      ),
+      actionRender: (
+        <Button size="small" onClick={() => switchTo('skill')}>管理</Button>
+      ),
+    },
+  ]
+
   return (
     <>
-      <EditItem
-        label="智能体别名"
-        placeholder="给智能体取一个易记的别名"
-        value={currentNode.data.modal?.alias}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            data.modal ??= {}
-            data.modal.alias = (v || '') as string
-          })
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
+          if (key === 'alias') {
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              data.modal ??= {}
+              data.modal.alias = (value || '') as string
+            })
+          }
+          // model 和 agent 的变更已在 valueRender 中处理
         }}
       />
-
-      {/* 模型选择 */}
-      <div className="line">
-        <Text>选择模型</Text>
-        <Space.Compact style={{ width: '100%' }}>
-          <Select
-            style={{ flex: 1 }}
-            placeholder="选择模型..."
-            value={selectedModelId}
-            notFoundContent="暂无模型，请先添加"
-            options={models.map((m) => ({
-              label: `${m.name} (${m.modelName})`,
-              value: m.name,
-            }))}
-            onChange={(value) => {
-              const model = models.find((m) => m.name === value)
-              if (!model) return
-              patchCurrentNode((draft) => {
-                const data = d(draft)
-                data.modal ??= {}
-                data.modal.name = model.modelName
-                data.modal.key = model.apiKey
-                data.modal.url = model.url
-                data.modal.token = model.token
-                  ? { min: model.token.min, max: model.token.max }
-                  : undefined
-              })
-            }}
-          />
-          <Button onClick={() => switchTo('model')}>管理</Button>
-        </Space.Compact>
-      </div>
-
-      {/* 角色选择 */}
-      <div className="line">
-        <Text>选择角色 (BMad)</Text>
-        <Space.Compact style={{ width: '100%' }}>
-          <Select
-            style={{ flex: 1 }}
-            placeholder={hasBmadConnection ? '已连接角色（可换选）' : '选择角色...'}
-            value={connectedAgentId}
-            notFoundContent="暂无角色，请先添加"
-            options={agents.map((a) => ({
-              label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
-              value: a.id,
-            }))}
-            onChange={(agentId) => {
-              const agent = agents.find((a) => a.id === agentId)
-              if (!agent) return
-
-              // 更新当前 AgentNode 的别名
-              patchCurrentNode((draft) => {
-                const data = d(draft)
-                data.modal ??= {}
-                data.modal.alias = agent.title
-              })
-
-              // 自动创建或更新 BMadAgentNode
-              addBmadAgentForCurrent({
-                title: agent.title || agent.name,
-                name: agent.name,
-                description: agent.description,
-              })
-            }}
-          />
-          <Button onClick={() => switchTo('skill')}>管理</Button>
-        </Space.Compact>
-      </div>
 
       {/* 已连接 BMad 角色的状态提示 */}
       {hasBmadConnection && connectedBmadData?.role && (
@@ -141,7 +156,7 @@ export const EditAgent = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginTop: 4,
+            marginTop: 8,
           }}
         >
           <div style={{ fontSize: 11, color: 'var(--xy-edge-stroke-default)' }}>

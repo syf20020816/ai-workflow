@@ -2,7 +2,8 @@ import { useNodeStore } from '#/store/node'
 import { NodeTypes } from '#/types'
 import type { NRetry, NRetryData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { Select, Divider, Typography, InputNumber, Tag } from 'antd'
 import { NodeBuilder } from '#/types/builder'
 import { useEffect } from 'react'
@@ -40,10 +41,13 @@ export const EditRetry = () => {
     }
   }, [currentNode.data.judgmentMode])
 
-  return (
-    <>
-      <div className="line">
-        <Text>判断模式</Text>
+  const isManual = currentNode.data.judgmentMode === 'manual'
+
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'judgmentMode',
+      label: '判断模式',
+      valueRender: (onChange) => (
         <Select
           style={{ width: '100%' }}
           value={currentNode.data.judgmentMode}
@@ -55,12 +59,16 @@ export const EditRetry = () => {
             patchCurrentNode((draft) => {
               d(draft).judgmentMode = v
             })
+            onChange(v)
           }}
         />
-      </div>
-
-      <div className="line">
-        <Text>重试间隔（秒）</Text>
+      ),
+      actionRender: null,
+    },
+    {
+      key: 'retryDelay',
+      label: '重试间隔（秒）',
+      valueRender: (onChange) => (
         <InputNumber
           style={{ width: '100%' }}
           min={0.1}
@@ -71,12 +79,16 @@ export const EditRetry = () => {
             patchCurrentNode((draft) => {
               d(draft).retryDelay = v ?? 1
             })
+            onChange(v)
           }}
         />
-      </div>
-
-      <div className="line">
-        <Text>最大重试次数</Text>
+      ),
+      actionRender: null,
+    },
+    {
+      key: 'maxRetryCount',
+      label: '最大重试次数',
+      valueRender: (onChange) => (
         <InputNumber
           style={{ width: '100%' }}
           min={0}
@@ -86,42 +98,61 @@ export const EditRetry = () => {
             patchCurrentNode((draft) => {
               d(draft).maxRetryCount = v ?? 5
             })
+            onChange(v)
           }}
         />
-      </div>
+      ),
+      actionRender: null,
+    },
+  ]
 
-      <Divider style={{ margin: '12px 0' }} />
+  // 仅 manual 模式显示错误关键词
+  if (isManual) {
+    rows.push({
+      key: 'errorKeywords',
+      label: '错误关键词',
+      value: currentNode.data.errorKeywords,
+      inputType: 'textArea',
+      rows: 2,
+      placeholder: '输入关键词，用逗号分隔。匹配则判定为错误',
+    })
+  }
 
-      {currentNode.data.judgmentMode === 'manual' ? (
-        <EditItem
-          label="错误关键词"
-          placeholder="输入关键词，用逗号分隔。匹配则判定为错误"
-          inputType="textArea"
-          rows={2}
-          value={currentNode.data.errorKeywords}
-          onChange={(v) => {
+  return (
+    <>
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
+          if (key === 'errorKeywords') {
             patchCurrentNode((draft) => {
-              d(draft).errorKeywords = (v || '') as string
+              d(draft).errorKeywords = (value || '') as string
             })
-          }}
-        />
-      ) : (
-        <div className="line">
-          <Text>AI 判断</Text>
-          {agentNode ? (
-            <div style={{ marginTop: 4 }}>
-              <Tag color="purple" style={{ fontSize: 10 }}>
-                {String(agentNode.data.title || '')}
-              </Tag>
-              <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 2 }}>
-                已连接 AgentNode，AI 将自动判断是否需要重试
+          }
+          // judgmentMode/retryDelay/maxRetryCount 的变更已在 valueRender 中处理
+        }}
+      />
+
+      {/* AI 判断信息展示 */}
+      {!isManual && (
+        <div style={{ marginTop: 8 }}>
+          <Divider style={{ margin: '12px 0' }} />
+          <div className="line">
+            <Text>AI 判断</Text>
+            {agentNode ? (
+              <div style={{ marginTop: 4 }}>
+                <Tag color="purple" style={{ fontSize: 10 }}>
+                  {String(agentNode.data.title || '')}
+                </Tag>
+                <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 2 }}>
+                  已连接 AgentNode，AI 将自动判断是否需要重试
+                </Text>
+              </div>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
+                将在确认后自动创建 AgentNode 连接
               </Text>
-            </div>
-          ) : (
-            <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
-              将在确认后自动创建 AgentNode 连接
-            </Text>
-          )}
+            )}
+          </div>
         </div>
       )}
     </>

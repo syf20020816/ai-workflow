@@ -1,7 +1,8 @@
 import { useNodeStore } from '#/store/node'
 import type { NCode, NCodeData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { Select, Typography, Button, InputNumber } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 
@@ -12,21 +13,27 @@ const d = (
 ) => draft.data as NCodeData
 
 export const EditCode = () => {
-  const currentNode = useNodeStore((state) => state.currentNode) as NodeProps<NCode>
+  const currentNode = useNodeStore(
+    (state) => state.currentNode,
+  ) as NodeProps<NCode>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
   const lines = currentNode.data.lines || []
 
   const addLineRange = () => {
-    const last = lines[lines.length - 1]
-    const start = last.end + 1 || 1
+    const last: { end?: number } | undefined = lines[lines.length - 1]
+    const start = (last.end || 0) + 1
     patchCurrentNode((draft) => {
       const data = d(draft)
       data.lines = [...(data.lines || []), { start, end: start + 10 }]
     })
   }
 
-  const updateLineRange = (idx: number, field: 'start' | 'end', value: number | null) => {
+  const updateLineRange = (
+    idx: number,
+    field: 'start' | 'end',
+    value: number | null,
+  ) => {
     patchCurrentNode((draft) => {
       const data = d(draft)
       const newLines = [...(data.lines || [])]
@@ -50,6 +57,21 @@ export const EditCode = () => {
     })
   }
 
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'repoUrl',
+      label: '文件路径',
+      value: currentNode.data.repoUrl,
+      placeholder: '如：/path/to/file.ts 或 ./src/main.ts',
+    },
+    {
+      key: 'branch',
+      label: '分支',
+      value: currentNode.data.branch,
+      placeholder: '默认: master',
+    },
+  ]
+
   return (
     <>
       <div className="line">
@@ -69,43 +91,55 @@ export const EditCode = () => {
         />
       </div>
 
-      <EditItem
-        label="文件路径"
-        placeholder="如：/path/to/file.ts 或 ./src/main.ts"
-        value={currentNode.data.repoUrl}
-        onChange={(v) => {
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
           patchCurrentNode((draft) => {
-            d(draft).repoUrl = (v || '') as string
-          })
-        }}
-      />
-
-      <EditItem
-        label="分支"
-        placeholder="默认: master"
-        value={currentNode.data.branch}
-        onChange={(v) => {
-          patchCurrentNode((draft) => {
-            d(draft).branch = (v || 'master') as string
+            const data = d(draft)
+            if (key === 'repoUrl') {
+              data.repoUrl = (value || '') as string
+            } else if (key === 'branch') {
+              data.branch = (value || 'master') as string
+            }
           })
         }}
       />
 
       {/* 行范围配置 */}
       <div style={{ marginTop: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <Text strong style={{ fontSize: 12 }}>读取行范围</Text>
-          <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addLineRange}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 4,
+          }}
+        >
+          <Text strong style={{ fontSize: 12 }}>
+            读取行范围
+          </Text>
+          <Button
+            type="dashed"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={addLineRange}
+          >
             添加
           </Button>
         </div>
-        <Text type="secondary" style={{ fontSize: 10, display: 'block', marginBottom: 4 }}>
+        <Text
+          type="secondary"
+          style={{ fontSize: 10, display: 'block', marginBottom: 4 }}
+        >
           不添加任何范围则读取整个文件
         </Text>
         {lines.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {lines.map((range, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div
+                key={idx}
+                style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+              >
                 <Text style={{ fontSize: 11, minWidth: 16 }}>{idx + 1}.</Text>
                 <InputNumber
                   size="small"
@@ -115,7 +149,9 @@ export const EditCode = () => {
                   value={range.start}
                   onChange={(v) => updateLineRange(idx, 'start', v)}
                 />
-                <Text type="secondary" style={{ fontSize: 11 }}>~</Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  ~
+                </Text>
                 <InputNumber
                   size="small"
                   min={1}
@@ -124,15 +160,13 @@ export const EditCode = () => {
                   value={range.end}
                   onChange={(v) => updateLineRange(idx, 'end', v)}
                 />
-                {lines.length > 1 && (
-                  <Button
+                <Button
                     type="text"
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
                     onClick={() => removeLineRange(idx)}
                   />
-                )}
               </div>
             ))}
           </div>

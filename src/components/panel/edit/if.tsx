@@ -2,7 +2,8 @@ import { useNodeStore } from '#/store/node'
 import { NodeTypes } from '#/types'
 import type { NIf, NIfData } from '#/types'
 import type { NodeProps, Node } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 import { Button, Divider, Typography, Tag } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { v4 as uuidv4 } from 'uuid'
@@ -55,17 +56,24 @@ export const EditIf = () => {
     setCurrentNode(conditionNode as any)
   }
 
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'expression',
+      label: '判断表达式',
+      value: currentNode.data.expression,
+      inputType: 'textArea',
+      rows: 2,
+      placeholder: '描述你的判断逻辑',
+    },
+  ]
+
   return (
     <>
-      <EditItem
-        label="判断表达式"
-        placeholder="描述你的判断逻辑"
-        inputType="textArea"
-        rows={2}
-        value={currentNode.data.expression}
-        onChange={(v) => {
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
           patchCurrentNode((draft) => {
-            d(draft).expression = (v || '') as string
+            d(draft).expression = (value || '') as string
           })
         }}
       />

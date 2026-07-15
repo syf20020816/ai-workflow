@@ -26,7 +26,7 @@ export const Route = createFileRoute('/api/execute/code')({
         logs.push(`代码节点: ${mode === 'local' ? '本地' : '云端'}模式`)
         logs.push(`文件: ${filePath} (分支: ${branch})`)
 
-        const upstreamResponse = (input as any).response || (input as any).analysis || ''
+        const upstreamResponse = input.response || input.analysis || ''
 
         if (mode === 'local') {
           try {
@@ -45,6 +45,47 @@ export const Route = createFileRoute('/api/execute/code')({
                   _codeError: '路径安全校验失败: 检测到路径穿越尝试',
                   _fromCodeNode: true,
                   _codeStatus: 'error',
+                },
+                logs,
+              })
+            }
+
+            const stat = await fs.stat(resolvedPath)
+            const isDir = stat.isDirectory()
+
+            if (isDir) {
+              logs.push(`正在遍历目录: ${normalizedPath}`)
+
+              const files: string[] = []
+              async function walkDir(dir: string) {
+                const entries = await fs.readdir(dir, { withFileTypes: true })
+                for (const entry of entries) {
+                  const fullPath = path.join(dir, entry.name)
+                  const relativePath = path.relative(path.dirname(resolvedPath), fullPath)
+                  if (entry.isDirectory()) {
+                    files.push(`${relativePath}/`)
+                    await walkDir(fullPath)
+                  } else {
+                    files.push(relativePath)
+                  }
+                }
+              }
+              await walkDir(resolvedPath)
+
+              logs.push(`目录遍历完成，共 ${files.length} 个文件/目录`)
+
+              return Response.json({
+                status: 'success',
+                output: {
+                  ...input,
+                  _codeMode: mode,
+                  _codeFile: normalizedPath,
+                  _codeBranch: branch,
+                  _codeIsDir: true,
+                  _codeFiles: files,
+                  _codeRequest: upstreamResponse,
+                  _fromCodeNode: true,
+                  _codeStatus: 'success',
                 },
                 logs,
               })

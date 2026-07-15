@@ -1,7 +1,8 @@
 import { useNodeStore } from '#/store/node'
 import type { NLoopCondition, NLoopConditionData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { EditItem } from './item'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 
 const d = (
   draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>,
@@ -13,17 +14,25 @@ export const EditLoopCondition = () => {
   ) as NodeProps<NLoopCondition>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'condition',
+      label: '循环退出条件',
+      value: currentNode.data.condition,
+      inputType: 'textArea',
+      rows: 2,
+      placeholder: '描述循环在什么时候退出',
+    },
+  ]
+
   return (
     <>
-      <EditItem
-        label="循环退出条件"
-        placeholder="描述循环在什么时候退出"
-        inputType="textArea"
-        rows={2}
-        value={currentNode.data.condition}
-        onChange={(v) => {
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
           patchCurrentNode((draft) => {
-            d(draft).condition = (v || '') as string
+            const data = d(draft)
+            if (key === 'condition') data.condition = (value || '') as string
           })
         }}
       />
