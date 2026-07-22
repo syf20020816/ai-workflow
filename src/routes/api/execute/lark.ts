@@ -20,13 +20,13 @@ export const Route = createFileRoute('/api/execute/lark')({
 
           switch (action) {
             case 'read':
-              cmd = `lark-cli docs +fetch --doc "${url}" --format json`
+              cmd = `lark-cli docs +fetch --doc "${url}" --doc-format markdown --format json`
               break
             case 'write':
-              cmd = `lark-cli docs +update --doc "${url}" --command append --content "${(content || '').replace(/"/g, '\\"')}" --format json`
+              cmd = `lark-cli docs +update --doc "${url}" --command append --doc-format markdown --content "${(content || '').replace(/"/g, '\\"')}" --format json`
               break
             case 'create':
-              cmd = `lark-cli docs +create --content "${(content || '新建文档').replace(/"/g, '\\"')}" --format json`
+              cmd = `lark-cli docs +create --doc-format markdown --content "${(content || '新建文档').replace(/"/g, '\\"')}" --format json`
               break
             default:
               return Response.json({

@@ -9,35 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ModelsRouteImport } from './routes/models'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
-import { Route as ApiSkillRouteImport } from './routes/api/skill'
+import { Route as ModelsRouteImport } from './routes/models'
+import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiModelRouteImport } from './routes/api/model'
-import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
-import { Route as ApiExecuteCodeRouteImport } from './routes/api/execute/code'
-import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
-import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
+import { Route as ApiPromptsRouteImport } from './routes/api/prompts'
+import { Route as ApiSkillRouteImport } from './routes/api/skill'
+import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
+import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
+import { Route as ApiEditorListRouteImport } from './routes/api/editor/list'
+import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
+import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
+import { Route as ApiExecuteCodeRouteImport } from './routes/api/execute/code'
+import { Route as ApiExecuteCodeAgentRouteImport } from './routes/api/execute/codeAgent'
+import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
+import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
+import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 
-const ModelsRoute = ModelsRouteImport.update({
-  id: '/models',
-  path: '/models',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWorkflowsRoute = ApiWorkflowsRouteImport.update({
-  id: '/api/workflows',
-  path: '/api/workflows',
+const ModelsRoute = ModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSkillRoute = ApiSkillRouteImport.update({
-  id: '/api/skill',
-  path: '/api/skill',
+const ApiMemoryRoute = ApiMemoryRouteImport.update({
+  id: '/api/memory',
+  path: '/api/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiModelRoute = ApiModelRouteImport.update({
@@ -45,24 +47,19 @@ const ApiModelRoute = ApiModelRouteImport.update({
   path: '/api/model',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
-  id: '/api/execute/lark',
-  path: '/api/execute/lark',
+const ApiPromptsRoute = ApiPromptsRouteImport.update({
+  id: '/api/prompts',
+  path: '/api/prompts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExecuteCodeRoute = ApiExecuteCodeRouteImport.update({
-  id: '/api/execute/code',
-  path: '/api/execute/code',
+const ApiSkillRoute = ApiSkillRouteImport.update({
+  id: '/api/skill',
+  path: '/api/skill',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExecuteBmadRoute = ApiExecuteBmadRouteImport.update({
-  id: '/api/execute/bmad',
-  path: '/api/execute/bmad',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiExecuteAgentRoute = ApiExecuteAgentRouteImport.update({
-  id: '/api/execute/agent',
-  path: '/api/execute/agent',
+const ApiWorkflowsRoute = ApiWorkflowsRouteImport.update({
+  id: '/api/workflows',
+  path: '/api/workflows',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
@@ -70,105 +67,190 @@ const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
   path: '/api/bmad/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEditorContentRoute = ApiEditorContentRouteImport.update({
+  id: '/api/editor/content',
+  path: '/api/editor/content',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEditorListRoute = ApiEditorListRouteImport.update({
+  id: '/api/editor/list',
+  path: '/api/editor/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteAgentRoute = ApiExecuteAgentRouteImport.update({
+  id: '/api/execute/agent',
+  path: '/api/execute/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteBmadRoute = ApiExecuteBmadRouteImport.update({
+  id: '/api/execute/bmad',
+  path: '/api/execute/bmad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteCodeRoute = ApiExecuteCodeRouteImport.update({
+  id: '/api/execute/code',
+  path: '/api/execute/code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteCodeAgentRoute = ApiExecuteCodeAgentRouteImport.update({
+  id: '/api/execute/codeAgent',
+  path: '/api/execute/codeAgent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
+  id: '/api/execute/lark',
+  path: '/api/execute/lark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSkillContentRoute = ApiSkillContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => ApiSkillRoute,
+} as any)
+const ApiSkillImportRoute = ApiSkillImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => ApiSkillRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/models': typeof ModelsRoute
+  '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
-  '/api/skill': typeof ApiSkillRoute
+  '/api/prompts': typeof ApiPromptsRoute
+  '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/code': typeof ApiExecuteCodeRoute
+  '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/skill/content': typeof ApiSkillContentRoute
+  '/api/skill/import': typeof ApiSkillImportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/models': typeof ModelsRoute
+  '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
-  '/api/skill': typeof ApiSkillRoute
+  '/api/prompts': typeof ApiPromptsRoute
+  '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/code': typeof ApiExecuteCodeRoute
+  '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/skill/content': typeof ApiSkillContentRoute
+  '/api/skill/import': typeof ApiSkillImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/models': typeof ModelsRoute
+  '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
-  '/api/skill': typeof ApiSkillRoute
+  '/api/prompts': typeof ApiPromptsRoute
+  '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/code': typeof ApiExecuteCodeRoute
+  '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/skill/content': typeof ApiSkillContentRoute
+  '/api/skill/import': typeof ApiSkillImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/models'
+    | '/api/memory'
     | '/api/model'
+    | '/api/prompts'
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/editor/content'
+    | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/code'
+    | '/api/execute/codeAgent'
     | '/api/execute/lark'
+    | '/api/skill/content'
+    | '/api/skill/import'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/models'
+    | '/api/memory'
     | '/api/model'
+    | '/api/prompts'
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/editor/content'
+    | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/code'
+    | '/api/execute/codeAgent'
     | '/api/execute/lark'
+    | '/api/skill/content'
+    | '/api/skill/import'
   id:
     | '__root__'
     | '/'
     | '/models'
+    | '/api/memory'
     | '/api/model'
+    | '/api/prompts'
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/editor/content'
+    | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/code'
+    | '/api/execute/codeAgent'
     | '/api/execute/lark'
+    | '/api/skill/content'
+    | '/api/skill/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModelsRoute: typeof ModelsRoute
+  ApiMemoryRoute: typeof ApiMemoryRoute
   ApiModelRoute: typeof ApiModelRoute
-  ApiSkillRoute: typeof ApiSkillRoute
+  ApiPromptsRoute: typeof ApiPromptsRoute
+  ApiSkillRoute: typeof ApiSkillRouteWithChildren
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
+  ApiEditorContentRoute: typeof ApiEditorContentRoute
+  ApiEditorListRoute: typeof ApiEditorListRoute
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
   ApiExecuteBmadRoute: typeof ApiExecuteBmadRoute
   ApiExecuteCodeRoute: typeof ApiExecuteCodeRoute
+  ApiExecuteCodeAgentRoute: typeof ApiExecuteCodeAgentRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/models': {
-      id: '/models'
-      path: '/models'
-      fullPath: '/models'
-      preLoaderRoute: typeof ModelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -176,18 +258,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/workflows': {
-      id: '/api/workflows'
-      path: '/api/workflows'
-      fullPath: '/api/workflows'
-      preLoaderRoute: typeof ApiWorkflowsRouteImport
+    '/models': {
+      id: '/models'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/skill': {
-      id: '/api/skill'
-      path: '/api/skill'
-      fullPath: '/api/skill'
-      preLoaderRoute: typeof ApiSkillRouteImport
+    '/api/memory': {
+      id: '/api/memory'
+      path: '/api/memory'
+      fullPath: '/api/memory'
+      preLoaderRoute: typeof ApiMemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/model': {
@@ -197,32 +279,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiModelRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/execute/lark': {
-      id: '/api/execute/lark'
-      path: '/api/execute/lark'
-      fullPath: '/api/execute/lark'
-      preLoaderRoute: typeof ApiExecuteLarkRouteImport
+    '/api/prompts': {
+      id: '/api/prompts'
+      path: '/api/prompts'
+      fullPath: '/api/prompts'
+      preLoaderRoute: typeof ApiPromptsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/execute/code': {
-      id: '/api/execute/code'
-      path: '/api/execute/code'
-      fullPath: '/api/execute/code'
-      preLoaderRoute: typeof ApiExecuteCodeRouteImport
+    '/api/skill': {
+      id: '/api/skill'
+      path: '/api/skill'
+      fullPath: '/api/skill'
+      preLoaderRoute: typeof ApiSkillRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/execute/bmad': {
-      id: '/api/execute/bmad'
-      path: '/api/execute/bmad'
-      fullPath: '/api/execute/bmad'
-      preLoaderRoute: typeof ApiExecuteBmadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/execute/agent': {
-      id: '/api/execute/agent'
-      path: '/api/execute/agent'
-      fullPath: '/api/execute/agent'
-      preLoaderRoute: typeof ApiExecuteAgentRouteImport
+    '/api/workflows': {
+      id: '/api/workflows'
+      path: '/api/workflows'
+      fullPath: '/api/workflows'
+      preLoaderRoute: typeof ApiWorkflowsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bmad/agents': {
@@ -232,19 +307,101 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBmadAgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/editor/content': {
+      id: '/api/editor/content'
+      path: '/api/editor/content'
+      fullPath: '/api/editor/content'
+      preLoaderRoute: typeof ApiEditorContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/editor/list': {
+      id: '/api/editor/list'
+      path: '/api/editor/list'
+      fullPath: '/api/editor/list'
+      preLoaderRoute: typeof ApiEditorListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/agent': {
+      id: '/api/execute/agent'
+      path: '/api/execute/agent'
+      fullPath: '/api/execute/agent'
+      preLoaderRoute: typeof ApiExecuteAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/bmad': {
+      id: '/api/execute/bmad'
+      path: '/api/execute/bmad'
+      fullPath: '/api/execute/bmad'
+      preLoaderRoute: typeof ApiExecuteBmadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/code': {
+      id: '/api/execute/code'
+      path: '/api/execute/code'
+      fullPath: '/api/execute/code'
+      preLoaderRoute: typeof ApiExecuteCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/codeAgent': {
+      id: '/api/execute/codeAgent'
+      path: '/api/execute/codeAgent'
+      fullPath: '/api/execute/codeAgent'
+      preLoaderRoute: typeof ApiExecuteCodeAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/lark': {
+      id: '/api/execute/lark'
+      path: '/api/execute/lark'
+      fullPath: '/api/execute/lark'
+      preLoaderRoute: typeof ApiExecuteLarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/skill/content': {
+      id: '/api/skill/content'
+      path: '/content'
+      fullPath: '/api/skill/content'
+      preLoaderRoute: typeof ApiSkillContentRouteImport
+      parentRoute: typeof ApiSkillRoute
+    }
+    '/api/skill/import': {
+      id: '/api/skill/import'
+      path: '/import'
+      fullPath: '/api/skill/import'
+      preLoaderRoute: typeof ApiSkillImportRouteImport
+      parentRoute: typeof ApiSkillRoute
+    }
   }
 }
+
+interface ApiSkillRouteChildren {
+  ApiSkillContentRoute: typeof ApiSkillContentRoute
+  ApiSkillImportRoute: typeof ApiSkillImportRoute
+}
+
+const ApiSkillRouteChildren: ApiSkillRouteChildren = {
+  ApiSkillContentRoute: ApiSkillContentRoute,
+  ApiSkillImportRoute: ApiSkillImportRoute,
+}
+
+const ApiSkillRouteWithChildren = ApiSkillRoute._addFileChildren(
+  ApiSkillRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModelsRoute: ModelsRoute,
+  ApiMemoryRoute: ApiMemoryRoute,
   ApiModelRoute: ApiModelRoute,
-  ApiSkillRoute: ApiSkillRoute,
+  ApiPromptsRoute: ApiPromptsRoute,
+  ApiSkillRoute: ApiSkillRouteWithChildren,
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
+  ApiEditorContentRoute: ApiEditorContentRoute,
+  ApiEditorListRoute: ApiEditorListRoute,
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
   ApiExecuteBmadRoute: ApiExecuteBmadRoute,
   ApiExecuteCodeRoute: ApiExecuteCodeRoute,
+  ApiExecuteCodeAgentRoute: ApiExecuteCodeAgentRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
 }
 export const routeTree = rootRouteImport

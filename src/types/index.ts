@@ -13,6 +13,10 @@ export const NodeTypes = {
   LOOP_CONDITION: 'loopCondition',
   RETRY: 'retry',
   CODE: 'code',
+  CODE_AGENT: 'codeAgent',
+  SKILL: 'skill',
+  LARK_TEMPLATE: 'larkTemplate',
+  MEMORY: 'memory',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -203,7 +207,57 @@ export type NCodeData = NNode & {
 
 export type NCode = Node<NCodeData, typeof NodeTypes.CODE>
 
+/** codeAgentNode：代码自主探索节点 — AI 通过 Tool Calling 自主分析项目 */
+export type NCodeAgentData = NNode & {
+  /** 项目路径（本地目录或 Git 仓库 URL） */
+  projectPath?: string
+  /** AI 分析目标/指令 */
+  instruction?: string
+  /** 最大迭代次数（防止死循环） */
+  maxIterations?: number
+  /** 模型配置 */
+  modal?: {
+    name?: string
+    key?: string
+    url?: string
+    token?: { min: number; max: number }
+  }
+}
+
+export type NCodeAgent = Node<NCodeAgentData, typeof NodeTypes.CODE_AGENT>
+
+/** Skill节点：加载技能指令并传递到下游 */
+export type NSkillData = NNode & {
+  /** 关联的技能ID */
+  skillId?: string
+  /** 技能名称（展示用） */
+  skillName?: string
+  /** 技能指令内容（执行时加载） */
+  instructions?: string
+}
+
+export type NSkill = Node<NSkillData, typeof NodeTypes.SKILL>
+
+/** Memory节点：读取记忆文件并传递到下游工作流 */
+export type NMemoryData = NNode & {
+  /** 记忆文件路径（相对于项目根目录） */
+  memoryPath?: string
+}
+
+export type NMemory = Node<NMemoryData, typeof NodeTypes.MEMORY>
+
+/** LarkTemplate节点：获取 Lark 文档作为输出模板 */
+export type NLarkTemplateData = NNode & {
+  /** Lark 文档 URL */
+  templateUrl?: string
+  /** 模板内容（执行时获取） */
+  templateContent?: string
+}
+
+export type NLarkTemplate = Node<NLarkTemplateData, typeof NodeTypes.LARK_TEMPLATE>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
-  | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCode
+  | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCode | NCodeAgent
+  | NSkill | NLarkTemplate | NMemory
 > | null

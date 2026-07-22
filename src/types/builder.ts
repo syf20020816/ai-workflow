@@ -83,6 +83,17 @@ export class NodeBuilder {
     }
   }
 
+  static larkTemplate(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.LARK_TEMPLATE,
+      data: {
+        title: 'Lark模板节点',
+        templateUrl: '',
+      },
+    }
+  }
+
   // ======== 控制节点 ========
 
   static ifNode(pos: Position): AppNode {
@@ -155,6 +166,42 @@ export class NodeBuilder {
         repoUrl: '',
         branch: 'master',
         lines: [],
+      },
+    }
+  }
+
+  static skill(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.SKILL,
+      data: {
+        title: 'Skill节点',
+        skillId: '',
+        skillName: '',
+      },
+    }
+  }
+
+  static memory(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.MEMORY,
+      data: {
+        title: '记忆节点',
+        memoryPath: 'memory/memory.md',
+      },
+    }
+  }
+
+  static codeAgent(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.CODE_AGENT,
+      data: {
+        title: '代码分析节点',
+        projectPath: '',
+        instruction: '请分析这个项目的结构和功能',
+        maxIterations: 20,
       },
     }
   }

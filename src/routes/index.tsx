@@ -6,9 +6,8 @@ import { EditPanel } from '#/components/panel/edit'
 import 'antd/dist/antd.css'
 import { ConfigProvider, Tabs, theme } from 'antd'
 import type { ThemeConfig } from 'antd'
-import { ModelManager } from '#/components/model'
-import { SkillManager } from '#/components/skill'
-import { WorkflowManager } from '#/components/workflow-manager'
+import { PromptManager } from '#/components/prompt-manager'
+import { FileEditor } from '#/components/file-editor'
 import { useRouteStore } from '#/store/route'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -35,14 +34,11 @@ function App() {
             <EditPanel />
           </div>
         </Tabs.TabPane>
-        <Tabs.TabPane tab="工作流管理" key="manage">
-          <WorkflowManager />
+        <Tabs.TabPane tab="管理" key="prompts">
+          <PromptManager />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="模型管理" key="model">
-          <ModelManager />
-        </Tabs.TabPane>
-        <Tabs.TabPane tab="技能管理" key="skill">
-          <SkillManager />
+        <Tabs.TabPane tab="编辑器" key="editor">
+          <FileEditor />
         </Tabs.TabPane>
       </Tabs>
     </ConfigProvider>

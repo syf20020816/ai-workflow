@@ -351,6 +351,53 @@ Icon.Code = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     ),
   })
 
+Icon.LarkTemplate = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: (
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width={24} height={24} {...rest}>
+        <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z" fill="#1677ff"/>
+        <path d="M320 320h384v64H320zM320 480h384v64H320zM320 640h256v64H320z" fill="#fff"/>
+        <path d="M704 640l64 64-64 64V640z" fill="#fff" opacity="0.8"/>
+      </svg>
+    ),
+  })
+
+Icon.Skill = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: (
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width={24} height={24} {...rest}>
+        <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z" fill="#722ed1"/>
+        <path d="M512 832c-176 0-320-144-320-320s144-320 320-320 320 144 320 320-144 320-320 320z" fill="#fff" opacity="0.3"/>
+        <path d="M640 384H384v64h256v-64zM640 512H384v64h256v-64zM384 640h160v64H384z" fill="#722ed1"/>
+      </svg>
+    ),
+  })
+
+Icon.CodeAgent = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: (
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width={24} height={24} {...rest}>
+        <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z" fill="#13c2c2"/>
+        <path d="M640 320H384v64h256v-64zM640 480H384v64h256v-64zM384 640h160v64H384z" fill="#fff"/>
+        <path d="M704 576l128-128-128-128v256z" fill="#fff" opacity="0.7"/>
+        <circle cx="352" cy="352" r="48" fill="none" stroke="#fff" strokeWidth="6" opacity="0.5"/>
+        <path d="M384 320l-48-48-48 48" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+      </svg>
+    ),
+  })
+
+Icon.Memory = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: (
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width={24} height={24} {...rest}>
+        <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z" fill="#eb2f96"/>
+        <path d="M320 480h64v64h-64zM480 480h64v64h-64zM640 480h64v64h-64z" fill="#fff"/>
+        <path d="M512 320c-88 0-160 72-160 160s72 160 160 160 160-72 160-160-72-160-160-160z m0 256c-53 0-96-43-96-96s43-96 96-96 96 43 96 96-43 96-96 96z" fill="#fff" opacity="0.5"/>
+        <path d="M512 704c-35 0-64-29-64-64s29-64 64-64 64 29 64 64-29 64-64 64z" fill="#fff" opacity="0.3"/>
+      </svg>
+    ),
+  })
+
 export const NodeIcons = new Map<NodeType, ReactNode>([
   [NodeTypes.USER_INPUT, <Icon.UserInput />],
   [NodeTypes.AGENT, <Icon.Agent />],
@@ -364,4 +411,8 @@ export const NodeIcons = new Map<NodeType, ReactNode>([
   [NodeTypes.LOOP_CONDITION, <Icon.LoopCondition />],
   [NodeTypes.RETRY, <Icon.Retry />],
   [NodeTypes.CODE, <Icon.Code />],
+  [NodeTypes.SKILL, <Icon.Skill />],
+  [NodeTypes.LARK_TEMPLATE, <Icon.LarkTemplate />],
+  [NodeTypes.CODE_AGENT, <Icon.CodeAgent />],
+  [NodeTypes.MEMORY, <Icon.Memory />],
 ])

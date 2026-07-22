@@ -17,6 +17,10 @@ import { EditLoop } from './edit/loop'
 import { EditLoopCondition } from './edit/loopCondition'
 import { EditRetry } from './edit/retry'
 import { EditCode } from './edit/code'
+import { EditMemory } from './edit/memory'
+import { EditSkill } from './edit/skill'
+import { EditCodeAgent } from './edit/codeAgent'
+import { EditLarkTemplate } from './edit/larkTemplate'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
@@ -54,6 +58,10 @@ export const EditPanel = () => {
                 {currentNode.type === NodeTypes.LOOP_CONDITION && <EditLoopCondition />}
                 {currentNode.type === NodeTypes.RETRY && <EditRetry />}
                 {currentNode.type === NodeTypes.CODE && <EditCode />}
+                {currentNode.type === NodeTypes.CODE_AGENT && <EditCodeAgent />}
+                {currentNode.type === NodeTypes.MEMORY && <EditMemory />}
+                {currentNode.type === NodeTypes.SKILL && <EditSkill />}
+                {currentNode.type === NodeTypes.LARK_TEMPLATE && <EditLarkTemplate />}
               </main>
               <footer className={styles.footer}>
                 <Button

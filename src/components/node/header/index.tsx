@@ -21,6 +21,10 @@ const IconMap: Partial<Record<NodeType, typeof Icon.UserInput>> = {
   [NodeTypes.LOOP_CONDITION]: Icon.LoopCondition,
   [NodeTypes.RETRY]: Icon.Retry,
   [NodeTypes.CODE]: Icon.Code,
+  [NodeTypes.SKILL]: Icon.Skill,
+  [NodeTypes.LARK_TEMPLATE]: Icon.LarkTemplate,
+  [NodeTypes.CODE_AGENT]: Icon.CodeAgent,
+  [NodeTypes.MEMORY]: Icon.Memory,
 }
 
 export const NodeHeader = ({ kind, title }: NodeHeaderProps) => {

@@ -7,7 +7,10 @@ import { AIOutputNode } from './node/ai/output'
 import { AnswerNode } from './node/ai/answer'
 import { BmadAgentNode } from './node/ai/bmad'
 import { LarkNode } from './node/ai/lark'
+import { LarkTemplateNode } from './node/ai/larkTemplate'
 import { CodeNode } from './node/ai/code'
+import { CodeAgentNode } from './node/ai/codeAgent'
+import { SkillNode } from './node/ai/skill'
 import { IfNode } from './node/control/if'
 import { IfConditionNode } from './node/control/ifCondition'
 import { LoopNode } from './node/control/loop'
@@ -19,6 +22,8 @@ import { NodeEdge } from './edge'
 import { AddNodeBtn } from './node/edge/add'
 import { ToolsPanel } from './panel/tools'
 
+import { MemoryNode } from './node/ai/memory'
+
 export const NODE_TYPES = {
   userInput: UserInputNode,
   agent: AgentNode,
@@ -26,12 +31,16 @@ export const NODE_TYPES = {
   answer: AnswerNode,
   bmadAgent: BmadAgentNode,
   lark: LarkNode,
+  larkTemplate: LarkTemplateNode,
   code: CodeNode,
+  codeAgent: CodeAgentNode,
+  skill: SkillNode,
   if: IfNode,
   ifCondition: IfConditionNode,
   loop: LoopNode,
   loopCondition: LoopConditionNode,
   retry: RetryNode,
+  memory: MemoryNode,
 }
 
 const EDGE_TYPES = {

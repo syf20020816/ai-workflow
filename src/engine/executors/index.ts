@@ -9,6 +9,10 @@ import { ifExecutor, ifConditionExecutor } from './if'
 import { loopExecutor, loopConditionExecutor } from './loop'
 import { retryExecutor } from './retry'
 import { codeExecutor } from './code'
+import { codeAgentExecutor } from './codeAgent'
+import { memoryExecutor } from './memory'
+import { skillExecutor } from './skill'
+import { larkTemplateExecutor } from './larkTemplate'
 import { NodeTypes } from '#/types'
 
 /** 节点类型 → 执行器映射 */
@@ -25,6 +29,10 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.LOOP_CONDITION]: loopConditionExecutor,
   [NodeTypes.RETRY]: retryExecutor,
   [NodeTypes.CODE]: codeExecutor,
+  [NodeTypes.CODE_AGENT]: codeAgentExecutor,
+  [NodeTypes.MEMORY]: memoryExecutor,
+  [NodeTypes.SKILL]: skillExecutor,
+  [NodeTypes.LARK_TEMPLATE]: larkTemplateExecutor,
 }
 
 /** 根据节点类型获取执行器 */
@@ -40,6 +48,7 @@ export function registerExecutor(nodeType: string, executor: NodeExecutor): void
 export {
   userInputExecutor,
   agentExecutor,
+  larkTemplateExecutor,
   bmadExecutor,
   larkExecutor,
   answerExecutor,
@@ -50,4 +59,7 @@ export {
   loopConditionExecutor,
   retryExecutor,
   codeExecutor,
+  codeAgentExecutor,
+  memoryExecutor,
+  skillExecutor,
 }

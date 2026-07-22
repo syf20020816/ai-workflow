@@ -123,7 +123,31 @@ export const AddNodeBtn = ({
       onClick: () => addNode(NodeBuilder.code),
     },
     {
+      label: <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码分析节点" />,
+      key: NodeTypes.CODE_AGENT,
+      disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),
+      onClick: () => addNode(NodeBuilder.codeAgent),
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.MEMORY} title="记忆节点" />,
+      key: NodeTypes.MEMORY,
+      disabled: isDisabledNode(kind, NodeTypes.MEMORY),
+      onClick: () => addNode(NodeBuilder.memory),
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.SKILL} title="Skill节点" />,
+      key: NodeTypes.SKILL,
+      disabled: isDisabledNode(kind, NodeTypes.SKILL),
+      onClick: () => addNode(NodeBuilder.skill),
+    },
+    {
       type: 'divider',
+    },
+    {
+      label: <NodeHeader kind={NodeTypes.LARK_TEMPLATE} title="Lark模板节点" />,
+      key: NodeTypes.LARK_TEMPLATE,
+      disabled: isDisabledNode(kind, NodeTypes.LARK_TEMPLATE),
+      onClick: () => addNode(NodeBuilder.larkTemplate),
     },
     {
       label: <NodeHeader kind={NodeTypes.IF} title="判断节点" />,
