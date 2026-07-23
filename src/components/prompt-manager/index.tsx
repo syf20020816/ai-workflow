@@ -17,6 +17,7 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const switchTo = useRouteStore((s) => s.switchTo)
   const setNodes = useNodeStore((s) => s.setNodes)
   const setEdges = useNodeStore((s) => s.setEdges)
+  const setWorkflowId = useNodeStore((s) => s.setWorkflowId)
   const [list, setList] = useState<any[]>([])
   const [l, setL] = useState(false)
 
@@ -38,6 +39,7 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       const data = await res.json()
       setNodes(data.nodes || [])
       setEdges(data.edges || [])
+      setWorkflowId(data.id || id)
       switchTo('workflow')
       message.success(`已加载工作流: ${name}`)
     } catch (err: any) {

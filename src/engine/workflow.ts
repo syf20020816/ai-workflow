@@ -50,6 +50,8 @@ export async function executeWorkflow(
   options?: {
     startNodeId?: string
     userInputs?: Record<string, any>
+    /** 固定节点输出：{ [nodeId]: output }，注入后下游可直接拿到该输出 */
+    nodeOutputOverrides?: Record<string, Record<string, any>>
   },
 ): Promise<PipelineContext> {
   const ctx = createPipelineContext()
@@ -104,10 +106,24 @@ export async function executeWorkflow(
 
   const nodeMap = new Map(dagNodes.map((n) => [n.id, n]))
 
+  // 注入固定节点输出（PIN 节点），使下游可以直接获取
+  if (options?.nodeOutputOverrides) {
+    for (const [nodeId, output] of Object.entries(options.nodeOutputOverrides)) {
+      ctx.nodeOutputs[nodeId] = output
+      ctx.nodeStatuses[nodeId] = 'success'
+      addLog(ctx, nodeId, nodeMap.get(nodeId) ? getNodeTitle(nodeMap.get(nodeId)!) : '', 'info', '使用固定节点输出（PIN）')
+    }
+  }
+
   // 逐节点执行
   for (const nodeId of executionOrder) {
     const node = nodeMap.get(nodeId)
     if (!node) continue
+
+    // 如果该节点已通过 PIN 注入输出，跳过实际执行
+    if (options?.nodeOutputOverrides && nodeId in options.nodeOutputOverrides) {
+      continue
+    }
 
     const nodeTitle = getNodeTitle(node)
 

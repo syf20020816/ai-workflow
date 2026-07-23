@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal, Button, Input, Upload, message, Space, Typography } from 'antd'
-import { UploadOutlined, DownloadOutlined, CopyOutlined, SaveOutlined } from '@ant-design/icons'
+import { UploadOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons'
 import { useNodeStore } from '#/store/node'
 import type { RcFile } from 'antd/es/upload'
 import type { Node, Edge } from '@xyflow/react'
@@ -16,6 +16,7 @@ interface WorkflowData {
 export const WorkflowImportExport = () => {
   const setNodes = useNodeStore((state) => state.setNodes)
   const setEdges = useNodeStore((state) => state.setEdges)
+  const setWorkflowId = useNodeStore((state) => state.setWorkflowId)
   const nodes = useNodeStore((state) => state.nodes)
   const edges = useNodeStore((state) => state.edges)
 
@@ -52,6 +53,7 @@ export const WorkflowImportExport = () => {
       setImportError('')
       setNodes(data.nodes)
       setEdges(data.edges)
+      setWorkflowId(data.id || data.name || `imported_${Date.now()}`)
       message.success(`已导入 ${data.nodes.length} 个节点, ${data.edges.length} 条连线`)
       setImportOpen(false)
       setImportJson('')

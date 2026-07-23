@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { AddNodeBtn } from './edge/add'
 import { NodeHeader } from './header'
 import { RunNode } from './edge/run'
+import { PinNode } from './edge/pin-node'
 import type { NodeStatus } from '#/types/engine'
 import { Badge } from 'antd'
 
@@ -48,6 +49,7 @@ export const UNode = ({ node, children }: UNodeProps) => {
       {children}
       <>
         <RunNode nodeId={node.id} />
+        <PinNode nodeId={node.id} title={node.data.title || ''} />
         <AddNodeBtn kind={kind} />
       </>
       <Handle type="source" position={Position.Right} />

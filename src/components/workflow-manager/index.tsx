@@ -17,6 +17,7 @@ interface WorkflowMeta {
 export const WorkflowManager = () => {
   const setNodes = useNodeStore((state) => state.setNodes)
   const setEdges = useNodeStore((state) => state.setEdges)
+  const setWorkflowId = useNodeStore((state) => state.setWorkflowId)
   const [workflows, setWorkflows] = useState<WorkflowMeta[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -47,6 +48,7 @@ export const WorkflowManager = () => {
       const data = await res.json()
       setNodes(data.nodes || [])
       setEdges(data.edges || [])
+      setWorkflowId(data.id || id)
       message.success(`已加载工作流: ${data.name}`)
     } catch (err: any) {
       message.error('加载失败: ' + err.message)

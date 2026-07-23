@@ -2,6 +2,18 @@ import { createFileRoute } from '@tanstack/react-router'
 import { execSync } from 'node:child_process'
 
 /**
+ * 对 shell 双引号内的内容进行转义
+ * 反引号、$、\、" 在 bash 双引号内都有特殊含义
+ */
+function escapeShellArg(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')  // 反斜杠优先
+    .replace(/"/g, '\\"')    // 双引号
+    .replace(/\$/g, '\\$')   // 变量展开
+    .replace(/`/g, '\\`')    // 命令替换
+}
+
+/**
  * Lark 文档执行 API
  * 调用 lark-cli 执行读/写/创建操作
  */
@@ -23,10 +35,10 @@ export const Route = createFileRoute('/api/execute/lark')({
               cmd = `lark-cli docs +fetch --doc "${url}" --doc-format markdown --format json`
               break
             case 'write':
-              cmd = `lark-cli docs +update --doc "${url}" --command append --doc-format markdown --content "${(content || '').replace(/"/g, '\\"')}" --format json`
+              cmd = `lark-cli docs +update --doc "${escapeShellArg(url)}" --command append --doc-format markdown --content "${escapeShellArg(content || '')}" --format json`
               break
             case 'create':
-              cmd = `lark-cli docs +create --doc-format markdown --content "${(content || '新建文档').replace(/"/g, '\\"')}" --format json`
+              cmd = `lark-cli docs +create --doc-format markdown --content "${escapeShellArg(content || '新建文档')}" --format json`
               break
             default:
               return Response.json({

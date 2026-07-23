@@ -26,6 +26,7 @@ import { Route as ApiExecuteCodeAgentRouteImport } from './routes/api/execute/co
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
+import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -112,6 +113,11 @@ const ApiSkillImportRoute = ApiSkillImportRouteImport.update({
   path: '/import',
   getParentRoute: () => ApiSkillRoute,
 } as any)
+const ApiWorkflowPinRoute = ApiWorkflowPinRouteImport.update({
+  id: '/api/workflow/pin',
+  path: '/api/workflow/pin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
+  '/api/workflow/pin': typeof ApiWorkflowPinRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
+  '/api/workflow/pin': typeof ApiWorkflowPinRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
+  '/api/workflow/pin': typeof ApiWorkflowPinRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
+    | '/api/workflow/pin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
+    | '/api/workflow/pin'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
+    | '/api/workflow/pin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   ApiExecuteCodeRoute: typeof ApiExecuteCodeRoute
   ApiExecuteCodeAgentRoute: typeof ApiExecuteCodeAgentRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
+  ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -370,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSkillImportRouteImport
       parentRoute: typeof ApiSkillRoute
     }
+    '/api/workflow/pin': {
+      id: '/api/workflow/pin'
+      path: '/api/workflow/pin'
+      fullPath: '/api/workflow/pin'
+      preLoaderRoute: typeof ApiWorkflowPinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -403,6 +423,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteCodeRoute: ApiExecuteCodeRoute,
   ApiExecuteCodeAgentRoute: ApiExecuteCodeAgentRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
+  ApiWorkflowPinRoute: ApiWorkflowPinRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

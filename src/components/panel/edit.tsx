@@ -25,6 +25,8 @@ import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
 import { ExecutionResult } from '../execution/result'
+import { Pin } from 'lucide-react'
+import { Modal, Select, message } from 'antd'
 
 const { Text } = Typography
 
@@ -33,7 +35,12 @@ type ActiveKey = 'editor' | 'execution'
 export const EditPanel = () => {
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const deleteCurrentNode = useNodeStore((state) => state.deleteCurrentNode)
+  const loadPinnedNode = useNodeStore((state) => state.loadPinnedNode)
+  const workflowId = useNodeStore((state) => state.workflowId)
   const [activeKey, setActiveKey] = useState<ActiveKey>('editor')
+  const [loadOpen, setLoadOpen] = useState(false)
+  const [pinnedList, setPinnedList] = useState<{ nodeId: string; title: string; savedAt: string }[]>([])
+  const [selectedPin, setSelectedPin] = useState<string | null>(null)
 
   const items: TabsProps['items'] = [
     {
@@ -64,16 +71,66 @@ export const EditPanel = () => {
                 {currentNode.type === NodeTypes.LARK_TEMPLATE && <EditLarkTemplate />}
               </main>
               <footer className={styles.footer}>
-                <Button
-                  color="danger"
-                  variant="outlined"
-                  block
-                  onClick={() => {
-                    deleteCurrentNode()
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button
+                    icon={<Pin size={14} />}
+                    block
+                    onClick={async () => {
+                      const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}`)
+                      const json = await res.json()
+                      if (json.status === 'success' && json.data.length > 0) {
+                        setPinnedList(json.data)
+                        setSelectedPin(null)
+                        setLoadOpen(true)
+                      } else {
+                        message.info('没有已固定的节点数据，请先执行节点并点击 PIN 按钮')
+                      }
+                    }}
+                  >
+                    加载固定
+                  </Button>
+                  <Button
+                    color="danger"
+                    variant="outlined"
+                    block
+                    onClick={() => {
+                      deleteCurrentNode()
+                    }}
+                  >
+                    删除
+                  </Button>
+                </div>
+                <Modal
+                  title="加载固定节点"
+                  open={loadOpen}
+                  onCancel={() => setLoadOpen(false)}
+                  onOk={async () => {
+                    if (!selectedPin) {
+                      message.warning('请选择一个固定节点')
+                      return
+                    }
+                    const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`)
+                    const json = await res.json()
+                    if (json.status === 'success') {
+                      loadPinnedNode(selectedPin, json.data.output)
+                      message.success(`已加载固定节点: ${json.data.title || selectedPin}`)
+                      setLoadOpen(false)
+                    } else {
+                      message.error('加载失败')
+                    }
                   }}
                 >
-                  删除
-                </Button>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="选择要加载的固定节点"
+                    value={selectedPin}
+                    onChange={setSelectedPin}
+                    options={pinnedList.map((p) => ({
+                      value: p.nodeId,
+                      label: `${p.title} (${p.nodeId})`,
+                    }))}
+                  />
+                </Modal>
               </footer>
             </>
           )}

@@ -1,6 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import styles from './index.module.scss'
-import { Button, Typography, Tag, Input, Space } from 'antd'
+import { Button, Typography, Tag, Input, Space, Select, message } from 'antd'
 import { PlayIcon, ResetIcon } from '@radix-ui/react-icons'
 import type { LogEntry } from '#/types/engine'
 import { useState } from 'react'
@@ -21,8 +21,18 @@ export const ExecutionPanel = () => {
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const resumeFrom = useNodeStore((state) => state.resumeFrom)
+  const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
+  const workflowId = useNodeStore((state) => state.workflowId)
+  const pinnedNodes = useNodeStore((state) => state.pinnedNodes)
 
   const [replyText, setReplyText] = useState('')
+  const [pinnedItems, setPinnedItems] = useState<
+    { nodeId: string; title: string }[]
+  >([])
+  const [selectedPinnedNode, setSelectedPinnedNode] = useState<string | null>(
+    null,
+  )
+  const [pinnedLoading, setPinnedLoading] = useState(false)
 
   // 找到处于 waiting 状态的节点
   const waitingNodeEntry = Object.entries(pipelineContext.nodeStatuses).find(
@@ -40,13 +50,70 @@ export const ExecutionPanel = () => {
     }
   }
 
+  const handleRun = () => {
+    if (selectedPinnedNode && selectedPinnedNode in pinnedNodes) {
+      // 从 PIN 节点开始执行
+      const overrides: Record<string, Record<string, any>> = {}
+      for (const [nid, output] of Object.entries(pinnedNodes)) {
+        if (output) overrides[nid] = output
+      }
+      runFromWithPinned(selectedPinnedNode, overrides)
+    } else {
+      // 从头执行
+      runAll()
+    }
+  }
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
         <WorkflowImportExport />
+
+        <Select
+          style={{ width: '100%' }}
+          placeholder="选择固定节点（可选）"
+          value={selectedPinnedNode}
+          onChange={setSelectedPinnedNode}
+          allowClear
+          loading={pinnedLoading}
+          onDropdownVisibleChange={async (open) => {
+            if (open) {
+              setPinnedLoading(true)
+              try {
+                const res = await fetch(
+                  `/api/workflow/pin?workflowId=${workflowId}`,
+                )
+                const json = await res.json()
+                if (json.status === 'success') {
+                  setPinnedItems(json.data)
+                  for (const item of json.data) {
+                    if (!(item.nodeId in pinnedNodes)) {
+                      const r = await fetch(
+                        `/api/workflow/pin?workflowId=${workflowId}&nodeId=${item.nodeId}`,
+                      )
+                      const j = await r.json()
+                      if (j.status === 'success') {
+                        useNodeStore
+                          .getState()
+                          .loadPinnedNode(item.nodeId, j.data.output)
+                      }
+                    }
+                  }
+                }
+              } catch {
+                // ignore
+              }
+              setPinnedLoading(false)
+            }
+          }}
+          options={pinnedItems.map((p) => ({
+            value: p.nodeId,
+            label: `${p.title} (${p.nodeId.slice(0, 8)})`,
+          }))}
+        />
         {pipelineContext.globalStatus === 'idle' && (
-          <Button block type="primary" icon={<PlayIcon />} onClick={runAll}>
-            运行
+          <Button block type="primary" icon={<PlayIcon />} onClick={handleRun}>
+            运行{selectedPinnedNode ? '（从PIN）' : ''}
           </Button>
         )}
         {pipelineContext.globalStatus !== 'idle' && (
@@ -156,8 +223,6 @@ export const ExecutionPanel = () => {
           </div>
         </div>
       )}
-
     </div>
   )
 }
-

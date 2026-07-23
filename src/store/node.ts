@@ -60,6 +60,24 @@ export interface UseNodeStoreProps {
   removeEdge: (edgeId: string) => void
   /** 清空面板 */
   clearPanel: () => void
+
+  // ---- PIN 功能 ----
+  /** 当前工作流 ID，用于定位 PIN 文件 */
+  workflowId: string
+  /** 设置工作流 ID */
+  setWorkflowId: (id: string) => void
+  /** 已 PIN 的输出：{ [nodeId]: output } (内存缓存) */
+  pinnedNodes: Partial<Record<string, Record<string, any>>>
+  /** 保存当前节点的输出为固定节点 */
+  pinNode: (nodeId: string, title: string) => Promise<void>
+  /** 从文件加载固定节点数据到缓存 */
+  loadPinnedNode: (nodeId: string, data: Record<string, any>) => void
+  /** 删除固定节点 */
+  unpinNode: (nodeId: string) => Promise<void>
+  /** 列出当前工作流的所有固定节点 */
+  getPinnedNodeList: () => Promise<{ nodeId: string; title: string; savedAt: string }[]>
+  /** 从固定节点开始执行（注入已 PIN 的输出） */
+  runFromWithPinned: (startNodeId: string, pinnedOverrides: Record<string, Record<string, any>>) => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
@@ -318,6 +336,54 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
 
   // ---- 执行引擎 ----
   pipelineContext: createPipelineContext(),
+  workflowId: `workflow_${Date.now()}`,
+  pinnedNodes: {},
+  setWorkflowId: (id: string) => {
+    set({ workflowId: id })
+  },
+  pinNode: async (nodeId: string, title: string) => {
+    const { workflowId, pipelineContext } = get()
+    const output = pipelineContext.nodeOutputs[nodeId]
+    if (!output) return
+
+    // 保存到文件
+    await fetch('/api/workflow/pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workflowId, nodeId, title, output }),
+    })
+
+    // 更新内存缓存
+    set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: output } })
+  },
+  loadPinnedNode: (nodeId: string, data: Record<string, any>) => {
+    set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: data } })
+  },
+  unpinNode: async (nodeId: string) => {
+    const { workflowId } = get()
+    await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${nodeId}`, { method: 'DELETE' })
+    const updated = { ...get().pinnedNodes }
+    delete updated[nodeId]
+    set({ pinnedNodes: updated })
+  },
+  getPinnedNodeList: async () => {
+    const { workflowId } = get()
+    const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}`)
+    const json = await res.json()
+    if (json.status === 'success') return json.data
+    return []
+  },
+  runFromWithPinned: (startNodeId: string, pinnedOverrides: Record<string, Record<string, any>>) => {
+    const { nodes, edges } = get()
+    executeWorkflow(
+      nodes,
+      edges,
+      (ctx) => {
+        set({ pipelineContext: { ...ctx } })
+      },
+      { startNodeId, nodeOutputOverrides: pinnedOverrides },
+    )
+  },
   runAll: () => {
     const { nodes, edges } = get()
     executeWorkflow(nodes, edges, (ctx) => {
