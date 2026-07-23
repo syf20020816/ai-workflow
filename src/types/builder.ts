@@ -200,6 +200,7 @@ export class NodeBuilder {
       data: {
         title: '代码分析节点',
         projectPath: '',
+        branch: '',
         instruction: '请分析这个项目的结构和功能',
         maxIterations: 20,
       },

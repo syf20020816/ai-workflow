@@ -4,6 +4,7 @@ import { generateText, tool, isLoopFinished } from 'ai'
 import { z } from 'zod'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { execSync } from 'node:child_process'
 
 /**
  * CodeAgent API
@@ -35,9 +36,13 @@ async function loadSystemPrompt(projectPath?: string): Promise<string> {
 
 /** 从模型 URL 中提取 OpenAI 兼容的 base URL */
 function extractBaseUrl(rawUrl: string): string {
-  let url = rawUrl.replace(/\/chat\/completions\/?$/i, '')
-  url = url.replace(/\/+$/, '')
-  if (!url.endsWith('/v1')) {
+  let url = rawUrl
+    .replace(/\/chat\/completions\/?$/i, '')
+    .replace(/\/responses\/?$/i, '')
+    .replace(/\/+$/, '')
+  // 仅当 URL 末尾没有 API 版本号（如 v1, v2, v3）时才补 /v1
+  const lastSegment = url.split('/').pop() || ''
+  if (!/^v\d+$/i.test(lastSegment)) {
     url += '/v1'
   }
   return url
@@ -53,12 +58,31 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
     handlers: {
       POST: async (ctx: any) => {
         const body = await ctx.request.json()
-        const { projectPath, instruction, maxIterations = 20, modal } = body
+        const { projectPath, branch, instruction, maxIterations = 20, modal, upstreamContext } = body
 
         const logs: string[] = []
         logs.push(`CodeAgent 开始执行`)
         logs.push(`项目路径: ${projectPath || '未设置'}`)
+        if (branch) logs.push(`Git 分支: ${branch}`)
         logs.push(`分析指令: ${instruction}`)
+
+        // 如果有上游上下文，将其融入分析指令
+        let enrichedInstruction = instruction
+        if (upstreamContext) {
+          const parts: string[] = []
+          // 优先使用上游的 response（需求分析/技术方案文本）
+          if (upstreamContext.response) {
+            parts.push(`## 上游需求分析\n${upstreamContext.response}`)
+          }
+          // 如果有模板内容，也传给 AI 作为输出格式参考
+          if (upstreamContext.templateContent) {
+            parts.push(`## 推荐输出格式\n请参考以下模板结构组织你的分析结果：\n${upstreamContext.templateContent}`)
+          }
+          if (parts.length > 0) {
+            enrichedInstruction = `${instruction}\n\n## 需求分析与代码分析结合\n以下是上游输出的需求分析结果，请基于这些需求去探索代码仓库，找出需要修改的组件、文件、接口，并输出一份完整的技术方案文档。\n\n${parts.join('\n\n')}`
+            logs.push(`已融入上游上下文进行分析`)
+          }
+        }
         logs.push(`最大迭代次数: ${maxIterations}`)
 
         if (!modal?.name || !modal?.url) {
@@ -78,16 +102,31 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
           baseURL: baseUrl,
           apiKey: modal.key || '',
         })
-        const model = provider(modal.modelName || modal.name)
+        const model = provider.chat(modal.modelName || modal.name)
 
         // 从 prompts/codeAgent.md 加载系统提示词
         const systemPrompt = await loadSystemPrompt(projectPath)
+
+        // 如果指定了分支，先切换 Git 分支
+        if (projectPath && branch) {
+          try {
+            const branchDir = path.isAbsolute(projectPath) ? projectPath : path.resolve(process.cwd(), projectPath)
+            logs.push(`切换分支到: ${branch}`)
+            execSync(`git switch "${branch}" 2>/dev/null || git checkout "${branch}"`, {
+              cwd: branchDir,
+              stdio: 'pipe',
+            })
+            logs.push(`分支已切换: ${branch}`)
+          } catch (err: any) {
+            logs.push(`切换分支失败: ${err.message}，将继续使用当前分支`)
+          }
+        }
 
         try {
           const result = await generateText({
             model,
             system: systemPrompt,
-            prompt: `${instruction}\n\n${projectPath ? `项目的根路径是: ${projectPath}，请开始探索分析。` : '请先使用 list_directory 查看当前目录结构。'}`,
+            prompt: `${enrichedInstruction}\n\n${projectPath ? `项目的根路径是: ${projectPath}，请开始探索分析。` : '请先使用 list_directory 查看当前目录结构。'}`,
             // 通过 maxTokens 控制输出长度
             ...(modal.token?.max ? { maxTokens: modal.token.max } : {}),
             // 停止条件：让循环自然结束（AI 不再调用工具时）
@@ -155,6 +194,24 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
                   }
 
                   return `文件: ${resolvedPath}\n总行数: ${totalLines}\n\n${content}`
+                },
+              }),
+              git_checkout: tool({
+                description: '切换到 Git 仓库的指定分支。适用于需要查看不同分支代码的场景。注意：这会影响当前工作目录的分支状态。',
+                inputSchema: z.object({
+                  branch: z.string().describe('要切换到的分支名，如 main、develop、feature/xxx'),
+                }),
+                execute: async ({ branch: targetBranch }) => {
+                  if (!projectPath) {
+                    throw new Error('项目路径未配置，无法切换分支')
+                  }
+                  const repoDir = path.isAbsolute(projectPath) ? projectPath : path.resolve(process.cwd(), projectPath)
+                  execSync(`git switch "${targetBranch}" 2>/dev/null || git checkout "${targetBranch}"`, {
+                    cwd: repoDir,
+                    stdio: 'pipe',
+                  })
+                  const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: repoDir, encoding: 'utf-8' }).trim()
+                  return `已切换到分支: ${currentBranch}`
                 },
               }),
             },

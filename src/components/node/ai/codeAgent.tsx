@@ -10,6 +10,7 @@ import { UNode } from '..'
  */
 export const CodeAgentNode = (props: NodeProps<NCodeAgent>) => {
   const projectPath = props.data.projectPath
+  const branch = props.data.branch
   const instruction = props.data.instruction
   const maxIterations = props.data.maxIterations ?? 20
 
@@ -23,7 +24,7 @@ export const CodeAgentNode = (props: NodeProps<NCodeAgent>) => {
       {projectPath && (
         <div className={styles.row}>
           <span style={{ fontSize: 9, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {projectPath}
+            {branch ? `[${branch}] ` : ''}{projectPath}
           </span>
         </div>
       )}

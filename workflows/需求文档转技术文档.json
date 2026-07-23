@@ -16,8 +16,8 @@
         }
       },
       "position": {
-        "x": 24,
-        "y": 63.5
+        "x": -14.880000000000024,
+        "y": 1.2920000000000158
       },
       "measured": {
         "width": 234,
@@ -29,7 +29,7 @@
     {
       "id": "6bf28463-d374-41ba-ab2d-f83891b67f76",
       "position": {
-        "x": 304.5,
+        "x": 275.98800000000006,
         "y": 12
       },
       "deletable": true,
@@ -54,8 +54,8 @@
     {
       "id": "e8d2db2f-4673-44b5-a959-5078f68e1471",
       "position": {
-        "x": 570.0725,
-        "y": 69.64399999999999
+        "x": 567.5725,
+        "y": 18.64399999999999
       },
       "deletable": true,
       "draggable": true,
@@ -70,27 +70,27 @@
       "data": {
         "title": "智能体节点",
         "modal": {
-          "name": "qwen3.5:4b",
-          "key": "",
-          "url": "http://localhost:11434",
+          "name": "deepseek-v4-flash-260425",
+          "key": "***REDACTED***",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
           "token": {
             "min": 100,
-            "max": 4096
+            "max": 128000
           },
           "alias": "Senior Software Engineer"
         }
       },
       "measured": {
         "width": 166,
-        "height": 86
+        "height": 63
       }
     },
     {
       "id": "144fb7bc-cc43-433b-a9b3-6bdb3254a0e4",
       "type": "bmadAgent",
       "position": {
-        "x": 787.2159999999999,
-        "y": 71.008
+        "x": 272.7159999999999,
+        "y": -101.99200000000002
       },
       "deletable": true,
       "draggable": true,
@@ -120,8 +120,8 @@
     {
       "id": "cb00e23f-90a5-47a2-ae83-40c3c4156f82",
       "position": {
-        "x": 1080.5279999999998,
-        "y": 64.09600000000002
+        "x": 1047.296284419517,
+        "y": 1.6983520639372216
       },
       "deletable": true,
       "draggable": true,
@@ -146,8 +146,8 @@
     {
       "id": "a37aa51f-c96f-4fd9-aa77-4bcb273198be",
       "position": {
-        "x": 289,
-        "y": 153.5
+        "x": 274.5,
+        "y": 129
       },
       "deletable": true,
       "draggable": true,
@@ -167,6 +167,68 @@
         "width": 234,
         "height": 70
       }
+    },
+    {
+      "id": "c9b5e271-313c-47ed-89e6-9b01bc6c99f3",
+      "position": {
+        "x": 782.7536834885025,
+        "y": -5.423071104879298
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 767.5725,
+      "positionAbsoluteY": 18.64399999999999,
+      "type": "codeAgent",
+      "data": {
+        "title": "代码分析节点",
+        "projectPath": "/Users/lizhi/Desktop/work/lizhi_hy/hy-repo/packages/apps/bms",
+        "instruction": "这是BMS后台项目",
+        "maxIterations": 20,
+        "branch": "feature/260508_relationship-v3",
+        "modal": {
+          "name": "deepseek-v4-flash-260425",
+          "key": "***REDACTED***",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+          "token": {
+            "min": 100,
+            "max": 128000
+          }
+        }
+      },
+      "measured": {
+        "width": 214,
+        "height": 109
+      }
+    },
+    {
+      "id": "d80811b8-3984-4f22-a99f-0a02373bddc2",
+      "position": {
+        "x": 373.2460516601216,
+        "y": -197.48254593381733
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "memory",
+      "data": {
+        "title": "记忆节点",
+        "memoryPath": "memory/memory.md"
+      },
+      "measured": {
+        "width": 134,
+        "height": 63
+      }
     }
   ],
   "edges": [
@@ -183,18 +245,6 @@
       "type": "nodeEdge"
     },
     {
-      "id": "e8d2db2f-4673-44b5-a959-5078f68e1471-144fb7bc-cc43-433b-a9b3-6bdb3254a0e4",
-      "source": "e8d2db2f-4673-44b5-a959-5078f68e1471",
-      "target": "144fb7bc-cc43-433b-a9b3-6bdb3254a0e4",
-      "type": "nodeEdge"
-    },
-    {
-      "id": "144fb7bc-cc43-433b-a9b3-6bdb3254a0e4-cb00e23f-90a5-47a2-ae83-40c3c4156f82",
-      "source": "144fb7bc-cc43-433b-a9b3-6bdb3254a0e4",
-      "target": "cb00e23f-90a5-47a2-ae83-40c3c4156f82",
-      "type": "nodeEdge"
-    },
-    {
       "id": "node1-a37aa51f-c96f-4fd9-aa77-4bcb273198be",
       "source": "node1",
       "target": "a37aa51f-c96f-4fd9-aa77-4bcb273198be",
@@ -205,8 +255,32 @@
       "target": "e8d2db2f-4673-44b5-a959-5078f68e1471",
       "type": "nodeEdge",
       "id": "xy-edge__a37aa51f-c96f-4fd9-aa77-4bcb273198be-e8d2db2f-4673-44b5-a959-5078f68e1471"
+    },
+    {
+      "id": "e8d2db2f-4673-44b5-a959-5078f68e1471-c9b5e271-313c-47ed-89e6-9b01bc6c99f3",
+      "source": "e8d2db2f-4673-44b5-a959-5078f68e1471",
+      "target": "c9b5e271-313c-47ed-89e6-9b01bc6c99f3",
+      "type": "nodeEdge"
+    },
+    {
+      "source": "144fb7bc-cc43-433b-a9b3-6bdb3254a0e4",
+      "target": "e8d2db2f-4673-44b5-a959-5078f68e1471",
+      "type": "nodeEdge",
+      "id": "xy-edge__144fb7bc-cc43-433b-a9b3-6bdb3254a0e4-e8d2db2f-4673-44b5-a959-5078f68e1471"
+    },
+    {
+      "source": "c9b5e271-313c-47ed-89e6-9b01bc6c99f3",
+      "target": "cb00e23f-90a5-47a2-ae83-40c3c4156f82",
+      "type": "nodeEdge",
+      "id": "xy-edge__c9b5e271-313c-47ed-89e6-9b01bc6c99f3-cb00e23f-90a5-47a2-ae83-40c3c4156f82"
+    },
+    {
+      "source": "d80811b8-3984-4f22-a99f-0a02373bddc2",
+      "target": "e8d2db2f-4673-44b5-a959-5078f68e1471",
+      "type": "nodeEdge",
+      "id": "xy-edge__d80811b8-3984-4f22-a99f-0a02373bddc2-e8d2db2f-4673-44b5-a959-5078f68e1471"
     }
   ],
-  "createdAt": "2026-07-21T09:52:20.918Z",
-  "updatedAt": "2026-07-21T09:52:20.918Z"
+  "createdAt": "2026-07-22T11:42:44.313Z",
+  "updatedAt": "2026-07-22T11:42:44.313Z"
 }

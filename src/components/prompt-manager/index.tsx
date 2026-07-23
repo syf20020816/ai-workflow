@@ -330,19 +330,18 @@ const ConfigTab = ({ loading }: { loading: boolean }) => {
 
 // ── 主面板：Tabs 分组 ──
 export const PromptManager = () => {
-  const [globalLoading, setGlobalLoading] = useState(false)
 
   return (
     <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Tabs
         tabBarStyle={{ marginBottom: 16 }}
         items={[
-          { key: 'workflows', label: '工作流', children: <WorkflowTab loading={globalLoading} /> },
-          { key: 'models', label: '模型', children: <ModelTab loading={globalLoading} /> },
-          { key: 'skills', label: '技能', children: <SkillTab loading={globalLoading} /> },
-          { key: 'prompts', label: '提示词', children: <PromptTab loading={globalLoading} /> },
-          { key: 'memory', label: '记忆', children: <MemoryTab loading={globalLoading} /> },
-          { key: 'configs', label: '配置', children: <ConfigTab loading={globalLoading} /> },
+          { key: 'workflows', label: '工作流', children: <WorkflowTab loading={false} /> },
+          { key: 'models', label: '模型', children: <ModelTab loading={false} /> },
+          { key: 'skills', label: '技能', children: <SkillTab loading={false} /> },
+          { key: 'prompts', label: '提示词', children: <PromptTab loading={false} /> },
+          { key: 'memory', label: '记忆', children: <MemoryTab loading={false} /> },
+          { key: 'configs', label: '配置', children: <ConfigTab loading={false} /> },
         ]}
       />
     </div>

@@ -12,22 +12,24 @@ export const codeAgentExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
     const { config } = ctx
     const projectPath = config.data.projectPath || ''
+    const branch = config.data.branch || ''
     const instruction = config.data.instruction || '请分析这个项目的结构和功能'
     const maxIterations = config.data.maxIterations ?? 20
-    const modal = config.data.modal || {}
+    const modal = config.data.modal
 
     const logs: string[] = []
     logs.push(`CodeAgent 开始执行`)
     logs.push(`项目路径: ${projectPath || '未设置（请使用绝对路径）'}`)
+    if (branch) logs.push(`Git 分支: ${branch}`)
     logs.push(`分析指令: ${instruction}`)
     logs.push(`最大迭代次数: ${maxIterations}`)
 
-    if (!modal.name || !modal.url) {
+    if (!modal?.name || !modal?.url) {
       return {
         nodeId: config.nodeId,
         status: 'error',
         output: {},
-        logs: [...logs, '模型配置不完整，请在编辑面板中选择模型'],
+        logs: [...logs, '模型配置不完整，请在编辑面板中为代码分析节点选择一个模型'],
         error: '模型配置不完整',
       }
     }
@@ -38,14 +40,17 @@ export const codeAgentExecutor: NodeExecutor = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectPath,
+          branch,
           instruction,
           maxIterations,
           modal: {
+            name: modal.name,
+            key: modal.key,
             url: modal.url,
-            apiKey: modal.key,
-            modelName: modal.name,
             token: modal.token,
           },
+          // 传递上游节点（如 Agent 节点）的上下文
+          upstreamContext: ctx.input,
         }),
       })
 

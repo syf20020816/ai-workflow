@@ -96,7 +96,7 @@ export type NAnswerData = NNode & {
 
 export type NAnswer = Node<NAnswerData, typeof NodeTypes.ANSWER>
 
-/** BMad子节点：赋予智能体角色配置 */
+/** BMad子节点：为智能体节点提供角色指令（如 Skill） */
 export type NBMadAgentData = NNode & {
   /** 智能体角色 */
   role?: string
@@ -104,19 +104,6 @@ export type NBMadAgentData = NNode & {
   roleDescription?: string
   /** BMad Agent ID (如 bmad-agent-analyst) */
   agentId?: string
-  /** 模型配置（与 AgentNode 共享同一结构，创建时从 AgentNode 继承） */
-  modal?: {
-    name?: string
-    key?: string
-    alias?: string
-    url?: string
-    token?: {
-      min: number
-      max: number
-    }
-  }
-  /** 温度参数 */
-  temperature?: number
   /** 系统提示词 */
   systemPrompt?: string
 }
@@ -211,6 +198,8 @@ export type NCode = Node<NCodeData, typeof NodeTypes.CODE>
 export type NCodeAgentData = NNode & {
   /** 项目路径（本地目录或 Git 仓库 URL） */
   projectPath?: string
+  /** Git 分支 */
+  branch?: string
   /** AI 分析目标/指令 */
   instruction?: string
   /** 最大迭代次数（防止死循环） */

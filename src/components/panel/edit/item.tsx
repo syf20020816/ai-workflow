@@ -16,9 +16,9 @@ import {
   Typography,
   Modal,
   Tree,
-  type TableProps,
   Table,
 } from 'antd'
+import type { TableProps } from 'antd'
 import type { ReactNode, Key } from 'react'
 import { useNodeStore } from '#/store/node'
 import { getPredecessors } from '#/engine/topological'
@@ -212,6 +212,7 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
       title: '值',
       dataIndex: 'value',
       key: 'value',
+      width: 120,
       render: (_, record) => {
         if (record.valueRender) {
           return record.valueRender((v: any) => onChange(record.key, v))
@@ -284,12 +285,15 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
         showHeader={true}
         size="small"
         bordered
-        styles={{root: {marginTop: 8}}}
+        styles={{ root: { marginTop: 8 } }}
       />
       <Modal
         title="选择上游数据"
         open={modalVisible}
-        onCancel={() => { setModalVisible(false); setPickTargetKey(null) }}
+        onCancel={() => {
+          setModalVisible(false)
+          setPickTargetKey(null)
+        }}
         footer={null}
         width={600}
         styles={{
@@ -301,10 +305,14 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
             treeData={treeData}
             defaultExpandAll
             showLine
-            onSelect={(keys) => pickTargetKey && handlePick(keys, pickTargetKey)}
+            onSelect={(keys) =>
+              pickTargetKey && handlePick(keys, pickTargetKey)
+            }
           />
         ) : (
-          <Text type="secondary">{emptyText || '暂无上游节点，请先连接上游节点'}</Text>
+          <Text type="secondary">
+            {emptyText || '暂无上游节点，请先连接上游节点'}
+          </Text>
         )}
       </Modal>
     </>

@@ -38,6 +38,12 @@ export const EditCodeAgent = () => {
       placeholder: '如：/Users/xxx/project 或 ./src',
     },
     {
+      key: 'branch',
+      label: 'Git 分支',
+      value: currentNode.data.branch,
+      placeholder: '留空使用当前分支，如：main、develop',
+    },
+    {
       key: 'instruction',
       label: '分析指令',
       value: currentNode.data.instruction,
@@ -112,6 +118,8 @@ export const EditCodeAgent = () => {
             const data = d(draft)
             if (key === 'projectPath') {
               data.projectPath = (value || '') as string
+            } else if (key === 'branch') {
+              data.branch = (value || '') as string
             } else if (key === 'instruction') {
               data.instruction = (value || '') as string
             } else if (key === 'maxIterations') {
