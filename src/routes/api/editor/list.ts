@@ -73,13 +73,13 @@ export const Route = createFileRoute('/api/editor/list')({
           const files: { name: string; path: string; relativePath: string; language: string }[] = []
           for (const entry of skillEntries) {
             if (entry.isDirectory()) {
-              const skillMdPath = path.join(skillsDir, entry.name, 'skill.md')
+              const skillMdPath = path.join(skillsDir, entry.name, 'SKILL.md')
               try {
                 await fs.access(skillMdPath)
                 files.push({
-                  name: `${entry.name}/skill.md`,
+                  name: `SKILL.md`,
                   path: skillMdPath,
-                  relativePath: path.join('workflows/skills', entry.name, 'skill.md'),
+                  relativePath: path.join('workflows/skills', entry.name, 'SKILL.md'),
                   language: 'markdown',
                 })
               } catch { /* 该技能没有 skill.md */ }

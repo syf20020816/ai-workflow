@@ -78,104 +78,142 @@ export const AddNodeBtn = ({
 
   const menuItems: MenuProps['items'] = [
     {
-      label: <NodeHeader kind={NodeTypes.USER_INPUT} title="用户输入节点" />,
-      key: NodeTypes.USER_INPUT,
-      disabled: isDisabledNode(kind, NodeTypes.USER_INPUT),
-      onClick: () => addNode(NodeBuilder.userInput),
+      key: 'input',
+      label: '输入节点',
+      type: 'group',
+      children: [
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.USER_INPUT} title="用户输入节点" />
+          ),
+          key: NodeTypes.USER_INPUT,
+          disabled: isDisabledNode(kind, NodeTypes.USER_INPUT),
+          onClick: () => addNode(NodeBuilder.userInput),
+        },
+        {
+          label: <NodeHeader kind={NodeTypes.ANSWER} title="回答节点" />,
+          key: NodeTypes.ANSWER,
+          disabled: isDisabledNode(kind, NodeTypes.ANSWER),
+          onClick: () => addNode(NodeBuilder.answer),
+        },
+        {
+          label: <NodeHeader kind={NodeTypes.MEMORY} title="记忆节点" />,
+          key: NodeTypes.MEMORY,
+          disabled: isDisabledNode(kind, NodeTypes.MEMORY),
+          onClick: () => addNode(NodeBuilder.memory),
+        },
+        {
+          label: <NodeHeader kind={NodeTypes.SKILL} title="Skill节点" />,
+          key: NodeTypes.SKILL,
+          disabled: isDisabledNode(kind, NodeTypes.SKILL),
+          onClick: () => addNode(NodeBuilder.skill),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.BMAD_AGENT} title="BMad角色节点" />
+          ),
+          key: NodeTypes.BMAD_AGENT,
+          disabled: isDisabledNode(kind, NodeTypes.BMAD_AGENT),
+          onClick: () => addNode(NodeBuilder.bmadAgent),
+        },
+      ],
     },
     {
-      label: <NodeHeader kind={NodeTypes.AGENT} title="智能体节点" />,
-      key: NodeTypes.AGENT,
-      disabled: isDisabledNode(kind, NodeTypes.AGENT),
-      onClick: () => addNode(NodeBuilder.agent),
+      key: 'plugin',
+      label: '插件节点',
+      type: 'group',
+      children: [
+        {
+          label: <NodeHeader kind={NodeTypes.LARK} title="Lark文档节点" />,
+          key: NodeTypes.LARK,
+          disabled: isDisabledNode(kind, NodeTypes.LARK),
+          onClick: () => addNode(NodeBuilder.lark),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.LARK_TEMPLATE} title="Lark模板节点" />
+          ),
+          key: NodeTypes.LARK_TEMPLATE,
+          disabled: isDisabledNode(kind, NodeTypes.LARK_TEMPLATE),
+          onClick: () => addNode(NodeBuilder.larkTemplate),
+        },
+      ],
     },
     {
-      label: <NodeHeader kind={NodeTypes.AI_OUTPUT} title="AI输出节点" />,
-      key: NodeTypes.AI_OUTPUT,
-      disabled: isDisabledNode(kind, NodeTypes.AI_OUTPUT),
-      onClick: () => addNode(NodeBuilder.aiOutput),
+      key: 'process',
+      label: '处理节点',
+      type: 'group',
+      children: [
+        {
+          label: <NodeHeader kind={NodeTypes.AGENT} title="智能体节点" />,
+          key: NodeTypes.AGENT,
+          disabled: isDisabledNode(kind, NodeTypes.AGENT),
+          onClick: () => addNode(NodeBuilder.agent),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码分析节点" />
+          ),
+          key: NodeTypes.CODE_AGENT,
+          disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),
+          onClick: () => addNode(NodeBuilder.codeAgent),
+        },
+      ],
     },
     {
-      type: 'divider',
+      key: 'output',
+      label: '输出节点',
+      type: 'group',
+      children: [
+        {
+          label: <NodeHeader kind={NodeTypes.AI_OUTPUT} title="AI输出节点" />,
+          key: NodeTypes.AI_OUTPUT,
+          disabled: isDisabledNode(kind, NodeTypes.AI_OUTPUT),
+          onClick: () => addNode(NodeBuilder.aiOutput),
+        },
+      ],
     },
+
     {
-      label: <NodeHeader kind={NodeTypes.ANSWER} title="回答节点" />,
-      key: NodeTypes.ANSWER,
-      disabled: isDisabledNode(kind, NodeTypes.ANSWER),
-      onClick: () => addNode(NodeBuilder.answer),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.BMAD_AGENT} title="BMad角色节点" />,
-      key: NodeTypes.BMAD_AGENT,
-      disabled: isDisabledNode(kind, NodeTypes.BMAD_AGENT),
-      onClick: () => addNode(NodeBuilder.bmadAgent),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.LARK} title="Lark文档节点" />,
-      key: NodeTypes.LARK,
-      disabled: isDisabledNode(kind, NodeTypes.LARK),
-      onClick: () => addNode(NodeBuilder.lark),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码分析节点" />,
-      key: NodeTypes.CODE_AGENT,
-      disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),
-      onClick: () => addNode(NodeBuilder.codeAgent),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.MEMORY} title="记忆节点" />,
-      key: NodeTypes.MEMORY,
-      disabled: isDisabledNode(kind, NodeTypes.MEMORY),
-      onClick: () => addNode(NodeBuilder.memory),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.SKILL} title="Skill节点" />,
-      key: NodeTypes.SKILL,
-      disabled: isDisabledNode(kind, NodeTypes.SKILL),
-      onClick: () => addNode(NodeBuilder.skill),
-    },
-    {
-      type: 'divider',
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.LARK_TEMPLATE} title="Lark模板节点" />,
-      key: NodeTypes.LARK_TEMPLATE,
-      disabled: isDisabledNode(kind, NodeTypes.LARK_TEMPLATE),
-      onClick: () => addNode(NodeBuilder.larkTemplate),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.IF} title="判断节点" />,
-      key: NodeTypes.IF,
-      disabled: isDisabledNode(kind, NodeTypes.IF),
-      onClick: () => addNode(NodeBuilder.ifNode),
-    },
-    {
-      label: (
-        <NodeHeader kind={NodeTypes.IF_CONDITION} title="条件分支节点" />
-      ),
-      key: NodeTypes.IF_CONDITION,
-      disabled: isDisabledNode(kind, NodeTypes.IF_CONDITION),
-      onClick: () => addNode(NodeBuilder.ifCondition),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.LOOP} title="循环节点" />,
-      key: NodeTypes.LOOP,
-      disabled: isDisabledNode(kind, NodeTypes.LOOP),
-      onClick: () => addNode(NodeBuilder.loop),
-    },
-    {
-      label: (
-        <NodeHeader kind={NodeTypes.LOOP_CONDITION} title="循环条件节点" />
-      ),
-      key: NodeTypes.LOOP_CONDITION,
-      disabled: isDisabledNode(kind, NodeTypes.LOOP_CONDITION),
-      onClick: () => addNode(NodeBuilder.loopCondition),
-    },
-    {
-      label: <NodeHeader kind={NodeTypes.RETRY} title="重试节点" />,
-      key: NodeTypes.RETRY,
-      disabled: isDisabledNode(kind, NodeTypes.RETRY),
-      onClick: () => addNode(NodeBuilder.retry),
+      key: 'control',
+      label: '控制节点',
+      type: 'group',
+      children: [
+        {
+          label: <NodeHeader kind={NodeTypes.IF} title="判断节点" />,
+          key: NodeTypes.IF,
+          disabled: isDisabledNode(kind, NodeTypes.IF),
+          onClick: () => addNode(NodeBuilder.ifNode),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.IF_CONDITION} title="条件分支节点" />
+          ),
+          key: NodeTypes.IF_CONDITION,
+          disabled: isDisabledNode(kind, NodeTypes.IF_CONDITION),
+          onClick: () => addNode(NodeBuilder.ifCondition),
+        },
+        {
+          label: <NodeHeader kind={NodeTypes.LOOP} title="循环节点" />,
+          key: NodeTypes.LOOP,
+          disabled: isDisabledNode(kind, NodeTypes.LOOP),
+          onClick: () => addNode(NodeBuilder.loop),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.LOOP_CONDITION} title="循环条件节点" />
+          ),
+          key: NodeTypes.LOOP_CONDITION,
+          disabled: isDisabledNode(kind, NodeTypes.LOOP_CONDITION),
+          onClick: () => addNode(NodeBuilder.loopCondition),
+        },
+        {
+          label: <NodeHeader kind={NodeTypes.RETRY} title="重试节点" />,
+          key: NodeTypes.RETRY,
+          disabled: isDisabledNode(kind, NodeTypes.RETRY),
+          onClick: () => addNode(NodeBuilder.retry),
+        },
+      ],
     },
   ]
 

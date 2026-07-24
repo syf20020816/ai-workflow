@@ -2,14 +2,13 @@ import {
   Button,
   message,
   Space,
-  Tree,
   Typography,
   Spin,
   Dropdown,
   Modal,
   Input,
 } from 'antd'
-import { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import {
   ReloadOutlined,
   SaveOutlined,
@@ -18,7 +17,6 @@ import {
   FolderAddOutlined,
   FileAddOutlined,
 } from '@ant-design/icons'
-import type { DataNode } from 'antd/es/tree'
 import type { MenuProps } from 'antd'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
@@ -56,6 +54,143 @@ function getLangExt(language: string) {
   const fn = languageMap[language]
   return fn ? fn() : undefined
 }
+
+// 自定义树节点组件，完全替代 Ant Design Tree，避免 DOM 复制 bug
+interface TreeNodeItem {
+  key: string
+  name: string
+  icon: React.ReactNode
+  isLeaf: boolean
+  children?: TreeNodeItem[]
+  /** 右键菜单目标路径 */
+  contextPath: string
+}
+
+interface FileTreeProps {
+  nodes: TreeNodeItem[]
+  selectedKey?: string
+  onSelect: (key: string) => void
+  onRename: (path: string) => void
+}
+
+const TreeNodeRow = React.memo<{
+  node: TreeNodeItem
+  depth: number
+  selectedKey?: string
+  onSelect: (key: string) => void
+  onRename: (path: string) => void
+}>(({ node, depth, selectedKey, onSelect, onRename }) => {
+  const [expanded, setExpanded] = useState(true)
+
+  const hasChildren = node.children && node.children.length > 0
+  const isSelected = selectedKey === node.key
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (hasChildren) setExpanded((v) => !v)
+  }
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'rename',
+      label: '重命名',
+      onClick: () => onRename(node.contextPath),
+    },
+  ]
+
+  return (
+    <>
+      <Dropdown menu={{ items: menuItems }} trigger={['contextMenu']}>
+        <div
+          onClick={handleToggle}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '2px 0',
+            cursor: 'pointer',
+            userSelect: 'none',
+            background: isSelected ? 'rgba(24,144,255,0.2)' : 'transparent',
+            borderRadius: 4,
+            paddingLeft: depth * 18,
+            fontSize: 13,
+          }}
+          onDoubleClick={() => {
+            if (node.isLeaf) onSelect(node.key)
+          }}
+        >
+          {/* expand/collapse icon for directories */}
+          <span
+            onClick={handleToggle}
+            style={{
+              width: 16,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              visibility: hasChildren ? 'visible' : 'hidden',
+              fontSize: 10,
+              color: '#888',
+              flexShrink: 0,
+            }}
+          >
+            {expanded ? '▼' : '▶'}
+          </span>
+          {/* folder/file icon */}
+          <span style={{ flexShrink: 0, lineHeight: 1, fontSize: 14, color: hasChildren ? '#faad14' : '#69b1ff' }}>
+            {node.icon}
+          </span>
+          {/* name */}
+          <span
+            style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              color: node.isLeaf ? '#ccc' : '#e8e8e8',
+            }}
+            onClick={() => {
+              if (node.isLeaf) onSelect(node.key)
+              else handleToggle
+            }}
+          >
+            {node.name}
+          </span>
+        </div>
+      </Dropdown>
+      {/* children */}
+      {hasChildren && expanded && (
+        <div>
+          {node.children!.map((child) => (
+            <TreeNodeRow
+              key={child.key}
+              node={child}
+              depth={depth + 1}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              onRename={onRename}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  )
+})
+
+const FileTree = React.memo<FileTreeProps>(({ nodes, selectedKey, onSelect, onRename }) => {
+  return (
+    <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+      {nodes.map((node) => (
+        <TreeNodeRow
+          key={node.key}
+          node={node}
+          depth={0}
+          selectedKey={selectedKey}
+          onSelect={onSelect}
+          onRename={onRename}
+        />
+      ))}
+    </div>
+  )
+})
 
 export const FileEditor = () => {
   const [groups, setGroups] = useState<FileGroup[]>([])
@@ -266,9 +401,18 @@ export const FileEditor = () => {
       if (data.status === 'success') {
         message.success('已重命名')
         setRenameModalOpen(false)
-        // 如果正在编辑被重命名的文件，更新 activeFile
-        if (activeFile && activeFile.path === renameTarget.relativePath) {
-          setActiveFile({ ...activeFile, path: newRelativePath })
+        // 更新 activeFile 路径（兼容文件和目录重命名）
+        if (activeFile) {
+          const oldPath = renameTarget.relativePath
+          if (activeFile.path === oldPath) {
+            // 文件重命名
+            setActiveFile({ ...activeFile, path: newRelativePath })
+          } else if (activeFile.path.startsWith(oldPath + '/')) {
+            // 目录重命名 - activeFile 位于被重命名的目录下
+            const newActivePath =
+              newRelativePath + activeFile.path.slice(oldPath.length)
+            setActiveFile({ ...activeFile, path: newActivePath })
+          }
         }
         fetchList()
       } else {
@@ -279,39 +423,106 @@ export const FileEditor = () => {
     }
   }
 
-  // --- 右键菜单 ---
-  const getContextMenuItems = (relativePath: string): MenuProps['items'] => [
-    {
-      key: 'rename',
-      label: '重命名',
-      onClick: () => openRenameModal(relativePath),
-    },
-  ]
-
-  // 构建树节点（带右键菜单）
-  const treeData: DataNode[] = groups.map((group, gi) => {
-    const groupKey = `group-${gi}`
-    return {
-      key: groupKey,
-      title: group.title,
-      icon: <FolderOutlined />,
-      children: group.files.map((file) => ({
-        key: file.relativePath,
-        title: (
-          <Dropdown
-            menu={{ items: getContextMenuItems(file.relativePath) }}
-            trigger={['contextMenu']}
-          >
-            <span style={{ display: 'inline-block', }}>
-              {file.name}
-            </span>
-          </Dropdown>
-        ),
-        icon: <FileOutlined />,
-        isLeaf: true,
-      })),
+  /** 将路径分割后构建嵌套树节点 */
+  const makeTreeFromFiles = (files: FileGroup['files']): TreeNodeItem[] => {
+    // 收集所有文件路径构建目录树，同时记录叶子文件信息
+    type DirNode = {
+      __dirPath: string
+      __children: Record<string, DirNode | { __file: FileGroup['files'][0] }>
     }
-  })
+    const root: DirNode = { __dirPath: '', __children: {} }
+
+    for (const file of files) {
+      const parts = file.relativePath.split('/')
+      let current = root
+      for (let i = 0; i < parts.length - 1; i++) {
+        const seg = parts[i]
+        if (!(seg in current.__children)) {
+          current.__children[seg] = {
+            __dirPath: parts.slice(0, i + 1).join('/'),
+            __children: {},
+          }
+        }
+        current = current.__children[seg] as DirNode
+      }
+      const fileName = parts[parts.length - 1]
+      current.__children[fileName] = { __file: file }
+    }
+
+    function buildNodes(obj: DirNode | { __file: any }): TreeNodeItem[] {
+      if ('__file' in obj) return []
+
+      const nodes: TreeNodeItem[] = []
+      const dirs: [string, DirNode][] = []
+      const fileEntries: [string, { __file: any }][] = []
+
+      for (const [name, val] of Object.entries(obj.__children)) {
+        if ('__children' in val) {
+          dirs.push([name, val])
+        } else {
+          fileEntries.push([name, val])
+        }
+      }
+
+      // 按名称排序
+      dirs.sort(([a], [b]) => a.localeCompare(b))
+      fileEntries.sort(([a], [b]) => a.localeCompare(b))
+
+      for (const [name, val] of dirs) {
+        const dirPath = val.__dirPath
+        nodes.push({
+          key: `dir-${dirPath}`,
+          name,
+          icon: <FolderOutlined />,
+          isLeaf: false,
+          contextPath: dirPath,
+          children: buildNodes(val),
+        })
+      }
+
+      for (const [, val] of fileEntries) {
+        const fileInfo = val.__file
+        nodes.push({
+          key: fileInfo.relativePath,
+          name: fileInfo.name,
+          icon: <FileOutlined />,
+          isLeaf: true,
+          contextPath: fileInfo.relativePath,
+        })
+      }
+
+      return nodes
+    }
+
+    return buildNodes(root)
+  }
+
+  // 树节点数据，仅在 groups 变化时更新
+  const [treeData, setTreeData] = useState<TreeNodeItem[]>([])
+
+  useEffect(() => {
+    const data = groups.map((group, gi) => {
+      return {
+        key: `group-${gi}`,
+        name: group.title,
+        icon: <FolderOutlined />,
+        isLeaf: false,
+        contextPath: '',
+        children: makeTreeFromFiles(group.files),
+      }
+    })
+    setTreeData(data)
+  }, [groups])
+
+  const handleTreeSelect = useCallback((key: string) => {
+    if (!key.startsWith('group-') && !key.startsWith('dir-')) {
+      handleSelect(key)
+    }
+  }, [])
+
+  const handleTreeRename = useCallback((path: string) => {
+    openRenameModal(path)
+  }, [])
 
   return (
     <div
@@ -351,18 +562,14 @@ export const FileEditor = () => {
             icon={<ReloadOutlined />}
             onClick={fetchList}
             loading={loading}
-          >
-            刷新
-          </Button>
+          ></Button>
           <Button
             type="primary"
             icon={<SaveOutlined />}
             onClick={handleSave}
             loading={saving}
             disabled={!dirty}
-          >
-            保存
-          </Button>
+          ></Button>
         </Space>
       </div>
 
@@ -400,19 +607,11 @@ export const FileEditor = () => {
           </div>
           <Spin spinning={loading}>
             {treeData.length > 0 ? (
-              <Tree
-                treeData={treeData}
-                showIcon
-                defaultExpandAll
-                selectedKeys={activeFile ? [activeFile.path] : []}
-                onSelect={(keys) => {
-                  if (
-                    keys.length > 0 &&
-                    !String(keys[0]).startsWith('group-')
-                  ) {
-                    handleSelect(keys[0] as string)
-                  }
-                }}
+              <FileTree
+                nodes={treeData}
+                selectedKey={activeFile?.path}
+                onSelect={handleTreeSelect}
+                onRename={handleTreeRename}
               />
             ) : (
               <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>
