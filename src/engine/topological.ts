@@ -88,6 +88,74 @@ export function topologicalSort(
   return { sortedIds, cycles }
 }
 
+/**
+ * 获取 DAG 的拓扑层（并行分组）。
+ * 每一层的节点之间没有依赖关系，可以安全地并行执行。
+ *
+ * @returns 二维数组，每组内的节点可并行执行
+ */
+export function topologicalLayers(
+  nodes: Node[],
+  edges: Edge[],
+): string[][] {
+  const nodeIds = new Set(nodes.map((n) => n.id))
+  const inDegree = new Map<string, number>()
+  const adjacency = new Map<string, string[]>()
+
+  for (const id of nodeIds) {
+    inDegree.set(id, 0)
+    adjacency.set(id, [])
+  }
+
+  for (const edge of edges) {
+    const { source, target } = edge
+    if (!nodeIds.has(source) || !nodeIds.has(target)) continue
+    adjacency.get(source)!.push(target)
+    inDegree.set(target, (inDegree.get(target) || 0) + 1)
+  }
+
+  const layers: string[][] = []
+  let currentLayer = [...inDegree.entries()]
+    .filter(([, deg]) => deg === 0)
+    .map(([id]) => id)
+
+  while (currentLayer.length > 0) {
+    layers.push([...currentLayer])
+
+    const nextLayer: string[] = []
+    for (const id of currentLayer) {
+      for (const neighbor of adjacency.get(id) || []) {
+        const newDegree = (inDegree.get(neighbor) || 1) - 1
+        inDegree.set(neighbor, newDegree)
+        if (newDegree === 0) {
+          nextLayer.push(neighbor)
+        }
+      }
+    }
+    currentLayer = nextLayer
+  }
+
+  return layers
+}
+
+/** 获取以某个节点为起点的所有可达节点 ID */
+export function getReachableNodeIds(
+  startNodeId: string,
+  edges: Edge[],
+): Set<string> {
+  const reachable = new Set<string>()
+  const queue = [startNodeId]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (reachable.has(id)) continue
+    reachable.add(id)
+    for (const succ of getSuccessors(id, edges)) {
+      queue.push(succ)
+    }
+  }
+  return reachable
+}
+
 /** 获取节点的上游节点 ID（直接前驱） */
 export function getPredecessors(nodeId: string, edges: Edge[]): string[] {
   return edges.filter((e) => e.target === nodeId).map((e) => e.source)

@@ -3,10 +3,18 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const WORKFLOWS_DIR = path.resolve(process.cwd(), 'workflows')
+const VERSIONS_DIR = path.join(WORKFLOWS_DIR, '.versions')
 
 function ensureDir() {
   if (!fs.existsSync(WORKFLOWS_DIR)) {
     fs.mkdirSync(WORKFLOWS_DIR, { recursive: true })
+  }
+}
+
+function ensureVersionsDir(id: string) {
+  const dir = path.join(VERSIONS_DIR, id)
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
   }
 }
 
@@ -54,6 +62,31 @@ export const Route = createFileRoute('/api/workflows')({
 
         const now = new Date().toISOString()
         const id = name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_')
+        const workflowFile = path.join(WORKFLOWS_DIR, `${id}.json`)
+
+        // 如果已存在相同 ID 的工作流，先保存版本快照
+        if (fs.existsSync(workflowFile)) {
+          try {
+            const existing = JSON.parse(fs.readFileSync(workflowFile, 'utf-8'))
+            ensureVersionsDir(id)
+            const versionId = `v-${Date.now()}`
+            const snapshot = {
+              name: existing.name,
+              id: existing.id,
+              nodes: existing.nodes,
+              edges: existing.edges,
+              savedAt: now,
+              versionId,
+            }
+            fs.writeFileSync(
+              path.join(VERSIONS_DIR, id, `${versionId}.json`),
+              JSON.stringify(snapshot, null, 2),
+            )
+          } catch {
+            // 版本快照保存失败不影响本次保存
+          }
+        }
+
         const workflow = {
           name,
           id,
@@ -63,15 +96,12 @@ export const Route = createFileRoute('/api/workflows')({
           updatedAt: now,
         }
 
-        fs.writeFileSync(
-          path.join(WORKFLOWS_DIR, `${id}.json`),
-          JSON.stringify(workflow, null, 2),
-        )
+        fs.writeFileSync(workflowFile, JSON.stringify(workflow, null, 2))
 
         return Response.json({ id, name, success: true }, { status: 201 })
       },
 
-      /** 删除工作流模板 */
+      /** 删除工作流模板（同时删除对应的版本记录） */
       DELETE: async (ctx: any) => {
         const url = new URL(ctx.request.url)
         const id = url.searchParams.get('id')
@@ -81,6 +111,11 @@ export const Route = createFileRoute('/api/workflows')({
         const filePath = path.join(WORKFLOWS_DIR, `${id}.json`)
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath)
+        }
+        // 删除版本历史目录
+        const versionDir = path.join(VERSIONS_DIR, id)
+        if (fs.existsSync(versionDir)) {
+          fs.rmSync(versionDir, { recursive: true, force: true })
         }
         return Response.json({ success: true })
       },

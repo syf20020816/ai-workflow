@@ -28,6 +28,7 @@ import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
+import { Route as ApiWorkflowVersionsRouteImport } from './routes/api/workflow/versions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -124,6 +125,11 @@ const ApiWorkflowPinRoute = ApiWorkflowPinRouteImport.update({
   path: '/api/workflow/pin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkflowVersionsRoute = ApiWorkflowVersionsRouteImport.update({
+  id: '/api/workflow/versions',
+  path: '/api/workflow/versions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
+  '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
+  '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
+  '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
+    | '/api/workflow/versions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
+    | '/api/workflow/versions'
   id:
     | '__root__'
     | '/'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
+    | '/api/workflow/versions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
+  ApiWorkflowVersionsRoute: typeof ApiWorkflowVersionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWorkflowPinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/workflow/versions': {
+      id: '/api/workflow/versions'
+      path: '/api/workflow/versions'
+      fullPath: '/api/workflow/versions'
+      preLoaderRoute: typeof ApiWorkflowVersionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -445,6 +465,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
+  ApiWorkflowVersionsRoute: ApiWorkflowVersionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

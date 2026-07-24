@@ -3,9 +3,10 @@ import type {
   PipelineContext,
   NodeExecutionConfig,
   NodeExecutionContext,
+  NodeExecutionResult,
   LogEntry,
 } from '#/types/engine'
-import { topologicalSort, getPredecessors } from './topological'
+import { topologicalLayers, getPredecessors, getReachableNodeIds } from './topological'
 import { getExecutor } from './executors'
 
 /** 从 node.data 中安全提取标题 */
@@ -81,22 +82,27 @@ export async function executeWorkflow(
     return ctx
   }
 
-  // 拓扑排序（只对 DAG 中的节点）
-  const { sortedIds, cycles } = topologicalSort(dagNodes, edges)
-  if (cycles.length > 0) {
-    ctx.globalStatus = 'error'
-    addLog(ctx, '', '', 'error', `检测到循环依赖: ${cycles.join(', ')}`)
-    onUpdate(ctx)
-    return ctx
+  // 计算拓扑层（并行分组）
+  let layers: string[][]
+  if (options?.startNodeId) {
+    const reachable = getReachableNodeIds(options.startNodeId, edges)
+    const subNodes = dagNodes.filter((n) => reachable.has(n.id))
+    const subEdges = edges.filter(
+      (e) => reachable.has(e.source) && reachable.has(e.target),
+    )
+    layers = topologicalLayers(subNodes, subEdges)
+  } else {
+    layers = topologicalLayers(dagNodes, edges)
   }
 
-  // 如果指定了 startNodeId，只执行子图
-  let executionOrder = sortedIds
-  if (options?.startNodeId) {
-    const startIndex = sortedIds.indexOf(options.startNodeId)
-    if (startIndex >= 0) {
-      executionOrder = sortedIds.slice(startIndex)
-    }
+  // 检测循环依赖：所有节点都应出现在层中
+  const allLayered = new Set(layers.flat())
+  const missing = dagNodes.filter((n) => !allLayered.has(n.id)).map((n) => n.id)
+  if (missing.length > 0) {
+    ctx.globalStatus = 'error'
+    addLog(ctx, '', '', 'error', `检测到循环依赖: ${missing.join(', ')}`)
+    onUpdate(ctx)
+    return ctx
   }
 
   // 初始化节点状态（只初始化 DAG 中的节点）
@@ -115,86 +121,95 @@ export async function executeWorkflow(
     }
   }
 
-  // 逐节点执行
-  for (const nodeId of executionOrder) {
-    const node = nodeMap.get(nodeId)
-    if (!node) continue
+  // 按层并行执行
+  let hasWaiting = false
+  loop: for (const layer of layers) {
+    // 过滤掉已通过 PIN 注入的节点
+    const activeIds = options?.nodeOutputOverrides
+      ? layer.filter((id) => !(id in options.nodeOutputOverrides!))
+      : layer
 
-    // 如果该节点已通过 PIN 注入输出，跳过实际执行
-    if (options?.nodeOutputOverrides && nodeId in options.nodeOutputOverrides) {
-      continue
-    }
+    if (activeIds.length === 0) continue
 
-    const nodeTitle = getNodeTitle(node)
+    // 并行执行当前层的所有节点
+    const results = await Promise.all(
+      activeIds.map(async (nodeId): Promise<{ nodeId: string; title?: string; status: 'skipped' | 'success' | 'error' | 'waiting'; result?: NodeExecutionResult; error?: string }> => {
+        const node = nodeMap.get(nodeId)
+        if (!node) return { nodeId, status: 'skipped' as const }
 
-    ctx.currentNodeId = nodeId
-    ctx.nodeStatuses[nodeId] = 'running'
-    addLog(ctx, nodeId, nodeTitle, 'info', `开始执行...`)
-    onUpdate({ ...ctx })
+        const nodeTitle = getNodeTitle(node)
 
-    // 获取上游节点的 output 作为当前节点的 input
-    const predecessors = getPredecessors(nodeId, edges)
-    const input: Record<string, any> = {}
-    for (const predId of predecessors) {
-      const predOutput = ctx.nodeOutputs[predId]
-      if (predOutput) {
-        Object.assign(input, predOutput)
+        ctx.currentNodeId = nodeId
+        ctx.nodeStatuses[nodeId] = 'running'
+        addLog(ctx, nodeId, nodeTitle, 'info', `开始执行...`)
+        onUpdate({ ...ctx })
+
+        // 获取上游节点的 output 作为当前节点的 input
+        const predecessors = getPredecessors(nodeId, edges)
+        const input: Record<string, any> = {}
+        for (const predId of predecessors) {
+          const predOutput = ctx.nodeOutputs[predId]
+          if (predOutput) {
+            Object.assign(input, predOutput)
+          }
+        }
+
+        // 构建执行上下文
+        const execConfig: NodeExecutionConfig = {
+          nodeId: node.id,
+          nodeType: node.type || '',
+          title: nodeTitle,
+          data: node.data as Record<string, any>,
+        }
+
+        const execCtx: NodeExecutionContext = {
+          config: execConfig,
+          input,
+          globalContext: {
+            userInputs: options?.userInputs || {},
+          },
+        }
+
+        // 获取执行器并执行
+        const executor = getExecutor(node.type || '')
+        if (!executor) {
+          return { nodeId, title: nodeTitle, status: 'error' as const, error: `未知节点类型: ${node.type}` }
+        }
+
+        const result = await executor.execute(execCtx)
+        return { nodeId, title: nodeTitle, status: result.status, result }
+      }),
+    )
+
+    // 汇总当前层的结果
+    let layerHasError = false
+    for (const r of results) {
+      if (r.status === 'skipped') continue
+      const nodeTitle = r.title || ''
+
+      if (r.status === 'error') {
+        ctx.nodeStatuses[r.nodeId] = 'error'
+        ctx.globalStatus = 'error'
+        addLog(ctx, r.nodeId, nodeTitle, 'error', r.error || '执行失败')
+        layerHasError = true
+      } else if (r.status === 'waiting' && r.result) {
+        ctx.nodeStatuses[r.nodeId] = 'waiting'
+        ctx.globalStatus = 'paused'
+        ctx.nodeOutputs[r.nodeId] = r.result.output
+        addLog(ctx, r.nodeId, nodeTitle, 'warn', '等待用户输入...')
+        hasWaiting = true
+      } else if (r.result) {
+        ctx.nodeStatuses[r.nodeId] = 'success'
+        ctx.nodeOutputs[r.nodeId] = r.result.output
+        for (const logMsg of r.result.logs) {
+          addLog(ctx, r.nodeId, nodeTitle, 'info', logMsg)
+        }
       }
-    }
-
-    // 构建执行上下文
-    const execConfig: NodeExecutionConfig = {
-      nodeId: node.id,
-      nodeType: node.type || '',
-      title: nodeTitle,
-      data: node.data as Record<string, any>,
-    }
-
-    const execCtx: NodeExecutionContext = {
-      config: execConfig,
-      input,
-      globalContext: {
-        userInputs: options?.userInputs || {},
-      },
-    }
-
-    // 获取执行器并执行
-    const executor = getExecutor(node.type || '')
-    if (!executor) {
-      ctx.nodeStatuses[nodeId] = 'error'
-      addLog(ctx, nodeId, nodeTitle, 'error', `未知节点类型: ${node.type}`)
-      ctx.globalStatus = 'error'
       onUpdate({ ...ctx })
-      break
     }
 
-    const result = await executor.execute(execCtx)
-
-    // 处理执行结果
-    if (result.status === 'waiting') {
-      ctx.nodeStatuses[nodeId] = 'waiting'
-      ctx.globalStatus = 'paused'
-      ctx.nodeOutputs[nodeId] = result.output
-      addLog(ctx, nodeId, nodeTitle, 'warn', '等待用户输入...')
-      onUpdate({ ...ctx })
-      return ctx
-    }
-
-    if (result.status === 'error') {
-      ctx.nodeStatuses[nodeId] = 'error'
-      ctx.globalStatus = 'error'
-      addLog(ctx, nodeId, nodeTitle, 'error', result.error || '执行失败')
-      onUpdate({ ...ctx })
-      break
-    }
-
-    // 成功
-    ctx.nodeStatuses[nodeId] = 'success'
-    ctx.nodeOutputs[nodeId] = result.output
-    for (const logMsg of result.logs) {
-      addLog(ctx, nodeId, nodeTitle, 'info', logMsg)
-    }
-    onUpdate({ ...ctx })
+    if (layerHasError) break loop
+    if (hasWaiting) return ctx
   }
 
   // 检查是否所有节点都完成了
