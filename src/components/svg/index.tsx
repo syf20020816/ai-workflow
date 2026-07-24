@@ -328,29 +328,6 @@ Icon.Retry = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     ),
   })
 
-Icon.Code = ({ ...rest }: SVGProps<SVGSVGElement>) =>
-  Icon({
-    children: (
-      <svg
-        viewBox="0 0 1024 1024"
-        xmlns="http://www.w3.org/2000/svg"
-        width={24}
-        height={24}
-        {...rest}
-      >
-        <path
-          d="M320 256L64 512l256 256 64-64-192-192 192-192-64-64zM704 256l-64 64 192 192-192 192 64 64 256-256-256-256z"
-          fill="#52c41a"
-        />
-        <path
-          d="M576 224L448 800l64 64 128-576-64-64z"
-          fill="#52c41a"
-          opacity="0.7"
-        />
-      </svg>
-    ),
-  })
-
 Icon.LarkTemplate = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
     children: (
@@ -410,7 +387,6 @@ export const NodeIcons = new Map<NodeType, ReactNode>([
   [NodeTypes.LOOP, <Icon.Loop />],
   [NodeTypes.LOOP_CONDITION, <Icon.LoopCondition />],
   [NodeTypes.RETRY, <Icon.Retry />],
-  [NodeTypes.CODE, <Icon.Code />],
   [NodeTypes.SKILL, <Icon.Skill />],
   [NodeTypes.LARK_TEMPLATE, <Icon.LarkTemplate />],
   [NodeTypes.CODE_AGENT, <Icon.CodeAgent />],

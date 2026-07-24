@@ -6,6 +6,10 @@ body {
   height: 100vh;
 }
 
+div {
+  scrollbar-width: thin;
+}
+
 #app {
   width: 100vw;
   height: 100vh;

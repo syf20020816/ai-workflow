@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Skill } from '#/types/skill'
 
-const DATA_PATH = path.resolve(process.cwd(), 'skill.conf.json')
+const INDEX_PATH = path.resolve(process.cwd(), 'workflows/skills/index.json')
+const SKILLS_DIR = path.resolve(process.cwd(), 'workflows/skills')
 
 export const Route = createFileRoute('/api/skill/content')({
   server: {
@@ -16,21 +17,22 @@ export const Route = createFileRoute('/api/skill/content')({
           return Response.json({ error: 'Missing id' }, { status: 400 })
         }
 
-        const skills: Skill[] = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+        if (!fs.existsSync(INDEX_PATH)) {
+          return Response.json({ error: 'No skills found' }, { status: 404 })
+        }
+
+        const skills: Skill[] = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf-8'))
         const skill = skills.find((s) => s.id === id)
 
         if (!skill) {
           return Response.json({ error: 'Skill not found' }, { status: 404 })
         }
 
-        let content = skill.systemPrompt || ''
-
-        // 如果是 markdown 来源，从文件重新读取
-        if (skill.source === 'markdown' && skill.filePath) {
-          const resolvedPath = path.resolve(process.cwd(), skill.filePath)
-          if (fs.existsSync(resolvedPath)) {
-            content = fs.readFileSync(resolvedPath, 'utf-8')
-          }
+        // 从 workflows/skills/{id}/skill.md 读取内容
+        const skillMdPath = path.join(SKILLS_DIR, id, 'skill.md')
+        let content = ''
+        if (fs.existsSync(skillMdPath)) {
+          content = fs.readFileSync(skillMdPath, 'utf-8')
         }
 
         return Response.json({ content, skill })

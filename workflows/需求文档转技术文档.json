@@ -61,7 +61,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": true,
+      "selected": false,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 506,
@@ -127,7 +127,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": false,
+      "selected": true,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 987.2159999999999,
@@ -191,12 +191,12 @@
         "maxIterations": 20,
         "branch": "feature/260508_relationship-v3",
         "modal": {
-          "name": "deepseek-v4-flash-260425",
+          "name": "doubao-seed-2-0-pro-260215",
           "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "token": {
             "min": 100,
-            "max": 128000
+            "max": 109600
           }
         }
       },
@@ -281,6 +281,6 @@
       "id": "xy-edge__d80811b8-3984-4f22-a99f-0a02373bddc2-e8d2db2f-4673-44b5-a959-5078f68e1471"
     }
   ],
-  "createdAt": "2026-07-22T11:42:44.313Z",
-  "updatedAt": "2026-07-22T11:42:44.313Z"
+  "createdAt": "2026-07-23T07:48:47.881Z",
+  "updatedAt": "2026-07-23T07:48:47.881Z"
 }

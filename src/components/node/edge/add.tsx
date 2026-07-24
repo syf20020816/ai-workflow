@@ -117,12 +117,6 @@ export const AddNodeBtn = ({
       onClick: () => addNode(NodeBuilder.lark),
     },
     {
-      label: <NodeHeader kind={NodeTypes.CODE} title="代码访问节点" />,
-      key: NodeTypes.CODE,
-      disabled: isDisabledNode(kind, NodeTypes.CODE),
-      onClick: () => addNode(NodeBuilder.code),
-    },
-    {
       label: <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码分析节点" />,
       key: NodeTypes.CODE_AGENT,
       disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),

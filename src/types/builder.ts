@@ -49,6 +49,7 @@ export class NodeBuilder {
       type: NodeTypes.AI_OUTPUT,
       data: {
         title: 'AI输出节点',
+        outputPath: '',
       },
     }
   }
@@ -152,20 +153,6 @@ export class NodeBuilder {
         maxRetryCount: 5,
         judgmentMode: 'manual',
         errorKeywords: '',
-      },
-    }
-  }
-
-  static code(pos: Position): AppNode {
-    return {
-      ...NodeBuilder.basicProps(pos.x, pos.y),
-      type: NodeTypes.CODE,
-      data: {
-        title: '代码访问节点',
-        mode: 'local',
-        repoUrl: '',
-        branch: 'master',
-        lines: [],
       },
     }
   }

@@ -90,7 +90,7 @@ export const EditAgent = () => {
         />
       ),
       actionRender: (
-        <Button size="small" onClick={() => switchTo('model')}>管理</Button>
+        <Button size="small" onClick={() => switchTo('prompts')}>管理</Button>
       ),
     },
     {
@@ -128,7 +128,7 @@ export const EditAgent = () => {
         />
       ),
       actionRender: (
-        <Button size="small" onClick={() => switchTo('skill')}>管理</Button>
+        <Button size="small" onClick={() => switchTo('prompts')}>管理</Button>
       ),
     },
   ]

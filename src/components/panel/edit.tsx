@@ -3,7 +3,16 @@ import { NodeTypes } from '#/types'
 import type { AppNode } from '#/types'
 import { NodeIcons } from '../svg'
 import styles from './index.module.scss'
-import { Button, Divider, Input, Tabs, Typography } from 'antd'
+import {
+  Button,
+  Divider,
+  Input,
+  Tabs,
+  Typography,
+  Modal,
+  Select,
+  message,
+} from 'antd'
 import type { TabsProps } from 'antd'
 import { EditUserInput } from './edit/userInput'
 import { EditAgent } from './edit/aiAgent'
@@ -16,7 +25,6 @@ import { EditIfCondition } from './edit/ifCondition'
 import { EditLoop } from './edit/loop'
 import { EditLoopCondition } from './edit/loopCondition'
 import { EditRetry } from './edit/retry'
-import { EditCode } from './edit/code'
 import { EditMemory } from './edit/memory'
 import { EditSkill } from './edit/skill'
 import { EditCodeAgent } from './edit/codeAgent'
@@ -26,7 +34,6 @@ import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
 import { ExecutionResult } from '../execution/result'
 import { Pin } from 'lucide-react'
-import { Modal, Select, message } from 'antd'
 
 const { Text } = Typography
 
@@ -39,7 +46,9 @@ export const EditPanel = () => {
   const workflowId = useNodeStore((state) => state.workflowId)
   const [activeKey, setActiveKey] = useState<ActiveKey>('editor')
   const [loadOpen, setLoadOpen] = useState(false)
-  const [pinnedList, setPinnedList] = useState<{ nodeId: string; title: string; savedAt: string }[]>([])
+  const [pinnedList, setPinnedList] = useState<
+    { nodeId: string; title: string; savedAt: string }[]
+  >([])
   const [selectedPin, setSelectedPin] = useState<string | null>(null)
 
   const items: TabsProps['items'] = [
@@ -60,15 +69,20 @@ export const EditPanel = () => {
                 {currentNode.type === NodeTypes.BMAD_AGENT && <EditBMADAgent />}
                 {currentNode.type === NodeTypes.LARK && <EditLark />}
                 {currentNode.type === NodeTypes.IF && <EditIf />}
-                {currentNode.type === NodeTypes.IF_CONDITION && <EditIfCondition />}
+                {currentNode.type === NodeTypes.IF_CONDITION && (
+                  <EditIfCondition />
+                )}
                 {currentNode.type === NodeTypes.LOOP && <EditLoop />}
-                {currentNode.type === NodeTypes.LOOP_CONDITION && <EditLoopCondition />}
+                {currentNode.type === NodeTypes.LOOP_CONDITION && (
+                  <EditLoopCondition />
+                )}
                 {currentNode.type === NodeTypes.RETRY && <EditRetry />}
-                {currentNode.type === NodeTypes.CODE && <EditCode />}
                 {currentNode.type === NodeTypes.CODE_AGENT && <EditCodeAgent />}
                 {currentNode.type === NodeTypes.MEMORY && <EditMemory />}
                 {currentNode.type === NodeTypes.SKILL && <EditSkill />}
-                {currentNode.type === NodeTypes.LARK_TEMPLATE && <EditLarkTemplate />}
+                {currentNode.type === NodeTypes.LARK_TEMPLATE && (
+                  <EditLarkTemplate />
+                )}
               </main>
               <footer className={styles.footer}>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -76,14 +90,18 @@ export const EditPanel = () => {
                     icon={<Pin size={14} />}
                     block
                     onClick={async () => {
-                      const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}`)
+                      const res = await fetch(
+                        `/api/workflow/pin?workflowId=${workflowId}`,
+                      )
                       const json = await res.json()
                       if (json.status === 'success' && json.data.length > 0) {
                         setPinnedList(json.data)
                         setSelectedPin(null)
                         setLoadOpen(true)
                       } else {
-                        message.info('没有已固定的节点数据，请先执行节点并点击 PIN 按钮')
+                        message.info(
+                          '没有已固定的节点数据，请先执行节点并点击 PIN 按钮',
+                        )
                       }
                     }}
                   >
@@ -109,11 +127,15 @@ export const EditPanel = () => {
                       message.warning('请选择一个固定节点')
                       return
                     }
-                    const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`)
+                    const res = await fetch(
+                      `/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`,
+                    )
                     const json = await res.json()
                     if (json.status === 'success') {
                       loadPinnedNode(selectedPin, json.data.output)
-                      message.success(`已加载固定节点: ${json.data.title || selectedPin}`)
+                      message.success(
+                        `已加载固定节点: ${json.data.title || selectedPin}`,
+                      )
                       setLoadOpen(false)
                     } else {
                       message.error('加载失败')
@@ -148,10 +170,10 @@ export const EditPanel = () => {
       children: <OutputPanel />,
     },
     {
-      key: "result",
-      label: "执行结果",
-      children: <ExecutionResult />
-    }
+      key: 'result',
+      label: '执行结果',
+      children: <ExecutionResult />,
+    },
   ]
 
   return (

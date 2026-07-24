@@ -66,22 +66,29 @@ export const Route = createFileRoute('/api/editor/list')({
           }
         } catch { /* 目录不存在 */ }
 
-        // 4. 配置文件
-        const configFiles = [
-          { name: 'skill.conf.json', relativePath: 'skill.conf.json', language: 'json' as const },
-        ]
-
-        const resolvedConfigs: { name: string; path: string; relativePath: string; language: string }[] = []
-        for (const cf of configFiles) {
-          const fullPath = path.join(WORKSPACE, cf.relativePath)
-          try {
-            await fs.access(fullPath)
-            resolvedConfigs.push({ ...cf, path: fullPath })
-          } catch { /* 文件不存在 */ }
-        }
-        if (resolvedConfigs.length > 0) {
-          groups.push({ title: '配置文件', files: resolvedConfigs })
-        }
+        // 4. 技能文件（workflows/skills 下的 skill.md）
+        const skillsDir = path.join(WORKSPACE, 'workflows/skills')
+        try {
+          const skillEntries = await fs.readdir(skillsDir, { withFileTypes: true })
+          const files: { name: string; path: string; relativePath: string; language: string }[] = []
+          for (const entry of skillEntries) {
+            if (entry.isDirectory()) {
+              const skillMdPath = path.join(skillsDir, entry.name, 'skill.md')
+              try {
+                await fs.access(skillMdPath)
+                files.push({
+                  name: `${entry.name}/skill.md`,
+                  path: skillMdPath,
+                  relativePath: path.join('workflows/skills', entry.name, 'skill.md'),
+                  language: 'markdown',
+                })
+              } catch { /* 该技能没有 skill.md */ }
+            }
+          }
+          if (files.length > 0) {
+            groups.push({ title: '技能 (Skills)', files })
+          }
+        } catch { /* 目录不存在 */ }
 
         return Response.json({ status: 'success', data: groups })
       },

@@ -1,12 +1,25 @@
-import { Button, message, Space, Tree, Typography, Spin } from 'antd'
+import {
+  Button,
+  message,
+  Space,
+  Tree,
+  Typography,
+  Spin,
+  Dropdown,
+  Modal,
+  Input,
+} from 'antd'
 import { useEffect, useState, useRef } from 'react'
 import {
   ReloadOutlined,
   SaveOutlined,
   FolderOutlined,
   FileOutlined,
+  FolderAddOutlined,
+  FileAddOutlined,
 } from '@ant-design/icons'
 import type { DataNode } from 'antd/es/tree'
+import type { MenuProps } from 'antd'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { json } from '@codemirror/lang-json'
@@ -55,6 +68,20 @@ export const FileEditor = () => {
   const viewRef = useRef<EditorView | null>(null)
   const contentRef = useRef('')
   const { pendingFilePath, consumePendingFile } = useRouteStore()
+
+  // 创建目录/文件 modal
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createType, setCreateType] = useState<'file' | 'directory'>('file')
+  const [createPath, setCreatePath] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  // 重命名 modal
+  const [renameModalOpen, setRenameModalOpen] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<{
+    relativePath: string
+    name: string
+  } | null>(null)
+  const [renameName, setRenameName] = useState('')
 
   const fetchList = async () => {
     setLoading(true)
@@ -177,31 +204,119 @@ export const FileEditor = () => {
     }
   }, [activeFile?.path, activeFile?.content, fileLoading])
 
-  // 构建树节点
-  const treeData: DataNode[] = groups.map((group, gi) => ({
-    key: `group-${gi}`,
-    title: group.title,
-    icon: <FolderOutlined />,
-    children: group.files.map((file) => ({
-      key: file.relativePath,
-      title: file.name,
-      icon: <FileOutlined />,
-      isLeaf: true,
-    })),
-  }))
+  // --- 创建目录/文件 ---
+  const openCreateModal = (type: 'file' | 'directory') => {
+    setCreateType(type)
+    setCreatePath('')
+    setCreateModalOpen(true)
+  }
 
-  // 获取当前路径对应的相对路径映射
-  const fileMap = new Map<string, string>()
-  for (const group of groups) {
-    for (const file of group.files) {
-      fileMap.set(file.name, file.relativePath)
+  const handleCreate = async () => {
+    if (!createPath.trim()) return
+    setCreating(true)
+    try {
+      const action = createType === 'directory' ? 'mkdir' : 'createFile'
+      const res = await fetch('/api/editor/fs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, path: createPath.trim() }),
+      })
+      const data = await res.json()
+      if (data.status === 'success') {
+        message.success(
+          createType === 'directory' ? '目录已创建' : '文件已创建',
+        )
+        setCreateModalOpen(false)
+        fetchList()
+      } else {
+        message.error(data.error || '创建失败')
+      }
+    } catch (err: any) {
+      message.error(`创建失败: ${err.message}`)
+    } finally {
+      setCreating(false)
     }
   }
+
+  // --- 重命名 ---
+  const openRenameModal = (relativePath: string) => {
+    const name = relativePath.split('/').pop() || relativePath
+    setRenameTarget({ relativePath, name })
+    setRenameName(name)
+    setRenameModalOpen(true)
+  }
+
+  const handleRename = async () => {
+    if (!renameTarget || !renameName.trim()) return
+    const parts = renameTarget.relativePath.split('/')
+    parts[parts.length - 1] = renameName.trim()
+    const newRelativePath = parts.join('/')
+
+    try {
+      const res = await fetch('/api/editor/fs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rename',
+          path: renameTarget.relativePath,
+          newPath: newRelativePath,
+        }),
+      })
+      const data = await res.json()
+      if (data.status === 'success') {
+        message.success('已重命名')
+        setRenameModalOpen(false)
+        // 如果正在编辑被重命名的文件，更新 activeFile
+        if (activeFile && activeFile.path === renameTarget.relativePath) {
+          setActiveFile({ ...activeFile, path: newRelativePath })
+        }
+        fetchList()
+      } else {
+        message.error(data.error || '重命名失败')
+      }
+    } catch (err: any) {
+      message.error(`重命名失败: ${err.message}`)
+    }
+  }
+
+  // --- 右键菜单 ---
+  const getContextMenuItems = (relativePath: string): MenuProps['items'] => [
+    {
+      key: 'rename',
+      label: '重命名',
+      onClick: () => openRenameModal(relativePath),
+    },
+  ]
+
+  // 构建树节点（带右键菜单）
+  const treeData: DataNode[] = groups.map((group, gi) => {
+    const groupKey = `group-${gi}`
+    return {
+      key: groupKey,
+      title: group.title,
+      icon: <FolderOutlined />,
+      children: group.files.map((file) => ({
+        key: file.relativePath,
+        title: (
+          <Dropdown
+            menu={{ items: getContextMenuItems(file.relativePath) }}
+            trigger={['contextMenu']}
+          >
+            <span style={{ display: 'inline-block', }}>
+              {file.name}
+            </span>
+          </Dropdown>
+        ),
+        icon: <FileOutlined />,
+        isLeaf: true,
+      })),
+    }
+  })
 
   return (
     <div
       style={{
-        padding: "16px 0",
+        padding: '16px 0',
         boxSizing: 'border-box',
         height: '100vh',
         display: 'flex',
@@ -263,6 +378,26 @@ export const FileEditor = () => {
             padding: 8,
           }}
         >
+          {/* 文件树 header */}
+          <div
+            style={{
+              marginBottom: 8,
+              display: 'flex',
+              gap: 4,
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Button
+              size="small"
+              icon={<FolderAddOutlined />}
+              onClick={() => openCreateModal('directory')}
+            ></Button>
+            <Button
+              size="small"
+              icon={<FileAddOutlined />}
+              onClick={() => openCreateModal('file')}
+            ></Button>
+          </div>
           <Spin spinning={loading}>
             {treeData.length > 0 ? (
               <Tree
@@ -271,7 +406,10 @@ export const FileEditor = () => {
                 defaultExpandAll
                 selectedKeys={activeFile ? [activeFile.path] : []}
                 onSelect={(keys) => {
-                  if (keys.length > 0 && keys[0] !== `group-${keys[0]}`) {
+                  if (
+                    keys.length > 0 &&
+                    !String(keys[0]).startsWith('group-')
+                  ) {
                     handleSelect(keys[0] as string)
                   }
                 }}
@@ -293,7 +431,7 @@ export const FileEditor = () => {
             border: '1px solid #333',
             borderRadius: 6,
             overflow: 'hidden',
-            height: "100%",
+            height: '100%',
             overflowY: 'auto',
           }}
         >
@@ -318,6 +456,58 @@ export const FileEditor = () => {
           )}
         </div>
       </div>
+
+      {/* 创建目录/文件 Modal */}
+      <Modal
+        title={createType === 'directory' ? '创建目录' : '创建文件'}
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        onOk={handleCreate}
+        confirmLoading={creating}
+        okText="创建"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary">
+            输入相对于项目根目录的路径
+            {createType === 'directory'
+              ? '（例如: workflows/skills/my-skill）'
+              : '（例如: workflows/skills/my-skill/skill.md）'}
+          </Text>
+        </div>
+        <Input
+          placeholder={
+            createType === 'directory'
+              ? '例如: workflows/skills/my-skill'
+              : '例如: workflows/skills/my-skill/skill.md'
+          }
+          value={createPath}
+          onChange={(e) => setCreatePath(e.target.value)}
+        />
+      </Modal>
+
+      {/* 重命名 Modal */}
+      <Modal
+        title="重命名"
+        open={renameModalOpen}
+        onCancel={() => setRenameModalOpen(false)}
+        onOk={handleRename}
+        okText="重命名"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary">
+            输入新名称
+            {renameTarget && (
+              <span style={{ display: 'block', fontSize: 11, marginTop: 4 }}>
+                当前: {renameTarget.relativePath}
+              </span>
+            )}
+          </Text>
+        </div>
+        <Input
+          value={renameName}
+          onChange={(e) => setRenameName(e.target.value)}
+        />
+      </Modal>
     </div>
   )
 }

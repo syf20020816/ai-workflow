@@ -1,15 +1,14 @@
 import { useNodeStore } from '#/store/node'
 import styles from './index.module.scss'
-import { Button, Typography, Tag, Input, Space, Select, message } from 'antd'
+import { Button, Typography, Tag, Input, Space, Select, Timeline } from 'antd'
 import { PlayIcon, ResetIcon } from '@radix-ui/react-icons'
 import type { LogEntry } from '#/types/engine'
 import { useState } from 'react'
-import { WorkflowImportExport } from './importExport'
 
 const { Text } = Typography
 
 const levelColorMap: Record<LogEntry['level'], string> = {
-  info: 'blue',
+  info: 'green',
   warn: 'orange',
   error: 'red',
   debug: 'default',
@@ -17,7 +16,6 @@ const levelColorMap: Record<LogEntry['level'], string> = {
 
 export const ExecutionPanel = () => {
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
-  const nodes = useNodeStore((state) => state.nodes)
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const resumeFrom = useNodeStore((state) => state.resumeFrom)
@@ -67,8 +65,6 @@ export const ExecutionPanel = () => {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <WorkflowImportExport />
-
         <Select
           style={{ width: '100%' }}
           placeholder="选择固定节点（可选）"
@@ -195,31 +191,30 @@ export const ExecutionPanel = () => {
 
       {/* 日志列表 */}
       {pipelineContext.logs.length > 0 && (
-        <div>
+        <div className={styles.log_panel}>
           <Text strong style={{ fontSize: 14 }}>
             执行日志
           </Text>
-          <div className={styles.log_container}>
-            {pipelineContext.logs.map((log, i) => (
-              <div key={i} className={styles.log_item}>
-                <Tag
-                  color={levelColorMap[log.level]}
-                  style={{ fontSize: 12, lineHeight: '14px', padding: '0 4px' }}
-                >
-                  {log.level}
-                </Tag>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: '#888',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {log.nodeTitle}
-                </Text>
-                <Text style={{ fontSize: 12 }}>{log.message}</Text>
-              </div>
-            ))}
+          <div style={{ marginTop: 8 }}>
+            <Timeline
+              items={pipelineContext.logs.map((log, i) => ({
+                color: levelColorMap[log.level] || 'blue',
+                content: (
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                    <Text
+                      style={{
+                        color: '#888',
+                        whiteSpace: 'nowrap',
+                        marginRight: 8,
+                      }}
+                    >
+                      {log.nodeTitle}
+                    </Text>
+                    <Text>{log.message}</Text>
+                  </div>
+                ),
+              }))}
+            />
           </div>
         </div>
       )}

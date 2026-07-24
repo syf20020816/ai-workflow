@@ -34,7 +34,7 @@ function App() {
             <EditPanel />
           </div>
         </Tabs.TabPane>
-        <Tabs.TabPane tab="管理" key="prompts">
+        <Tabs.TabPane tab="规则与模型" key="prompts">
           <PromptManager />
         </Tabs.TabPane>
         <Tabs.TabPane tab="编辑器" key="editor">

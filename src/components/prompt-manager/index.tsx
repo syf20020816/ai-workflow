@@ -1,6 +1,24 @@
-import { Button, message, Space, Table, Tabs, Tag, Typography, Modal, Form, Input, InputNumber, Select } from 'antd'
+import {
+  Button,
+  message,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+} from 'antd'
 import { useEffect, useState } from 'react'
-import { EditOutlined, PlusOutlined, UploadOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import {
+  EditOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  PlayCircleOutlined,
+} from '@ant-design/icons'
 import { useRouteStore } from '#/store/route'
 import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
@@ -8,6 +26,7 @@ import { useBmadAgentStore } from '#/store/bmad'
 import { useSkillStore } from '#/store/skill'
 import type { Model } from '#/types/model'
 import { ModalKinds } from '#/types/model'
+import { FileScan, RefreshCw, Upload } from 'lucide-react'
 
 const { Text } = Typography
 
@@ -27,15 +46,24 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       const res = await window.fetch('/api/workflows')
       if (res.ok) setList(await res.json())
       else console.error('load workflow list failed:', res.status)
-    } catch (err) { console.error('load workflow list error:', err) } finally { setL(false) }
+    } catch (err) {
+      console.error('load workflow list error:', err)
+    } finally {
+      setL(false)
+    }
   }
 
-  useEffect(() => { loadList() }, [])
+  useEffect(() => {
+    loadList()
+  }, [])
 
   const handleLoad = async (id: string, name: string) => {
     try {
       const res = await fetch(`/workflows/${id}.json`)
-      if (!res.ok) { message.error('加载工作流文件失败'); return }
+      if (!res.ok) {
+        message.error('加载工作流文件失败')
+        return
+      }
       const data = await res.json()
       setNodes(data.nodes || [])
       setEdges(data.edges || [])
@@ -50,36 +78,93 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const handleDelete = async (id: string, name: string) => {
     Modal.confirm({
       title: `确认删除工作流 "${name}"？`,
-      okText: '删除', okType: 'danger',
+      okText: '删除',
+      okType: 'danger',
       onOk: async () => {
         const res = await fetch(`/api/workflows?id=${id}`, { method: 'DELETE' })
-        if (res.ok) { message.success('已删除'); loadList() }
+        if (res.ok) {
+          message.success('已删除')
+          loadList()
+        }
       },
     })
   }
 
   const columns = [
-    { title: '名称', dataIndex: 'name', key: 'name', render: (n: string) => <Text strong>{n}</Text> },
-    { title: '节点', dataIndex: 'nodeCount', key: 'nodeCount', width: 60, align: 'center' as const, render: (c: number) => <Tag>{c}</Tag> },
-    { title: '连线', dataIndex: 'edgeCount', key: 'edgeCount', width: 60, align: 'center' as const, render: (c: number) => <Tag>{c}</Tag> },
     {
-      title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170,
-      render: (d: string) => <Text type="secondary" style={{ fontSize: 12 }}>{d ? new Date(d).toLocaleString() : '-'}</Text>,
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text strong>{n}</Text>,
     },
     {
-      title: '操作', key: 'action', width: 200,
+      title: '节点',
+      dataIndex: 'nodeCount',
+      key: 'nodeCount',
+      width: 60,
+      align: 'center' as const,
+      render: (c: number) => <Tag>{c}</Tag>,
+    },
+    {
+      title: '连线',
+      dataIndex: 'edgeCount',
+      key: 'edgeCount',
+      width: 60,
+      align: 'center' as const,
+      render: (c: number) => <Tag>{c}</Tag>,
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 170,
+      render: (d: string) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {d ? new Date(d).toLocaleString() : '-'}
+        </Text>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 200,
       render: (_: any, r: any) => (
         <Space>
-          <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => handleLoad(r.id, r.name)}>加载</Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openInEditor(`workflows/${r.id}.json`)}>JSON</Button>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id, r.name)} />
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlayCircleOutlined />}
+            onClick={() => handleLoad(r.id, r.name)}
+          >
+            加载
+          </Button>
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openInEditor(`workflows/${r.id}.json`)}
+          >
+            JSON
+          </Button>
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(r.id, r.name)}
+          />
         </Space>
       ),
     },
   ]
 
   return (
-    <Table dataSource={list} columns={columns} rowKey="id" loading={l || loading} size="small" pagination={false} />
+    <Table
+      dataSource={list}
+      columns={columns}
+      rowKey="id"
+      loading={l || loading}
+      size="small"
+      pagination={false}
+    />
   )
 }
 
@@ -96,32 +181,92 @@ const ModelTab = ({ loading }: { loading: boolean }) => {
   const [editingModel, setEditingModel] = useState<Model | null>(null)
   const [form] = Form.useForm()
 
-  useEffect(() => { fetchModels() }, [])
+  useEffect(() => {
+    fetchModels()
+  }, [])
 
-  const handleEdit = (r: Model) => { setEditingModel(r); form.setFieldsValue(r); setModalOpen(true) }
-  const handleCreate = () => { setEditingModel(null); form.resetFields(); form.setFieldsValue({ kind: ModalKinds.Cloud, token: { min: 100, max: 4096 } }); setModalOpen(true) }
+  const handleEdit = (r: Model) => {
+    setEditingModel(r)
+    form.setFieldsValue(r)
+    setModalOpen(true)
+  }
+  const handleCreate = () => {
+    setEditingModel(null)
+    form.resetFields()
+    form.setFieldsValue({
+      kind: ModalKinds.Cloud,
+      token: { min: 100, max: 4096 },
+    })
+    setModalOpen(true)
+  }
   const handleSave = async () => {
     try {
       const v = await form.validateFields()
-      if (editingModel) { await updateModel({ ...editingModel, ...v }); message.success('已更新') }
-      else { await createModel(v); message.success('已创建') }
+      if (editingModel) {
+        await updateModel({ ...editingModel, ...v })
+        message.success('已更新')
+      } else {
+        await createModel(v)
+        message.success('已创建')
+      }
       setModalOpen(false)
-    } catch { /* validation */ }
+    } catch {
+      /* validation */
+    }
   }
   const handleDelete = (r: Model) => {
-    Modal.confirm({ title: `确认删除模型 "${r.name}"？`, okText: '删除', okType: 'danger', onOk: async () => { await deleteModel(r.id); message.success('已删除') } })
+    Modal.confirm({
+      title: `确认删除模型 "${r.name}"？`,
+      okText: '删除',
+      okType: 'danger',
+      onOk: async () => {
+        await deleteModel(r.id)
+        message.success('已删除')
+      },
+    })
   }
 
   const columns = [
-    { title: '名称', dataIndex: 'name', key: 'name', render: (n: string, r: Model) => <Space><Tag color={r.kind === ModalKinds.Local ? 'green' : 'blue'}>{r.kind === ModalKinds.Local ? '本地' : '云端'}</Tag><Text strong>{n}</Text></Space> },
-    { title: '模型', dataIndex: 'modelName', key: 'modelName' },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
     {
-      title: '操作', key: 'action', width: 140,
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string, r: Model) => (
+        <Space>
+          <Tag color={r.kind === ModalKinds.Local ? 'green' : 'blue'}>
+            {r.kind === ModalKinds.Local ? '本地' : '云端'}
+          </Tag>
+          <Text strong>{n}</Text>
+        </Space>
+      ),
+    },
+    { title: '模型', dataIndex: 'modelName', key: 'modelName' },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 140,
       render: (_: any, r: Model) => (
         <Space>
-          <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)}>编辑</Button>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} />
+          <Button
+            type="primary"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(r)}
+          >
+            编辑
+          </Button>
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(r)}
+          />
         </Space>
       ),
     },
@@ -129,26 +274,70 @@ const ModelTab = ({ loading }: { loading: boolean }) => {
 
   return (
     <>
-      <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate} style={{ marginBottom: 12 }}>新增模型</Button>
-      <Table dataSource={models} columns={columns} rowKey="id" loading={modelLoading || loading} size="small" pagination={false} />
-      <Modal title={editingModel ? '编辑模型' : '新增模型'} open={modalOpen} onCancel={() => setModalOpen(false)} onOk={handleSave} okText={editingModel ? '保存' : '创建'} width={520}>
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={handleCreate}
+        style={{ marginBottom: 12 }}
+      >
+        新增模型
+      </Button>
+      <Table
+        dataSource={models}
+        columns={columns}
+        rowKey="id"
+        loading={modelLoading || loading}
+        size="small"
+        pagination={false}
+      />
+      <Modal
+        title={editingModel ? '编辑模型' : '新增模型'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={handleSave}
+        okText={editingModel ? '保存' : '创建'}
+        width={520}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="kind" label="类型" rules={[{ required: true }]}>
-            <Select options={[{ label: '云端模型', value: ModalKinds.Cloud }, { label: '本地模型', value: ModalKinds.Local }]} />
+            <Select
+              options={[
+                { label: '云端模型', value: ModalKinds.Cloud },
+                { label: '本地模型', value: ModalKinds.Local },
+              ]}
+            />
           </Form.Item>
-          <Form.Item name="name" label="自定义名称" rules={[{ required: true, message: '请输入名称' }]}>
+          <Form.Item
+            name="name"
+            label="自定义名称"
+            rules={[{ required: true, message: '请输入名称' }]}
+          >
             <Input placeholder="例如: GPT-4o" />
           </Form.Item>
-          <Form.Item name="modelName" label="模型名" rules={[{ required: true, message: '请输入模型名' }]}>
+          <Form.Item
+            name="modelName"
+            label="模型名"
+            rules={[{ required: true, message: '请输入模型名' }]}
+          >
             <Input placeholder="例如: gpt-4o" />
           </Form.Item>
-          <Form.Item name="description" label="描述"><Input.TextArea rows={2} placeholder="可选描述" /></Form.Item>
-          <Form.Item name="url" label="API URL"><Input placeholder="https://api.openai.com/v1" /></Form.Item>
-          <Form.Item name="apiKey" label="API Key"><Input.Password placeholder="留空或输入密钥" /></Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} placeholder="可选描述" />
+          </Form.Item>
+          <Form.Item name="url" label="API URL">
+            <Input placeholder="https://api.openai.com/v1" />
+          </Form.Item>
+          <Form.Item name="apiKey" label="API Key">
+            <Input.Password placeholder="留空或输入密钥" />
+          </Form.Item>
           <Space>
-            <Form.Item name={['token', 'min']} label="最小 Token"><InputNumber min={0} max={128000} style={{ width: 120 }} /></Form.Item>
+            <Form.Item name={['token', 'min']} label="最小 Token">
+              <InputNumber min={0} max={128000} style={{ width: 120 }} />
+            </Form.Item>
             <span>~</span>
-            <Form.Item name={['token', 'max']} label="最大 Token"><InputNumber min={0} max={128000} style={{ width: 120 }} /></Form.Item>
+            <Form.Item name={['token', 'max']} label="最大 Token">
+              <InputNumber min={0} max={128000} style={{ width: 120 }} />
+            </Form.Item>
           </Space>
         </Form>
       </Modal>
@@ -171,7 +360,10 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
   const [importDir, setImportDir] = useState(false)
   const [importing, setImporting] = useState(false)
 
-  useEffect(() => { fetchAgents(); fetchSkills() }, [])
+  useEffect(() => {
+    fetchAgents()
+    fetchSkills()
+  }, [])
 
   const handleImport = async () => {
     if (!importPath.trim()) return
@@ -180,49 +372,189 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
       const res = await fetch('/api/skill/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(importDir ? { dirPath: importPath.trim() } : { filePath: importPath.trim() }),
+        body: JSON.stringify(
+          importDir
+            ? { dirPath: importPath.trim() }
+            : { filePath: importPath.trim() },
+        ),
       })
       const data = await res.json()
-      if (data.success) { message.success('导入成功'); fetchSkills(); setImportModalOpen(false); setImportPath('') }
-      else { message.error(data.error || '导入失败') }
-    } catch (err: any) { message.error(`导入失败: ${err.message}`) } finally { setImporting(false) }
+      if (data.success) {
+        message.success('导入成功')
+        fetchSkills()
+        setImportModalOpen(false)
+        setImportPath('')
+      } else {
+        message.error(data.error || '导入失败')
+      }
+    } catch (err: any) {
+      message.error(`导入失败: ${err.message}`)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleDelete = (r: any) => {
-    Modal.confirm({ title: `确认删除技能 "${r.name}"？`, okText: '删除', okType: 'danger', onOk: async () => { await deleteSkill(r.id); message.success('已删除') } })
+    Modal.confirm({
+      title: `确认删除技能 "${r.name}"？`,
+      okText: '删除',
+      okType: 'danger',
+      onOk: async () => {
+        await deleteSkill(r.id)
+        message.success('已删除')
+      },
+    })
   }
 
-  const moduleColorMap: Record<string, string> = { bmm: 'blue', bmb: 'green', tea: 'orange' }
+  const moduleColorMap: Record<string, string> = {
+    bmm: 'blue',
+    bmb: 'green',
+    tea: 'orange',
+  }
 
   const bmadColumns = [
-    { title: '角色', dataIndex: 'title', key: 'title', width: 160, render: (_: string, r: any) => <Space><Tag color={moduleColorMap[r.module]}>{r.module?.toUpperCase()}</Tag><span>{r.title}</span></Space> },
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '团队', dataIndex: 'team', key: 'team', render: (t: string) => t?.replace('-', ' ') },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
-    { title: '', key: 'action', width: 80, render: () => <Tag style={{ fontSize: 9 }}>配置来源 BMad</Tag> },
+    {
+      title: '角色',
+      dataIndex: 'title',
+      key: 'title',
+      render: (_: string, r: any) => (
+        <Space>
+          <Tag color={moduleColorMap[r.module]}>{r.module?.toUpperCase()}</Tag>
+          <span>{r.title}</span>
+        </Space>
+      ),
+    },
+    { title: '名称', dataIndex: 'name', key: 'name', width: 140 },
+    {
+      title: '团队',
+      dataIndex: 'team',
+      key: 'team',
+      render: (t: string) => t?.replace('-', ' '),
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+    },
+    {
+      title: '来源',
+      key: 'action',
+      width: 120,
+      render: () => <Tag style={{ fontSize: 9 }}>BMad</Tag>,
+    },
   ]
 
   const customColumns = [
     { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
-    { title: '操作', key: 'action', width: 80, render: (_: any, r: any) => <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)}>删除</Button> },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_: any, r: any) => (
+        <Button
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(r)}
+        >
+          删除
+        </Button>
+      ),
+    },
   ]
 
   return (
     <>
       <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
-        <Button size="small" icon={<UploadOutlined />} onClick={() => { setImportDir(false); setImportPath(''); setImportModalOpen(true) }}>导入文件</Button>
-        <Button size="small" icon={<UploadOutlined />} onClick={() => { setImportDir(true); setImportPath(''); setImportModalOpen(true) }}>扫描目录</Button>
+        <Button
+          icon={<Upload height={16} />}
+          onClick={() => {
+            setImportDir(false)
+            setImportPath('')
+            setImportModalOpen(true)
+          }}
+        >
+          导入文件
+        </Button>
+        <Button
+          icon={<FileScan height={16} />}
+          onClick={() => {
+            setImportDir(true)
+            setImportPath('')
+            setImportModalOpen(true)
+          }}
+        >
+          扫描目录
+        </Button>
+        <Button
+          icon={<RefreshCw height={16} />}
+          onClick={() => fetchSkills()}
+          loading={skillLoading}
+        >
+          刷新
+        </Button>
       </div>
       <Tabs
         items={[
-          { key: 'bmad', label: `BMad 角色 (${bmadAgents.length})`, children: <Table dataSource={bmadAgents} columns={bmadColumns} rowKey="id" loading={bmadLoading || loading} size="small" pagination={false} /> },
-          { key: 'custom', label: `自定义技能 (${customSkills.length})`, children: <Table dataSource={customSkills} columns={customColumns} rowKey="id" loading={skillLoading || loading} size="small" pagination={false} /> },
+          {
+            key: 'bmad',
+            label: `BMad 角色 (${bmadAgents.length})`,
+            children: (
+              <Table
+                dataSource={bmadAgents}
+                columns={bmadColumns}
+                rowKey="id"
+                loading={bmadLoading || loading}
+                size="small"
+                pagination={false}
+              />
+            ),
+          },
+          {
+            key: 'custom',
+            label: `自定义技能 (${customSkills.length})`,
+            children: (
+              <Table
+                dataSource={customSkills}
+                columns={customColumns}
+                rowKey="id"
+                loading={skillLoading || loading}
+                size="small"
+                pagination={false}
+              />
+            ),
+          },
         ]}
       />
-      <Modal title={importDir ? '扫描目录导入技能' : '导入 Markdown 技能文件'} open={importModalOpen} onCancel={() => setImportModalOpen(false)} onOk={handleImport} confirmLoading={importing} okText="导入">
-        <div style={{ marginBottom: 8 }}><Text type="secondary">{importDir ? '输入相对于项目根目录的文件夹路径，扫描所有 .md 文件导入为技能' : '输入相对于项目根目录的 .md 文件路径，导入为技能'}</Text></div>
-        <Input placeholder={importDir ? '例如: skills/' : '例如: skills/architect.md'} value={importPath} onChange={(e) => setImportPath(e.target.value)} />
+      <Modal
+        title={importDir ? '扫描目录导入技能' : '导入 Markdown 技能文件'}
+        open={importModalOpen}
+        onCancel={() => setImportModalOpen(false)}
+        onOk={handleImport}
+        confirmLoading={importing}
+        okText="导入"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary">
+            {importDir
+              ? '输入相对于项目根目录的文件夹路径，扫描所有 .md 文件导入为技能'
+              : '输入相对于项目根目录的 .md 文件路径，导入为技能'}
+          </Text>
+        </div>
+        <Input
+          placeholder={
+            importDir ? '例如: skills/' : '例如: skills/architect.md'
+          }
+          value={importPath}
+          onChange={(e) => setImportPath(e.target.value)}
+        />
       </Modal>
     </>
   )
@@ -248,18 +580,61 @@ const PromptTab = ({ loading }: { loading: boolean }) => {
         }
       }
       setList([])
-    } catch { /* ignore */ } finally { setL(false) }
+    } catch {
+      /* ignore */
+    } finally {
+      setL(false)
+    }
   }
 
-  useEffect(() => { loadList() }, [])
+  useEffect(() => {
+    loadList()
+  }, [])
 
   const columns = [
-    { title: '文件名', dataIndex: 'name', key: 'name', render: (n: string) => <Text strong>{n}</Text> },
-    { title: '路径', dataIndex: 'relativePath', key: 'relativePath', render: (p: string) => <Text type="secondary" style={{ fontSize: 11 }}>{p}</Text> },
-    { title: '操作', key: 'action', width: 100, render: (_: any, r: any) => <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => openInEditor(r.relativePath)}>编辑</Button> },
+    {
+      title: '文件名',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text strong>{n}</Text>,
+    },
+    {
+      title: '路径',
+      dataIndex: 'relativePath',
+      key: 'relativePath',
+      render: (p: string) => (
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          {p}
+        </Text>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, r: any) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => openInEditor(r.relativePath)}
+        >
+          编辑
+        </Button>
+      ),
+    },
   ]
 
-  return <Table dataSource={list} columns={columns} rowKey="relativePath" loading={l || loading} size="small" pagination={false} />
+  return (
+    <Table
+      dataSource={list}
+      columns={columns}
+      rowKey="relativePath"
+      loading={l || loading}
+      size="small"
+      pagination={false}
+    />
+  )
 }
 
 /** 记忆表格 */
@@ -282,18 +657,61 @@ const MemoryTab = ({ loading }: { loading: boolean }) => {
         }
       }
       setList([])
-    } catch { /* ignore */ } finally { setL(false) }
+    } catch {
+      /* ignore */
+    } finally {
+      setL(false)
+    }
   }
 
-  useEffect(() => { loadList() }, [])
+  useEffect(() => {
+    loadList()
+  }, [])
 
   const columns = [
-    { title: '文件名', dataIndex: 'name', key: 'name', render: (n: string) => <Text strong>{n}</Text> },
-    { title: '路径', dataIndex: 'relativePath', key: 'relativePath', render: (p: string) => <Text type="secondary" style={{ fontSize: 11 }}>{p}</Text> },
-    { title: '操作', key: 'action', width: 100, render: (_: any, r: any) => <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => openInEditor(r.relativePath)}>编辑</Button> },
+    {
+      title: '文件名',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text strong>{n}</Text>,
+    },
+    {
+      title: '路径',
+      dataIndex: 'relativePath',
+      key: 'relativePath',
+      render: (p: string) => (
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          {p}
+        </Text>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, r: any) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => openInEditor(r.relativePath)}
+        >
+          编辑
+        </Button>
+      ),
+    },
   ]
 
-  return <Table dataSource={list} columns={columns} rowKey="relativePath" loading={l || loading} size="small" pagination={false} />
+  return (
+    <Table
+      dataSource={list}
+      columns={columns}
+      rowKey="relativePath"
+      loading={l || loading}
+      size="small"
+      pagination={false}
+    />
+  )
 }
 
 /** 配置表格 */
@@ -316,34 +734,107 @@ const ConfigTab = ({ loading }: { loading: boolean }) => {
         }
       }
       setList([])
-    } catch { /* ignore */ } finally { setL(false) }
+    } catch {
+      /* ignore */
+    } finally {
+      setL(false)
+    }
   }
 
-  useEffect(() => { loadList() }, [])
+  useEffect(() => {
+    loadList()
+  }, [])
 
   const columns = [
-    { title: '文件名', dataIndex: 'name', key: 'name', render: (n: string) => <Text strong>{n}</Text> },
-    { title: '路径', dataIndex: 'relativePath', key: 'relativePath', render: (p: string) => <Text type="secondary" style={{ fontSize: 11 }}>{p}</Text> },
-    { title: '操作', key: 'action', width: 100, render: (_: any, r: any) => <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => openInEditor(r.relativePath)}>编辑</Button> },
+    {
+      title: '文件名',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text strong>{n}</Text>,
+    },
+    {
+      title: '路径',
+      dataIndex: 'relativePath',
+      key: 'relativePath',
+      render: (p: string) => (
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          {p}
+        </Text>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, r: any) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => openInEditor(r.relativePath)}
+        >
+          编辑
+        </Button>
+      ),
+    },
   ]
 
-  return <Table dataSource={list} columns={columns} rowKey="relativePath" loading={l || loading} size="small" pagination={false} />
+  return (
+    <Table
+      dataSource={list}
+      columns={columns}
+      rowKey="relativePath"
+      loading={l || loading}
+      size="small"
+      pagination={false}
+    />
+  )
 }
 
 // ── 主面板：Tabs 分组 ──
 export const PromptManager = () => {
-
   return (
-    <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        padding: 16,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Tabs
         tabBarStyle={{ marginBottom: 16 }}
         items={[
-          { key: 'workflows', label: '工作流', children: <WorkflowTab loading={false} /> },
-          { key: 'models', label: '模型', children: <ModelTab loading={false} /> },
-          { key: 'skills', label: '技能', children: <SkillTab loading={false} /> },
-          { key: 'prompts', label: '提示词', children: <PromptTab loading={false} /> },
-          { key: 'memory', label: '记忆', children: <MemoryTab loading={false} /> },
-          { key: 'configs', label: '配置', children: <ConfigTab loading={false} /> },
+          {
+            key: 'workflows',
+            label: '工作流',
+            children: <WorkflowTab loading={false} />,
+          },
+          {
+            key: 'models',
+            label: '模型',
+            children: <ModelTab loading={false} />,
+          },
+          {
+            key: 'skills',
+            label: '技能',
+            children: <SkillTab loading={false} />,
+          },
+          {
+            key: 'prompts',
+            label: '提示词',
+            children: <PromptTab loading={false} />,
+          },
+          {
+            key: 'memory',
+            label: '记忆',
+            children: <MemoryTab loading={false} />,
+          },
+          {
+            key: 'configs',
+            label: '配置',
+            children: <ConfigTab loading={false} />,
+          },
         ]}
       />
     </div>

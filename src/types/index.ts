@@ -12,7 +12,6 @@ export const NodeTypes = {
   LOOP: 'loop',
   LOOP_CONDITION: 'loopCondition',
   RETRY: 'retry',
-  CODE: 'code',
   CODE_AGENT: 'codeAgent',
   SKILL: 'skill',
   LARK_TEMPLATE: 'larkTemplate',
@@ -80,6 +79,8 @@ export type NAIOutputData = NNode & {
   content?: string
   /** 来源智能体 */
   sourceAgent?: string
+  /** 导出文件路径 */
+  outputPath?: string
 }
 
 export type NAIOutput = Node<NAIOutputData, typeof NodeTypes.AI_OUTPUT>
@@ -180,20 +181,6 @@ export type NRetryData = NNode & {
 
 export type NRetry = Node<NRetryData, typeof NodeTypes.RETRY>
 
-/** codeNode：代码访问节点 */
-export type NCodeData = NNode & {
-  /** 运行模式：local | cloud */
-  mode: 'local' | 'cloud'
-  /** 仓库 URL */
-  repoUrl?: string
-  /** 分支，默认 master */
-  branch: string
-  /** 要读取的文件行范围，空数组或 undefined 表示读取整个文件 */
-  lines?: { start: number; end: number }[]
-}
-
-export type NCode = Node<NCodeData, typeof NodeTypes.CODE>
-
 /** codeAgentNode：代码自主探索节点 — AI 通过 Tool Calling 自主分析项目 */
 export type NCodeAgentData = NNode & {
   /** 项目路径（本地目录或 Git 仓库 URL） */
@@ -247,6 +234,6 @@ export type NLarkTemplate = Node<NLarkTemplateData, typeof NodeTypes.LARK_TEMPLA
 
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
-  | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCode | NCodeAgent
+  | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory
 > | null

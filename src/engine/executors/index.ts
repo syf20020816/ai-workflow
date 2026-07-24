@@ -8,7 +8,6 @@ import { aiOutputExecutor } from './aiOutput'
 import { ifExecutor, ifConditionExecutor } from './if'
 import { loopExecutor, loopConditionExecutor } from './loop'
 import { retryExecutor } from './retry'
-import { codeExecutor } from './code'
 import { codeAgentExecutor } from './codeAgent'
 import { memoryExecutor } from './memory'
 import { skillExecutor } from './skill'
@@ -28,7 +27,6 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.LOOP]: loopExecutor,
   [NodeTypes.LOOP_CONDITION]: loopConditionExecutor,
   [NodeTypes.RETRY]: retryExecutor,
-  [NodeTypes.CODE]: codeExecutor,
   [NodeTypes.CODE_AGENT]: codeAgentExecutor,
   [NodeTypes.MEMORY]: memoryExecutor,
   [NodeTypes.SKILL]: skillExecutor,
@@ -58,7 +56,6 @@ export {
   loopExecutor,
   loopConditionExecutor,
   retryExecutor,
-  codeExecutor,
   codeAgentExecutor,
   memoryExecutor,
   skillExecutor,

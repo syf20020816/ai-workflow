@@ -205,14 +205,13 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
       title: '键',
       dataIndex: 'label',
       key: 'label',
-      width: 80,
+      width: 100,
       render: (text) => <strong style={{ fontSize: 12 }}>{text}</strong>,
     },
     {
       title: '值',
       dataIndex: 'value',
       key: 'value',
-      width: 120,
       render: (_, record) => {
         if (record.valueRender) {
           return record.valueRender((v: any) => onChange(record.key, v))

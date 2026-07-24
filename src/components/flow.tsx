@@ -8,7 +8,6 @@ import { AnswerNode } from './node/ai/answer'
 import { BmadAgentNode } from './node/ai/bmad'
 import { LarkNode } from './node/ai/lark'
 import { LarkTemplateNode } from './node/ai/larkTemplate'
-import { CodeNode } from './node/ai/code'
 import { CodeAgentNode } from './node/ai/codeAgent'
 import { SkillNode } from './node/ai/skill'
 import { IfNode } from './node/control/if'
@@ -32,7 +31,6 @@ export const NODE_TYPES = {
   bmadAgent: BmadAgentNode,
   lark: LarkNode,
   larkTemplate: LarkTemplateNode,
-  code: CodeNode,
   codeAgent: CodeAgentNode,
   skill: SkillNode,
   if: IfNode,

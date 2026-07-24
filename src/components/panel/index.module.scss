@@ -1,5 +1,5 @@
 .panel {
-  width: 360px;
+  width: 400px;
   height: 100%;
   background-color: var(--xy-node-background-color);
   padding: 0 8px 8px 8px;
@@ -67,4 +67,8 @@
         justify-content: space-between;
         gap: 4px;
     }
+}
+
+.toolBtn {
+    margin: 0px 4px;
 }

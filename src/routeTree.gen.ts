@@ -18,11 +18,12 @@ import { Route as ApiSkillRouteImport } from './routes/api/skill'
 import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
+import { Route as ApiEditorFsRouteImport } from './routes/api/editor/fs'
 import { Route as ApiEditorListRouteImport } from './routes/api/editor/list'
 import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
 import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
-import { Route as ApiExecuteCodeRouteImport } from './routes/api/execute/code'
 import { Route as ApiExecuteCodeAgentRouteImport } from './routes/api/execute/codeAgent'
+import { Route as ApiExecuteFileWriteRouteImport } from './routes/api/execute/fileWrite'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
@@ -73,6 +74,11 @@ const ApiEditorContentRoute = ApiEditorContentRouteImport.update({
   path: '/api/editor/content',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEditorFsRoute = ApiEditorFsRouteImport.update({
+  id: '/api/editor/fs',
+  path: '/api/editor/fs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEditorListRoute = ApiEditorListRouteImport.update({
   id: '/api/editor/list',
   path: '/api/editor/list',
@@ -88,14 +94,14 @@ const ApiExecuteBmadRoute = ApiExecuteBmadRouteImport.update({
   path: '/api/execute/bmad',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExecuteCodeRoute = ApiExecuteCodeRouteImport.update({
-  id: '/api/execute/code',
-  path: '/api/execute/code',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiExecuteCodeAgentRoute = ApiExecuteCodeAgentRouteImport.update({
   id: '/api/execute/codeAgent',
   path: '/api/execute/codeAgent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteFileWriteRoute = ApiExecuteFileWriteRouteImport.update({
+  id: '/api/execute/fileWrite',
+  path: '/api/execute/fileWrite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
@@ -129,11 +135,12 @@ export interface FileRoutesByFullPath {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
-  '/api/execute/code': typeof ApiExecuteCodeRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -149,11 +156,12 @@ export interface FileRoutesByTo {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
-  '/api/execute/code': typeof ApiExecuteCodeRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -170,11 +178,12 @@ export interface FileRoutesById {
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
   '/api/editor/content': typeof ApiEditorContentRoute
+  '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
-  '/api/execute/code': typeof ApiExecuteCodeRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -192,11 +201,12 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/editor/content'
+    | '/api/editor/fs'
     | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
-    | '/api/execute/code'
     | '/api/execute/codeAgent'
+    | '/api/execute/fileWrite'
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -212,11 +222,12 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/editor/content'
+    | '/api/editor/fs'
     | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
-    | '/api/execute/code'
     | '/api/execute/codeAgent'
+    | '/api/execute/fileWrite'
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -232,11 +243,12 @@ export interface FileRouteTypes {
     | '/api/workflows'
     | '/api/bmad/agents'
     | '/api/editor/content'
+    | '/api/editor/fs'
     | '/api/editor/list'
     | '/api/execute/agent'
     | '/api/execute/bmad'
-    | '/api/execute/code'
     | '/api/execute/codeAgent'
+    | '/api/execute/fileWrite'
     | '/api/execute/lark'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -253,11 +265,12 @@ export interface RootRouteChildren {
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
   ApiEditorContentRoute: typeof ApiEditorContentRoute
+  ApiEditorFsRoute: typeof ApiEditorFsRoute
   ApiEditorListRoute: typeof ApiEditorListRoute
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
   ApiExecuteBmadRoute: typeof ApiExecuteBmadRoute
-  ApiExecuteCodeRoute: typeof ApiExecuteCodeRoute
   ApiExecuteCodeAgentRoute: typeof ApiExecuteCodeAgentRoute
+  ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
 }
@@ -327,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEditorContentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/editor/fs': {
+      id: '/api/editor/fs'
+      path: '/api/editor/fs'
+      fullPath: '/api/editor/fs'
+      preLoaderRoute: typeof ApiEditorFsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/editor/list': {
       id: '/api/editor/list'
       path: '/api/editor/list'
@@ -348,18 +368,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecuteBmadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/execute/code': {
-      id: '/api/execute/code'
-      path: '/api/execute/code'
-      fullPath: '/api/execute/code'
-      preLoaderRoute: typeof ApiExecuteCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/execute/codeAgent': {
       id: '/api/execute/codeAgent'
       path: '/api/execute/codeAgent'
       fullPath: '/api/execute/codeAgent'
       preLoaderRoute: typeof ApiExecuteCodeAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/fileWrite': {
+      id: '/api/execute/fileWrite'
+      path: '/api/execute/fileWrite'
+      fullPath: '/api/execute/fileWrite'
+      preLoaderRoute: typeof ApiExecuteFileWriteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/lark': {
@@ -417,11 +437,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
   ApiEditorContentRoute: ApiEditorContentRoute,
+  ApiEditorFsRoute: ApiEditorFsRoute,
   ApiEditorListRoute: ApiEditorListRoute,
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
   ApiExecuteBmadRoute: ApiExecuteBmadRoute,
-  ApiExecuteCodeRoute: ApiExecuteCodeRoute,
   ApiExecuteCodeAgentRoute: ApiExecuteCodeAgentRoute,
+  ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
 }
