@@ -75,9 +75,14 @@ export interface UseNodeStoreProps {
   /** 删除固定节点 */
   unpinNode: (nodeId: string) => Promise<void>
   /** 列出当前工作流的所有固定节点 */
-  getPinnedNodeList: () => Promise<{ nodeId: string; title: string; savedAt: string }[]>
+  getPinnedNodeList: () => Promise<
+    { nodeId: string; title: string; savedAt: string }[]
+  >
   /** 从固定节点开始执行（注入已 PIN 的输出） */
-  runFromWithPinned: (startNodeId: string, pinnedOverrides: Record<string, Record<string, any>>) => void
+  runFromWithPinned: (
+    startNodeId: string,
+    pinnedOverrides: Record<string, Record<string, any>>,
+  ) => void
 }
 
 export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
@@ -131,20 +136,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     )
     set({ currentNode: patched, nodes: updatedNodes })
   },
-  nodes: [
-    {
-      id: 'node1',
-      type: 'userInput',
-      data: { title: '用户输入节点' },
-      position: { x: 100, y: 100 },
-    },
-    {
-      id: 'node2',
-      type: 'agent',
-      data: { title: '智能体节点' },
-      position: { x: 300, y: 200 },
-    },
-  ],
+  nodes: [],
   edges: [],
 
   onNodesChange: (changes) => {
@@ -224,7 +216,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
           name: agentModal.name,
           key: agentModal.key,
           url: agentModal.url,
-          token: agentModal.token ? { min: agentModal.token.min, max: agentModal.token.max } : undefined,
+          token: agentModal.token
+            ? { min: agentModal.token.min, max: agentModal.token.max }
+            : undefined,
         }
       : undefined
 
@@ -232,7 +226,8 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const existingEdge = get().edges.find(
       (e) =>
         e.source === current.id &&
-        get().nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+        get().nodes.find((n) => n.id === e.target)?.type ===
+          NodeTypes.BMAD_AGENT,
     )
 
     if (existingEdge) {
@@ -268,7 +263,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
         )
         set({
           nodes: updatedCurrentNodes,
-          currentNode: updatedCurrentNodes.find((n) => n.id === current.id) as any,
+          currentNode: updatedCurrentNodes.find(
+            (n) => n.id === current.id,
+          ) as any,
         })
       }
       return
@@ -297,10 +294,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     } as unknown as Node
 
     set({
-      nodes: [
-        ...get().nodes,
-        bmadNode,
-      ],
+      nodes: [...get().nodes, bmadNode],
       edges: [
         ...get().edges,
         {
@@ -321,7 +315,8 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const existingEdge = get().edges.find(
       (e) =>
         e.source === current.id &&
-        get().nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+        get().nodes.find((n) => n.id === e.target)?.type ===
+          NodeTypes.BMAD_AGENT,
     )
 
     if (!existingEdge) return
@@ -361,7 +356,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   },
   unpinNode: async (nodeId: string) => {
     const { workflowId } = get()
-    await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${nodeId}`, { method: 'DELETE' })
+    await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${nodeId}`, {
+      method: 'DELETE',
+    })
     const updated = { ...get().pinnedNodes }
     delete updated[nodeId]
     set({ pinnedNodes: updated })
@@ -373,7 +370,10 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     if (json.status === 'success') return json.data
     return []
   },
-  runFromWithPinned: (startNodeId: string, pinnedOverrides: Record<string, Record<string, any>>) => {
+  runFromWithPinned: (
+    startNodeId: string,
+    pinnedOverrides: Record<string, Record<string, any>>,
+  ) => {
     const { nodes, edges } = get()
     executeWorkflow(
       nodes,

@@ -33,13 +33,16 @@ import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useState } from 'react'
 import { ExecutionResult } from '../execution/result'
-import { Pin } from 'lucide-react'
+import { Expand, Pin, Shrink } from 'lucide-react'
+import { Panel } from '@xyflow/react'
+import type { PanelProps } from '@xyflow/react'
 
 const { Text } = Typography
 
 type ActiveKey = 'editor' | 'execution'
 
-export const EditPanel = () => {
+export const EditPanel = (props: PanelProps) => {
+  const [isShrink, setIsShrink] = useState(false)
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const deleteCurrentNode = useNodeStore((state) => state.deleteCurrentNode)
   const loadPinnedNode = useNodeStore((state) => state.loadPinnedNode)
@@ -160,11 +163,6 @@ export const EditPanel = () => {
       ),
     },
     {
-      key: 'execution',
-      label: '执行',
-      children: <ExecutionPanel />,
-    },
-    {
       key: 'output',
       label: '输出',
       children: <OutputPanel />,
@@ -177,18 +175,36 @@ export const EditPanel = () => {
   ]
 
   return (
-    <div className={styles.panel}>
-      <Tabs
-        activeKey={activeKey}
-        items={items}
-        onChange={(k) => setActiveKey(k as ActiveKey)}
-        styles={{
-          body: { height: '100%', padding: 0 },
-          content: { height: '100%' },
-          root: { height: '100%' },
-        }}
-      />
-    </div>
+    <Panel {...props}>
+      <ExecutionPanel />
+      <div className={styles.panel} style={{
+        height: isShrink ? '80vh': '48px'
+      }}>
+        <Tabs
+          activeKey={activeKey}
+          items={items}
+          onChange={(k) => setActiveKey(k as ActiveKey)}
+          styles={{
+            body: { height: '100%', padding: 0 },
+            content: { height: '100%' },
+            root: { height: '100%' },
+          }}
+          tabBarExtraContent={
+            <Button
+              onClick={() => setIsShrink(!isShrink)}
+              type="text"
+              icon={
+                isShrink ? (
+                  <Expand height={16} width={16}></Expand>
+                ) : (
+                  <Shrink height={16} width={16}></Shrink>
+                )
+              }
+            ></Button>
+          }
+        />
+      </div>
+    </Panel>
   )
 }
 

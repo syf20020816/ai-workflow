@@ -1,22 +1,47 @@
 import { useNodeStore } from '#/store/node'
 import { NodeTypes } from '#/types'
 import { useEffect, useState } from 'react'
-import { Typography, Tag } from 'antd'
+import { Typography, Tag, Input, Space, Button, Timeline } from 'antd'
+import type { LogEntry } from '#/types/engine'
 
 const { Text } = Typography
 
+const levelColorMap: Record<LogEntry['level'], string> = {
+  info: 'green',
+  warn: 'orange',
+  error: 'red',
+  debug: 'default',
+}
+
 /**
  * # 执行结果组件
- * 获取 AI_OUTPUT 节点的执行结果并展示。
- * 如果没有 AI_OUTPUT 节点，则获取 pipeline 最后一个节点的执行结果。
+ * 显示执行状态、等待输入、日志和最终执行结果。
  */
 export const ExecutionResult = () => {
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
   const nodes = useNodeStore((state) => state.nodes)
-  const { nodeOutputs, globalStatus } = pipelineContext
+  const resumeFrom = useNodeStore((state) => state.resumeFrom)
+  const { nodeOutputs, globalStatus, logs } = pipelineContext
 
   const [result, setResult] = useState('')
   const [sourceLabel, setSourceLabel] = useState('')
+  const [replyText, setReplyText] = useState('')
+
+  // 找到处于 waiting 状态的节点
+  const waitingNodeEntry = Object.entries(pipelineContext.nodeStatuses).find(
+    ([, status]) => status === 'waiting',
+  )
+  const waitingNodeId = waitingNodeEntry?.[0]
+  const waitingOutput = waitingNodeId
+    ? pipelineContext.nodeOutputs[waitingNodeId]
+    : null
+
+  const handleResume = () => {
+    if (waitingNodeId && replyText.trim()) {
+      resumeFrom(waitingNodeId, replyText.trim())
+      setReplyText('')
+    }
+  }
 
   useEffect(() => {
     const executedNodeIds = Object.keys(nodeOutputs)
@@ -74,20 +99,74 @@ export const ExecutionResult = () => {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8,
-        }}
-      >
+      {/* 执行状态 */}
+      {globalStatus !== 'idle' && (
+        <div style={{ marginBottom: 8 }}>
+          <Tag color={statusColorMap[globalStatus] || 'default'}>
+            {statusLabelMap[globalStatus] || globalStatus}
+          </Tag>
+        </div>
+      )}
+
+      {/* Answer 节点输入面板 */}
+      {globalStatus === 'paused' && waitingOutput && (
+        <div
+          style={{
+            margin: '8px 0',
+            padding: 8,
+            border: '1px solid var(--xy-edge-stroke-default)',
+            borderRadius: 4,
+            backgroundColor: 'var(--xy-node-background-color)',
+          }}
+        >
+          <Text strong style={{ fontSize: 12 }}>
+            {waitingOutput.question || '请输入:'}
+          </Text>
+          {waitingOutput.options && waitingOutput.options.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 4,
+                marginTop: 4,
+              }}
+            >
+              {waitingOutput.options.map((opt: string) => (
+                <Tag
+                  key={opt}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setReplyText(opt)}
+                >
+                  {opt}
+                </Tag>
+              ))}
+            </div>
+          )}
+          <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+            <Input
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onPressEnter={handleResume}
+              placeholder="输入回复..."
+              size="small"
+            />
+            <Button
+              type="primary"
+              size="small"
+              onClick={handleResume}
+              disabled={!replyText.trim()}
+            >
+              提交
+            </Button>
+          </Space.Compact>
+        </div>
+      )}
+
+      {/* 执行结果 */}
+      <div style={{ marginBottom: 8 }}>
         <Text strong style={{ fontSize: 13 }}>
           执行结果
         </Text>
-        <Tag color={statusColorMap[globalStatus] || 'default'}>
-          {statusLabelMap[globalStatus] || globalStatus}
-        </Tag>
       </div>
       {!result ? (
         <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>
@@ -116,12 +195,42 @@ export const ExecutionResult = () => {
               backgroundColor: 'var(--deep-color)',
               padding: 8,
               borderRadius: 4,
-              maxHeight: 400,
+              maxHeight: 300,
             }}
           >
             {result}
           </pre>
         </>
+      )}
+
+      {/* 执行日志 */}
+      {logs.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <Text strong style={{ fontSize: 13 }}>
+            执行日志
+          </Text>
+          <div style={{ marginTop: 8 }}>
+            <Timeline
+              items={logs.map((log, i) => ({
+                color: levelColorMap[log.level] || 'blue',
+                content: (
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                    <Text
+                      style={{
+                        color: '#888',
+                        whiteSpace: 'nowrap',
+                        marginRight: 8,
+                      }}
+                    >
+                      {log.nodeTitle}
+                    </Text>
+                    <Text>{log.message}</Text>
+                  </div>
+                ),
+              }))}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

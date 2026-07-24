@@ -22,6 +22,7 @@ import { AddNodeBtn } from './node/edge/add'
 import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
+import { EditPanel } from './panel/edit'
 
 export const NODE_TYPES = {
   userInput: UserInputNode,
@@ -87,9 +88,10 @@ export function Flow() {
         deleteKeyCode="Delete"
       >
         <Background />
-        <MiniMap />
+        {/* <MiniMap position="bottom-left" /> */}
         <Controls />
         <ToolsPanel position="top-left"></ToolsPanel>
+        <EditPanel position="top-right"></EditPanel>
       </ReactFlow>
     </AddNodeBtn>
   )
