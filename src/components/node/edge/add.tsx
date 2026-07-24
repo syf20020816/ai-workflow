@@ -1,7 +1,7 @@
 import { Button, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import styles from '../index.module.scss'
-import { PlusCircledIcon } from '@radix-ui/react-icons'
+import { CirclePlus } from 'lucide-react'
 import { NodeTypes } from '#/types'
 import type { NodeType, AppNode } from '#/types'
 import { NodeHeader } from '../header'
@@ -232,7 +232,7 @@ export const AddNodeBtn = ({
             },
           }}
         >
-          <PlusCircledIcon height={8} width={8}></PlusCircledIcon>
+          <CirclePlus size={8}></CirclePlus>
         </Button>
       )}
     </Dropdown>

@@ -1,6 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import type { InputKind, NUserInput, NUserInputData } from '#/types'
-import { PlusCircledIcon } from '@radix-ui/react-icons'
+import { CirclePlus } from 'lucide-react'
 import styles from '../index.module.scss'
 import { Button, Radio } from 'antd'
 import type { CheckboxGroupProps } from 'antd/es/checkbox'
@@ -124,7 +124,7 @@ export const EditUserInput = () => {
           value={nodeInput}
           onChange={(e) => setNodeInput(e.target.value)}
         ></Radio.Group>
-        <Button icon={<PlusCircledIcon />} onClick={addInput}></Button>
+        <Button icon={<CirclePlus size={14} />} onClick={addInput}></Button>
       </div>
       <DynEditKV
         rows={rows}

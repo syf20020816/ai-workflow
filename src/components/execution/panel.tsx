@@ -1,7 +1,7 @@
 import { useNodeStore } from '#/store/node'
 import styles from './index.module.scss'
 import { Button, Typography, Tag, Input, Space, Select, Timeline } from 'antd'
-import { PlayIcon, ResetIcon } from '@radix-ui/react-icons'
+import { Play, RotateCcw } from 'lucide-react'
 import type { LogEntry } from '#/types/engine'
 import { useState } from 'react'
 
@@ -108,12 +108,12 @@ export const ExecutionPanel = () => {
           }))}
         />
         {pipelineContext.globalStatus === 'idle' && (
-          <Button block type="primary" icon={<PlayIcon />} onClick={handleRun}>
+          <Button block type="primary" icon={<Play size={14} />} onClick={handleRun}>
             运行{selectedPinnedNode ? '（从PIN）' : ''}
           </Button>
         )}
         {pipelineContext.globalStatus !== 'idle' && (
-          <Button block icon={<ResetIcon />} onClick={resetExecution}>
+          <Button block icon={<RotateCcw size={14} />} onClick={resetExecution}>
             重置
           </Button>
         )}

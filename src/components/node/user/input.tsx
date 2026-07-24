@@ -5,9 +5,8 @@ import type { NodeProps } from '@xyflow/react'
 import { InputKinds } from '#/types'
 import type { InputKind, NUserInput } from '#/types'
 import styles from '../index.module.scss'
-import { CrumpledPaperIcon, Link1Icon, TextIcon } from '@radix-ui/react-icons'
+import { ScrollText, Link, Type, FileTextIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { FileTextIcon } from 'lucide-react'
 import { UNode } from '..'
 
 /**
@@ -61,10 +60,10 @@ const iconAttrs = {
 }
 
 const Icons = new Map<InputKind, ReactNode>([
-  [InputKinds.text, <TextIcon {...iconAttrs} />],
+  [InputKinds.text, <Type size={10} color="#1890ff" />],
   [InputKinds.file, <FileTextIcon {...iconAttrs} />],
-  [InputKinds.prompt, <CrumpledPaperIcon {...iconAttrs} />],
-  [InputKinds.url, <Link1Icon {...iconAttrs} />],
+  [InputKinds.prompt, <ScrollText size={10} color="#1890ff" />],
+  [InputKinds.url, <Link size={10} color="#1890ff" />],
 ])
 
 export const InputItem = ({ kind, label }: InputItemProps) => {

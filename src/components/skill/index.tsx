@@ -2,7 +2,7 @@ import { useBmadAgentStore } from '#/store/bmad'
 import { useSkillStore } from '#/store/skill'
 import { Table, Tag, Space, Typography, Button, Tabs, Modal, Input, message } from 'antd'
 import { useEffect, useState } from 'react'
-import { ReloadIcon, PlusIcon, FileIcon, UploadIcon } from '@radix-ui/react-icons'
+import { RefreshCw, File, Upload } from 'lucide-react'
 
 const { Text } = Typography
 
@@ -154,7 +154,7 @@ export const SkillManager = () => {
             <Text type="secondary" style={{ fontSize: 12 }}>
               角色数据来源于 BMad 配置文件 (<code>bmad/_bmad/config.toml</code>)
             </Text>
-            <Button size="small" icon={<ReloadIcon />} onClick={fetchAgents} loading={loading}>
+            <Button size="small" icon={<RefreshCw size={14} />} onClick={fetchAgents} loading={loading}>
               刷新
             </Button>
           </div>
@@ -181,19 +181,19 @@ export const SkillManager = () => {
             <Space>
               <Button
                 size="small"
-                icon={<UploadIcon />}
+                icon={<Upload size={14} />}
                 onClick={() => { setImportDir(false); setImportPath(''); setImportModalOpen(true) }}
               >
                 导入文件
               </Button>
               <Button
                 size="small"
-                icon={<FileIcon />}
+                icon={<File size={14} />}
                 onClick={() => { setImportDir(true); setImportPath(''); setImportModalOpen(true) }}
               >
                 扫描目录
               </Button>
-              <Button size="small" icon={<ReloadIcon />} onClick={fetchSkills} loading={skillLoading}>
+              <Button size="small" icon={<RefreshCw size={14} />} onClick={fetchSkills} loading={skillLoading}>
                 刷新
               </Button>
             </Space>

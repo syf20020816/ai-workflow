@@ -1,6 +1,6 @@
 import { useModelStore } from '#/store/model'
 import { Table, Button, Modal, Tag, Space, Input, InputNumber, Form, Select, message } from 'antd'
-import { PlusIcon, Pencil1Icon, TrashIcon } from '@radix-ui/react-icons'
+import { Plus, Pencil, Trash } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Model } from '#/types/model'
 import { ModalKinds } from '#/types/model'
@@ -123,7 +123,7 @@ export const ModelManager = () => {
           <Button
             type="primary"
             size="small"
-            icon={<Pencil1Icon />}
+            icon={<Pencil size={14} />}
             onClick={() => handleEdit(record)}
           >
             编辑
@@ -132,7 +132,7 @@ export const ModelManager = () => {
             type="text"
             size="small"
             danger
-            icon={<TrashIcon />}
+            icon={<Trash size={14} />}
             onClick={() => handleDelete(record)}
           >
        
@@ -147,7 +147,7 @@ export const ModelManager = () => {
       <h2 style={{ marginBottom: 16 }}>模型管理</h2>
       <Button
         type="primary"
-        icon={<PlusIcon />}
+        icon={<Plus size={14} />}
         onClick={handleCreate}
         style={{ marginBottom: 12 }}
       >

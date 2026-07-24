@@ -1,6 +1,6 @@
 import { Button, Tooltip } from 'antd'
 import styles from '../index.module.scss'
-import { PlayIcon } from '@radix-ui/react-icons'
+import { Play } from 'lucide-react'
 import { useNodeStore } from '#/store/node'
 
 export interface RunNodeProps {
@@ -33,7 +33,7 @@ export const RunNode = ({ nodeId }: RunNodeProps) => {
           runFrom(nodeId)
         }}
       >
-        <PlayIcon height={8} width={8}></PlayIcon>
+        <Play size={8}></Play>
       </Button>
     </Tooltip>
   )

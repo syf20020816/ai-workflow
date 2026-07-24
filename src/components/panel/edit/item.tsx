@@ -2,12 +2,13 @@ import React from 'react'
 import { InputKinds } from '#/types'
 import type { InputKind } from '#/types'
 import {
-  TextIcon,
-  CrumpledPaperIcon,
-  FileTextIcon,
-  Link1Icon,
-  CrossCircledIcon,
-} from '@radix-ui/react-icons'
+  Type,
+  ScrollText,
+  FileText,
+  Link,
+  XCircle,
+  Plus,
+} from 'lucide-react'
 import styles from '../index.module.scss'
 import {
   Button,
@@ -22,7 +23,6 @@ import type { TableProps } from 'antd'
 import type { ReactNode, Key } from 'react'
 import { useNodeStore } from '#/store/node'
 import { getPredecessors } from '#/engine/topological'
-import { Plus } from 'lucide-react'
 
 const { Text } = Typography
 
@@ -57,12 +57,6 @@ export interface EditItemProps {
   kind?: InputKind
 }
 
-const iconAttrs = {
-  width: 12,
-  height: 12,
-  color: '#1890ff',
-}
-
 const EditTextMapper = new Map<
   InputKind,
   {
@@ -76,7 +70,7 @@ const EditTextMapper = new Map<
     {
       label: '用户文本输入',
       placeholder: '输入用户文本',
-      icon: <TextIcon {...iconAttrs} />,
+      icon: <Type size={12} color="#1890ff" />,
     },
   ],
   [
@@ -84,7 +78,7 @@ const EditTextMapper = new Map<
     {
       label: '提示词',
       placeholder: '输入提示词',
-      icon: <CrumpledPaperIcon {...iconAttrs} />,
+      icon: <ScrollText size={12} color="#1890ff" />,
     },
   ],
   [
@@ -92,7 +86,7 @@ const EditTextMapper = new Map<
     {
       label: '文件',
       placeholder: '上传文件',
-      icon: <FileTextIcon {...iconAttrs} />,
+      icon: <FileText size={12} color="#1890ff" />,
     },
   ],
   [
@@ -100,7 +94,7 @@ const EditTextMapper = new Map<
     {
       label: '链接',
       placeholder: '输入链接',
-      icon: <Link1Icon {...iconAttrs} />,
+      icon: <Link size={12} color="#1890ff" />,
     },
   ],
 ])
@@ -247,7 +241,7 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
                 type="text"
                 size="small"
                 danger
-                icon={<CrossCircledIcon width={12} height={12} />}
+                icon={<XCircle size={12} />}
                 onClick={(e) => {
                   e.stopPropagation()
                   record.onDelete?.()
@@ -346,7 +340,7 @@ export const EditItem = ({
             type="text"
             size="small"
             danger
-            icon={<CrossCircledIcon />}
+            icon={<XCircle size={14} />}
             onClick={onDelete}
           />
         )}
