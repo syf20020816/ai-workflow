@@ -163,8 +163,8 @@ Icon.Lark = ({ ...rest }: SVGProps<SVGSVGElement>) =>
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         p-id="1715"
-        width="200"
-        height="200"
+        width="16"
+        height="16"
         {...rest}
       >
         <path
@@ -196,20 +196,6 @@ Icon.If = ({ ...rest }: SVGProps<SVGSVGElement>) =>
 Icon.IfCondition = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
     children: (
-      // <svg
-      //   viewBox="0 0 1024 1024"
-      //   xmlns="http://www.w3.org/2000/svg"
-      //   width={24}
-      //   height={24}
-      //   {...rest}
-      // >
-      //   <path
-      //     d="M192 512l320-320 320 320-320 320z"
-      //     fill="#ff7a45"
-      //     opacity="0.8"
-      //   />
-      //   <path d="M352 512l160-160 160 160-160 160z" fill="#fff" />
-      // </svg>
       <GitCommitHorizontal {...rest} color="#ff7a45" />
     ),
   })
@@ -275,20 +261,20 @@ Icon.Memory = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <BrainCog {...rest} color="#eb2f96" />,
   })
 
-export const NodeIcons = new Map<NodeType, ReactNode>([
-  [NodeTypes.USER_INPUT, <Icon.UserInput />],
-  [NodeTypes.AGENT, <Icon.Agent />],
-  [NodeTypes.ANSWER, <Icon.Answer />],
-  [NodeTypes.AI_OUTPUT, <Icon.AIOutput />],
-  [NodeTypes.BMAD_AGENT, <Icon.BMadAgent />],
-  [NodeTypes.LARK, <Icon.Lark />],
-  [NodeTypes.IF, <Icon.If />],
-  [NodeTypes.IF_CONDITION, <Icon.IfCondition />],
-  [NodeTypes.LOOP, <Icon.Loop />],
-  [NodeTypes.LOOP_CONDITION, <Icon.LoopCondition />],
-  [NodeTypes.RETRY, <Icon.Retry />],
-  [NodeTypes.SKILL, <Icon.Skill />],
-  [NodeTypes.LARK_TEMPLATE, <Icon.LarkTemplate />],
-  [NodeTypes.CODE_AGENT, <Icon.CodeAgent />],
-  [NodeTypes.MEMORY, <Icon.Memory />],
+export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
+  [NodeTypes.USER_INPUT, Icon.UserInput],
+  [NodeTypes.AGENT, Icon.Agent],
+  [NodeTypes.ANSWER, Icon.Answer],
+  [NodeTypes.AI_OUTPUT, Icon.AIOutput ],
+  [NodeTypes.BMAD_AGENT, Icon.BMadAgent ],
+  [NodeTypes.LARK, Icon.Lark],
+  [NodeTypes.IF, Icon.If ],
+  [NodeTypes.IF_CONDITION, Icon.IfCondition],
+  [NodeTypes.LOOP, Icon.Loop],
+  [NodeTypes.LOOP_CONDITION, Icon.LoopCondition],
+  [NodeTypes.RETRY, Icon.Retry],
+  [NodeTypes.SKILL, Icon.Skill],
+  [NodeTypes.LARK_TEMPLATE, Icon.LarkTemplate],
+  [NodeTypes.CODE_AGENT, Icon.CodeAgent],
+  [NodeTypes.MEMORY, Icon.Memory],
 ])

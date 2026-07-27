@@ -18,13 +18,10 @@ import {
   FileAddOutlined,
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
-import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
-import { json } from '@codemirror/lang-json'
-import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
 
 import { useRouteStore } from '#/store/route'
+import { CodeEditor } from './editor'
+import styles from './index.module.scss'
 
 const { Text, Title } = Typography
 
@@ -42,17 +39,6 @@ interface FileContent {
   content: string
   language: string
   path: string
-}
-
-const languageMap: Record<string, any> = {
-  json,
-  markdown,
-}
-
-/** 根据语言名获取 CodeMirror Extension */
-function getLangExt(language: string) {
-  const fn = languageMap[language]
-  return fn ? fn() : undefined
 }
 
 // 自定义树节点组件，完全替代 Ant Design Tree，避免 DOM 复制 bug
@@ -103,18 +89,8 @@ const TreeNodeRow = React.memo<{
       <Dropdown menu={{ items: menuItems }} trigger={['contextMenu']}>
         <div
           onClick={handleToggle}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '2px 0',
-            cursor: 'pointer',
-            userSelect: 'none',
-            background: isSelected ? 'rgba(24,144,255,0.2)' : 'transparent',
-            borderRadius: 4,
-            paddingLeft: depth * 18,
-            fontSize: 13,
-          }}
+          className={`${styles.treeRow}${isSelected ? ` ${styles.treeRowSelected}` : ''}`}
+          style={{ ['--tree-depth' as any]: depth }}
           onDoubleClick={() => {
             if (node.isLeaf) onSelect(node.key)
           }}
@@ -122,31 +98,19 @@ const TreeNodeRow = React.memo<{
           {/* expand/collapse icon for directories */}
           <span
             onClick={handleToggle}
-            style={{
-              width: 16,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              visibility: hasChildren ? 'visible' : 'hidden',
-              fontSize: 10,
-              color: '#888',
-              flexShrink: 0,
-            }}
+            className={`${styles.treeExpandIcon} ${hasChildren ? styles.treeExpandIconVisible : styles.treeExpandIconHidden}`}
           >
             {expanded ? '▼' : '▶'}
           </span>
           {/* folder/file icon */}
-          <span style={{ flexShrink: 0, lineHeight: 1, fontSize: 14, color: hasChildren ? '#faad14' : '#69b1ff' }}>
+          <span
+            className={`${styles.treeNodeIcon} ${hasChildren ? styles.treeNodeIconDir : styles.treeNodeIconFile}`}
+          >
             {node.icon}
           </span>
           {/* name */}
           <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              color: node.isLeaf ? '#ccc' : '#e8e8e8',
-            }}
+            className={`${styles.treeName} ${node.isLeaf ? styles.treeNameFile : styles.treeNameDir}`}
             onClick={() => {
               if (node.isLeaf) onSelect(node.key)
               else handleToggle
@@ -175,22 +139,24 @@ const TreeNodeRow = React.memo<{
   )
 })
 
-const FileTree = React.memo<FileTreeProps>(({ nodes, selectedKey, onSelect, onRename }) => {
-  return (
-    <div style={{ overflow: 'auto', maxHeight: '100%' }}>
-      {nodes.map((node) => (
-        <TreeNodeRow
-          key={node.key}
-          node={node}
-          depth={0}
-          selectedKey={selectedKey}
-          onSelect={onSelect}
-          onRename={onRename}
-        />
-      ))}
-    </div>
-  )
-})
+const FileTree = React.memo<FileTreeProps>(
+  ({ nodes, selectedKey, onSelect, onRename }) => {
+    return (
+      <div className={styles.fileTree}>
+        {nodes.map((node) => (
+          <TreeNodeRow
+            key={node.key}
+            node={node}
+            depth={0}
+            selectedKey={selectedKey}
+            onSelect={onSelect}
+            onRename={onRename}
+          />
+        ))}
+      </div>
+    )
+  },
+)
 
 export const FileEditor = () => {
   const [groups, setGroups] = useState<FileGroup[]>([])
@@ -199,8 +165,6 @@ export const FileEditor = () => {
   const [fileLoading, setFileLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const editorRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
   const contentRef = useRef('')
   const { pendingFilePath, consumePendingFile } = useRouteStore()
 
@@ -266,8 +230,7 @@ export const FileEditor = () => {
 
   const handleSave = async () => {
     if (!activeFile) return
-    const currentContent =
-      viewRef.current?.state.doc.toString() ?? contentRef.current
+    const currentContent = contentRef.current
 
     setSaving(true)
     try {
@@ -294,50 +257,11 @@ export const FileEditor = () => {
     }
   }
 
-  // 初始化/更新 CodeMirror
-  useEffect(() => {
-    if (!editorRef.current || !activeFile || fileLoading) return
-
-    // 销毁旧 editor
-    if (viewRef.current) {
-      viewRef.current.destroy()
-      viewRef.current = null
-    }
-
-    const langExt = getLangExt(activeFile.language)
-
-    const state = EditorState.create({
-      doc: activeFile.content,
-      extensions: [
-        basicSetup,
-        oneDark,
-        langExt ? langExt : [],
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            setDirty(true)
-          }
-        }),
-        EditorView.theme({
-          '&': { height: '100%' },
-          '.cm-scroller': { overflow: 'auto' },
-        }),
-      ].flat(),
-    })
-
-    const view = new EditorView({
-      state,
-      parent: editorRef.current,
-    })
-
-    viewRef.current = view
-
-    return () => {
-      if (viewRef.current) {
-        viewRef.current.destroy()
-        viewRef.current = null
-      }
-    }
-  }, [activeFile?.path, activeFile?.content, fileLoading])
+  // 编辑器内容变化时同步到 ref
+  const handleEditorChange = useCallback((val: string) => {
+    contentRef.current = val
+    setDirty(true)
+  }, [])
 
   // --- 创建目录/文件 ---
   const openCreateModal = (type: 'file' | 'directory') => {
@@ -525,36 +449,19 @@ export const FileEditor = () => {
   }, [])
 
   return (
-    <div
-      style={{
-        padding: '16px 0',
-        boxSizing: 'border-box',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        width: '100%',
-      }}
-    >
-      <div
-        style={{
-          marginBottom: 12,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Title level={4} style={{ margin: 0 }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <Title level={4} className={styles.headerTitle}>
           文件编辑器
         </Title>
         <Space>
           {activeFile && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text type="secondary" className={styles.headerPath}>
               {activeFile.path}
             </Text>
           )}
           {dirty && (
-            <Text type="warning" style={{ color: '#faad14', fontSize: 11 }}>
+            <Text type="warning" className={styles.headerDirty}>
               未保存
             </Text>
           )}
@@ -573,27 +480,11 @@ export const FileEditor = () => {
         </Space>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
+      <div className={styles.contentArea}>
         {/* 左侧文件树 */}
-        <div
-          style={{
-            width: 260,
-            flexShrink: 0,
-            overflow: 'auto',
-            border: '1px solid #333',
-            borderRadius: 6,
-            padding: 8,
-          }}
-        >
+        <div className={styles.sidebar}>
           {/* 文件树 header */}
-          <div
-            style={{
-              marginBottom: 8,
-              display: 'flex',
-              gap: 4,
-              justifyContent: 'flex-end',
-            }}
-          >
+          <div className={styles.sidebarHeader}>
             <Button
               size="small"
               icon={<FolderAddOutlined />}
@@ -614,7 +505,7 @@ export const FileEditor = () => {
                 onRename={handleTreeRename}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>
+              <div className={styles.emptyState}>
                 <Text type="secondary">无可编辑文件</Text>
               </div>
             )}
@@ -622,34 +513,17 @@ export const FileEditor = () => {
         </div>
 
         {/* 右侧编辑器 */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            border: '1px solid #333',
-            borderRadius: 6,
-            overflow: 'hidden',
-            height: '100%',
-            overflowY: 'auto',
-          }}
-        >
+        <div className={styles.editorContainer}>
           {activeFile ? (
-            <Spin spinning={fileLoading} style={{ flex: 1 }}>
-              <div
-                ref={editorRef}
-                style={{ height: '100%', overflow: 'auto' }}
+            <Spin spinning={fileLoading} className={styles.editorSpin}>
+              <CodeEditor
+                value={activeFile.content}
+                onChange={handleEditorChange}
+                language={activeFile.language as any}
               />
             </Spin>
           ) : (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div className={styles.editorPlaceholder}>
               <Text type="secondary">从左侧选择一个文件进行编辑</Text>
             </div>
           )}
@@ -665,7 +539,7 @@ export const FileEditor = () => {
         confirmLoading={creating}
         okText="创建"
       >
-        <div style={{ marginBottom: 8 }}>
+        <div className={styles.modalDesc}>
           <Text type="secondary">
             输入相对于项目根目录的路径
             {createType === 'directory'
@@ -692,11 +566,11 @@ export const FileEditor = () => {
         onOk={handleRename}
         okText="重命名"
       >
-        <div style={{ marginBottom: 8 }}>
+        <div className={styles.modalDesc}>
           <Text type="secondary">
             输入新名称
             {renameTarget && (
-              <span style={{ display: 'block', fontSize: 11, marginTop: 4 }}>
+              <span className={styles.currentPath}>
                 当前: {renameTarget.relativePath}
               </span>
             )}

@@ -3,6 +3,7 @@ import { NodeTypes } from '#/types'
 import { useEffect, useState } from 'react'
 import { Typography, Tag, Input, Space, Button, Timeline } from 'antd'
 import type { LogEntry } from '#/types/engine'
+import { CodeEditor } from '#/components/file-editor/editor'
 
 const { Text } = Typography
 
@@ -185,21 +186,9 @@ export const ExecutionResult = () => {
               来源: {sourceLabel}
             </Text>
           </div>
-          <pre
-            style={{
-              fontSize: 12,
-              overflow: 'auto',
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-all',
-              backgroundColor: 'var(--deep-color)',
-              padding: 8,
-              borderRadius: 4,
-              maxHeight: 300,
-            }}
-          >
-            {result}
-          </pre>
+          <div style={{ borderRadius: 4, overflow: 'hidden' }}>
+            <CodeEditor value={result} readOnly maxHeight={300} />
+          </div>
         </>
       )}
 

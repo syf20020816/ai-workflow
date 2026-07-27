@@ -31,7 +31,7 @@ import { EditCodeAgent } from './edit/codeAgent'
 import { EditLarkTemplate } from './edit/larkTemplate'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ExecutionResult } from '../execution/result'
 import { Expand, Pin, Shrink } from 'lucide-react'
 import { Panel } from '@xyflow/react'
@@ -182,7 +182,7 @@ export const EditPanel = (props: PanelProps) => {
       <div
         className={styles.panel}
         style={{
-          height: isShrink ? '80vh' : '48px',
+          height: isShrink ? '92vh' : '48px',
         }}
       >
         <Tabs
@@ -216,7 +216,10 @@ export const EditPanel = (props: PanelProps) => {
 const EditHeader = () => {
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const setCurrentNode = useNodeStore((state) => state.setCurrentNode)
-
+  const IconComponent = useMemo(() => {
+    if (!currentNode) return null;
+  return  NodeIcons.get(currentNode.type) || NodeIcons.get(NodeTypes.USER_INPUT)
+  }, [currentNode])
   if (!currentNode) {
     return null
   }
@@ -224,7 +227,7 @@ const EditHeader = () => {
   return (
     <header className={styles.header}>
       <div className={styles.header_title}>
-        {NodeIcons.get(currentNode.type) || NodeIcons.get(NodeTypes.USER_INPUT)}
+        {IconComponent && <IconComponent height={24} width={24}></IconComponent>}
         <Input
           value={currentNode.data.title}
           className={styles.header_title_input}

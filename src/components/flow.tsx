@@ -24,7 +24,6 @@ import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
 import { EditPanel } from './panel/edit'
-import { HelpCircle } from 'lucide-react'
 import type { NodeType } from '#/types'
 
 export const NODE_TYPES = {

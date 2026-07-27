@@ -83,7 +83,6 @@ function App() {
               <main className={styles.flow}>
                 <Flow />
               </main>
-              {/* <EditPanel /> */}
             </div>
           )}
           {activeKey === 'prompts' && <PromptManager />}

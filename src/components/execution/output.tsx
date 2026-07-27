@@ -1,5 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import { Collapse, Typography } from 'antd'
+import { CodeEditor } from '#/components/file-editor/editor'
 
 const { Text } = Typography
 
@@ -35,21 +36,13 @@ export const OutputPanel = () => {
             </Text>
           ),
           children: output ? (
-            <pre
-              style={{
-                fontSize: 12,
-                overflow: 'auto',
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-                backgroundColor: 'var(--deep-color)',
-                padding: 8,
-                borderRadius: 4,
-                maxHeight: 400,
-              }}
-            >
-              {JSON.stringify(output, null, 2)}
-            </pre>
+            <div style={{ borderRadius: 4, overflow: 'hidden' }}>
+              <CodeEditor
+                value={JSON.stringify(output, null, 2)}
+                readOnly
+                maxHeight={400}
+              />
+            </div>
           ) : (
             <Text type="secondary" style={{ fontSize: 12 }}>
               无输出
