@@ -459,13 +459,10 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
       width: 80,
       render: (_: any, r: any) => (
         <Button
-          size="small"
           danger
           icon={<DeleteOutlined />}
           onClick={() => handleDelete(r)}
-        >
-          删除
-        </Button>
+        ></Button>
       ),
     },
   ]
@@ -495,7 +492,11 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
         </Button>
         <Button
           icon={<RefreshCw height={16} />}
-          onClick={() => fetchSkills()}
+          onClick={async () => {
+            // 先触发 rescan 同步 index.json，再重新加载
+            await fetch('/api/skill?rescan=true')
+            fetchSkills()
+          }}
           loading={skillLoading}
         >
           刷新
@@ -830,11 +831,11 @@ export const PromptManager = () => {
             label: '记忆',
             children: <MemoryTab loading={false} />,
           },
-          {
-            key: 'configs',
-            label: '配置',
-            children: <ConfigTab loading={false} />,
-          },
+          // {
+          //   key: 'configs',
+          //   label: '配置',
+          //   children: <ConfigTab loading={false} />,
+          // },
         ]}
       />
     </div>

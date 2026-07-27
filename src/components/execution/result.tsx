@@ -198,7 +198,7 @@ export const ExecutionResult = () => {
           <Text strong style={{ fontSize: 13 }}>
             执行日志
           </Text>
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, height: 'calc(100vh - 400px)', overflow: "auto" }}>
             <Timeline
               items={logs.map((log, i) => ({
                 color: levelColorMap[log.level] || 'blue',

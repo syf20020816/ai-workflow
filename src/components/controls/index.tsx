@@ -18,6 +18,23 @@ export const Controls = (props: PanelProps) => {
     }
   }, [editing])
 
+  // 全局键盘快捷键: Ctrl++ / Ctrl+-
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault()
+          zoomIn()
+        } else if (e.key === '-') {
+          e.preventDefault()
+          zoomOut()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [zoomIn, zoomOut])
+
   return (
     <Panel {...props}>
       <div className={styles.controls}>

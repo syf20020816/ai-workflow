@@ -28,8 +28,8 @@ export const Route = createFileRoute('/api/skill/content')({
           return Response.json({ error: 'Skill not found' }, { status: 404 })
         }
 
-        // 从 workflows/skills/{id}/skill.md 读取内容
-        const skillMdPath = path.join(SKILLS_DIR, id, 'skill.md')
+        // 从 workflows/skills/{id}/SKILL.md 读取内容
+        const skillMdPath = path.join(SKILLS_DIR, id, 'SKILL.md')
         let content = ''
         if (fs.existsSync(skillMdPath)) {
           content = fs.readFileSync(skillMdPath, 'utf-8')

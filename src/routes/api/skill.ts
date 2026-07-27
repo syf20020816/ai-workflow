@@ -58,11 +58,77 @@ function deleteSkillDir(skillId: string): void {
   }
 }
 
+/** 解析 SKILL.md 的 YAML front matter，提取 name/description */
+function parseSkillFrontMatter(content: string): { name?: string; description?: string } {
+  const lines = content.split('\n')
+  if (lines.length < 2 || lines[0].trim() !== '---') return {}
+  const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---')
+  if (end === -1) return {}
+  const fm: Record<string, string> = {}
+  for (let i = 1; i < end; i++) {
+    const m = lines[i].match(/^(\w+):\s*(.+)/)
+    if (m) fm[m[1]] = m[2].replace(/^>-\s*/, '').trim()
+  }
+  return { name: fm.name, description: fm.description }
+}
+
+/** 重新扫描 skills 目录，同步 index.json */
+function rescanIndex(): Skill[] {
+  const index = readIndex()
+  const originalJson = JSON.stringify(index)
+  const indexMap = new Map<string, Skill>()
+  for (const s of index) indexMap.set(s.id, s)
+
+  // 扫描所有子目录
+  let dirEntries: fs.Dirent[] = []
+  try {
+    dirEntries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true })
+  } catch {
+    // skills 目录不存在
+  }
+
+  const foundIds = new Set<string>()
+
+  for (const entry of dirEntries) {
+    if (!entry.isDirectory()) continue
+    const skillMdPath = path.join(SKILLS_DIR, entry.name, 'SKILL.md')
+    if (!fs.existsSync(skillMdPath)) continue
+
+    foundIds.add(entry.name)
+
+    // 已存在索引中，跳过
+    if (indexMap.has(entry.name)) continue
+
+    // 新增条目
+    const content = fs.readFileSync(skillMdPath, 'utf-8')
+    const fm = parseSkillFrontMatter(content)
+    const skill: Skill = {
+      id: entry.name,
+      name: fm.name || entry.name,
+      description: fm.description || `skill: ${entry.name}`,
+      source: 'custom',
+    }
+    index.push(skill)
+  }
+
+  // 移除已不存在的条目
+  const cleaned = index.filter((s) => foundIds.has(s.id))
+
+  // 有变化时才写入（对比原始快照，而非已变异的 index）
+  if (JSON.stringify(cleaned) !== originalJson) {
+    writeIndex(cleaned)
+  }
+
+  return cleaned
+}
+
 export const Route = createFileRoute('/api/skill')({
   server: {
     handlers: {
-      GET: async () => {
-        const index = readIndex()
+      GET: async (ctx: any) => {
+        const url = new URL(ctx.request.url)
+        const rescan = url.searchParams.get('rescan') === 'true'
+        const index = rescan ? rescanIndex() : readIndex()
         return Response.json(index)
       },
       POST: async (ctx: any) => {

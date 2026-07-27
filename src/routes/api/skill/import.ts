@@ -1,7 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import fs from 'node:fs'
-import path from 'node:path'
-import type { Skill } from '#/types/skill'
 import { importSkillFromMarkdown, scanMarkdownSkills } from '../skill'
 
 export const Route = createFileRoute('/api/skill/import')({
