@@ -43,15 +43,15 @@ export const UNode = ({ node, children }: UNodeProps) => {
     >
       <Handle type="target" position={Position.Left} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Badge status={statusBadgeMap[nodeStatus]} size="small" />
         <NodeHeader kind={kind} title={node.data.title || ''} />
+        <Badge status={statusBadgeMap[nodeStatus]} size="small" />
       </div>
       {children}
-      <>
+      <div className={styles.node_tools}>
         <RunNode nodeId={node.id} />
         <PinNode nodeId={node.id} title={node.data.title || ''} />
         <AddNodeBtn kind={kind} />
-      </>
+      </div>
       <Handle type="source" position={Position.Right} />
     </div>
   )

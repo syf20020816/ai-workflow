@@ -87,76 +87,78 @@ export const EditPanel = (props: PanelProps) => {
                   <EditLarkTemplate />
                 )}
               </main>
-              <footer className={styles.footer}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button
-                    icon={<Pin size={14} />}
-                    block
-                    onClick={async () => {
+              {isShrink && (
+                <footer className={styles.footer}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      icon={<Pin size={14} />}
+                      block
+                      onClick={async () => {
+                        const res = await fetch(
+                          `/api/workflow/pin?workflowId=${workflowId}`,
+                        )
+                        const json = await res.json()
+                        if (json.status === 'success' && json.data.length > 0) {
+                          setPinnedList(json.data)
+                          setSelectedPin(null)
+                          setLoadOpen(true)
+                        } else {
+                          message.info(
+                            '没有已固定的节点数据，请先执行节点并点击 PIN 按钮',
+                          )
+                        }
+                      }}
+                    >
+                      加载固定
+                    </Button>
+                    <Button
+                      color="danger"
+                      variant="outlined"
+                      block
+                      onClick={() => {
+                        deleteCurrentNode()
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                  <Modal
+                    title="加载固定节点"
+                    open={loadOpen}
+                    onCancel={() => setLoadOpen(false)}
+                    onOk={async () => {
+                      if (!selectedPin) {
+                        message.warning('请选择一个固定节点')
+                        return
+                      }
                       const res = await fetch(
-                        `/api/workflow/pin?workflowId=${workflowId}`,
+                        `/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`,
                       )
                       const json = await res.json()
-                      if (json.status === 'success' && json.data.length > 0) {
-                        setPinnedList(json.data)
-                        setSelectedPin(null)
-                        setLoadOpen(true)
-                      } else {
-                        message.info(
-                          '没有已固定的节点数据，请先执行节点并点击 PIN 按钮',
+                      if (json.status === 'success') {
+                        loadPinnedNode(selectedPin, json.data.output)
+                        message.success(
+                          `已加载固定节点: ${json.data.title || selectedPin}`,
                         )
+                        setLoadOpen(false)
+                      } else {
+                        message.error('加载失败')
                       }
                     }}
                   >
-                    加载固定
-                  </Button>
-                  <Button
-                    color="danger"
-                    variant="outlined"
-                    block
-                    onClick={() => {
-                      deleteCurrentNode()
-                    }}
-                  >
-                    删除
-                  </Button>
-                </div>
-                <Modal
-                  title="加载固定节点"
-                  open={loadOpen}
-                  onCancel={() => setLoadOpen(false)}
-                  onOk={async () => {
-                    if (!selectedPin) {
-                      message.warning('请选择一个固定节点')
-                      return
-                    }
-                    const res = await fetch(
-                      `/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`,
-                    )
-                    const json = await res.json()
-                    if (json.status === 'success') {
-                      loadPinnedNode(selectedPin, json.data.output)
-                      message.success(
-                        `已加载固定节点: ${json.data.title || selectedPin}`,
-                      )
-                      setLoadOpen(false)
-                    } else {
-                      message.error('加载失败')
-                    }
-                  }}
-                >
-                  <Select
-                    style={{ width: '100%' }}
-                    placeholder="选择要加载的固定节点"
-                    value={selectedPin}
-                    onChange={setSelectedPin}
-                    options={pinnedList.map((p) => ({
-                      value: p.nodeId,
-                      label: `${p.title} (${p.nodeId})`,
-                    }))}
-                  />
-                </Modal>
-              </footer>
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder="选择要加载的固定节点"
+                      value={selectedPin}
+                      onChange={setSelectedPin}
+                      options={pinnedList.map((p) => ({
+                        value: p.nodeId,
+                        label: `${p.title} (${p.nodeId})`,
+                      }))}
+                    />
+                  </Modal>
+                </footer>
+              )}
             </>
           )}
         </div>
@@ -177,9 +179,12 @@ export const EditPanel = (props: PanelProps) => {
   return (
     <Panel {...props}>
       <ExecutionPanel />
-      <div className={styles.panel} style={{
-        height: isShrink ? '80vh': '48px'
-      }}>
+      <div
+        className={styles.panel}
+        style={{
+          height: isShrink ? '80vh' : '48px',
+        }}
+      >
         <Tabs
           activeKey={activeKey}
           items={items}

@@ -177,7 +177,6 @@ export const AddNodeBtn = ({
     {
       key: 'control',
       label: '控制节点',
-      type: 'group',
       children: [
         {
           label: <NodeHeader kind={NodeTypes.IF} title="判断节点" />,

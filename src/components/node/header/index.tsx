@@ -30,7 +30,7 @@ export const NodeHeader = ({ kind, title }: NodeHeaderProps) => {
   const IconComponent = IconMap[kind]
 
   return (
-    <div className={styles.row}>
+    <div className={styles.row} style={{ margin: 0}}>
       {IconComponent && <IconComponent height={16} width={16} />}
       <h4 className={styles.node_title}>{title}</h4>
     </div>

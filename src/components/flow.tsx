@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { ReactFlow, Background, Controls, MiniMap } from '@xyflow/react'
+import { ReactFlow, Background, MiniMap } from '@xyflow/react'
+import { Controls } from './controls'
 
 import { UserInputNode } from './node/user/input'
 import { AgentNode } from './node/ai/agent'
@@ -23,6 +24,8 @@ import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
 import { EditPanel } from './panel/edit'
+import { HelpCircle } from 'lucide-react'
+import type { NodeType } from '#/types'
 
 export const NODE_TYPES = {
   userInput: UserInputNode,
@@ -40,6 +43,24 @@ export const NODE_TYPES = {
   loopCondition: LoopConditionNode,
   retry: RetryNode,
   memory: MemoryNode,
+}
+
+export const NODE_COLORS = {
+  userInput: '#10a6f5',
+  agent: '#985debff',
+  aiOutput: '#52c41a',
+  answer: '#fa8c16',
+  bmadAgent: '#eb2f96',
+  lark: '#1677ff',
+  larkTemplate: '#1677ff',
+  codeAgent: '#13c2c2',
+  skill: '#985debff',
+  if: '#fa8c16',
+  ifCondition: '#ff7a45',
+  loop: '#1890ff',
+  loopCondition: '#1890ff',
+  retry: '#eb2f96',
+  memory: '#eb2f96',
 }
 
 const EDGE_TYPES = {
@@ -88,8 +109,16 @@ export function Flow() {
         deleteKeyCode="Delete"
       >
         <Background />
-        {/* <MiniMap position="bottom-left" /> */}
-        <Controls />
+        <MiniMap
+          offsetScale={10}
+          style={{ height: 120, width: 140, bottom: 36 }}
+          position="bottom-left"
+          nodeColor={(node) =>
+            NODE_COLORS[(node.type ?? 'userInput') as NodeType] ||
+            NODE_COLORS.userInput
+          }
+        />
+        <Controls position="bottom-left"></Controls>
         <ToolsPanel position="top-left"></ToolsPanel>
         <EditPanel position="top-right"></EditPanel>
       </ReactFlow>
