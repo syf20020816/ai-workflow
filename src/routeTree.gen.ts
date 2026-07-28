@@ -21,9 +21,11 @@ import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
+import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiExecuteFileWriteRouteImport } from './routes/api/execute/fileWrite'
 import { Route as ApiExecuteEmbedRouteImport } from './routes/api/execute/embed'
+import { Route as ApiExecuteDocProcessRouteImport } from './routes/api/execute/doc-process'
 import { Route as ApiExecuteCodeAgentRouteImport } from './routes/api/execute/codeAgent'
 import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
 import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
@@ -92,6 +94,11 @@ const ApiExecuteQdrantRoute = ApiExecuteQdrantRouteImport.update({
   path: '/api/execute/qdrant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecuteModelsRoute = ApiExecuteModelsRouteImport.update({
+  id: '/api/execute/models',
+  path: '/api/execute/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   id: '/api/execute/lark',
   path: '/api/execute/lark',
@@ -105,6 +112,11 @@ const ApiExecuteFileWriteRoute = ApiExecuteFileWriteRouteImport.update({
 const ApiExecuteEmbedRoute = ApiExecuteEmbedRouteImport.update({
   id: '/api/execute/embed',
   path: '/api/execute/embed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteDocProcessRoute = ApiExecuteDocProcessRouteImport.update({
+  id: '/api/execute/doc-process',
+  path: '/api/execute/doc-process',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteCodeAgentRoute = ApiExecuteCodeAgentRouteImport.update({
@@ -158,9 +170,11 @@ export interface FileRoutesByFullPath {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -182,9 +196,11 @@ export interface FileRoutesByTo {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -207,9 +223,11 @@ export interface FileRoutesById {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -233,9 +251,11 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -257,9 +277,11 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -281,9 +303,11 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -306,9 +330,11 @@ export interface RootRouteChildren {
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
   ApiExecuteBmadRoute: typeof ApiExecuteBmadRoute
   ApiExecuteCodeAgentRoute: typeof ApiExecuteCodeAgentRoute
+  ApiExecuteDocProcessRoute: typeof ApiExecuteDocProcessRoute
   ApiExecuteEmbedRoute: typeof ApiExecuteEmbedRoute
   ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
+  ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
   ApiWorkflowVersionsRoute: typeof ApiWorkflowVersionsRoute
@@ -400,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecuteQdrantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/execute/models': {
+      id: '/api/execute/models'
+      path: '/api/execute/models'
+      fullPath: '/api/execute/models'
+      preLoaderRoute: typeof ApiExecuteModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/execute/lark': {
       id: '/api/execute/lark'
       path: '/api/execute/lark'
@@ -419,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/api/execute/embed'
       fullPath: '/api/execute/embed'
       preLoaderRoute: typeof ApiExecuteEmbedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/doc-process': {
+      id: '/api/execute/doc-process'
+      path: '/api/execute/doc-process'
+      fullPath: '/api/execute/doc-process'
+      preLoaderRoute: typeof ApiExecuteDocProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/codeAgent': {
@@ -502,9 +542,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
   ApiExecuteBmadRoute: ApiExecuteBmadRoute,
   ApiExecuteCodeAgentRoute: ApiExecuteCodeAgentRoute,
+  ApiExecuteDocProcessRoute: ApiExecuteDocProcessRoute,
   ApiExecuteEmbedRoute: ApiExecuteEmbedRoute,
   ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
+  ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
   ApiWorkflowVersionsRoute: ApiWorkflowVersionsRoute,

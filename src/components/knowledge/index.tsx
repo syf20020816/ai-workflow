@@ -16,6 +16,11 @@ import {
   Badge,
   Collapse,
   Empty,
+  Tabs,
+  Upload,
+  Select,
+  List,
+  Progress,
 } from 'antd'
 import {
   PlusOutlined,
@@ -30,12 +35,14 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  FileTextOutlined,
+  InboxOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
 
 const { Text, Title } = Typography
-const { TextArea } = Input
 const { Panel } = Collapse
 
 // ============ Types ============
@@ -81,6 +88,89 @@ export const KnowledgeManager = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
   const [syncing, setSyncing] = useState<Record<string, boolean>>({})
+
+  // === Document upload state ===
+  interface DocRecord {
+    id: string
+    fileName: string
+    collectionName: string
+    totalChunks: number
+    totalVectors: number
+    status: 'processing' | 'success' | 'error'
+    error?: string
+    createdAt: string
+  }
+  const [docs, setDocs] = useState<DocRecord[]>([])
+  const [uploadCollection, setUploadCollection] = useState<string>('')
+  const [embedModelId, setEmbedModelId] = useState<string>('')
+  const [modelList, setModelList] = useState<Array<{ id: string; name: string; modelName: string }>>([])
+
+  // === Handle file upload and processing ===
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+
+  const handleProcessDoc = async (file: File, collectionName: string) => {
+    // 前端文件大小校验
+    if (file.size > MAX_FILE_SIZE) {
+      message.warning(`「${file.name}」文件过大 (${(file.size / 1024 / 1024).toFixed(1)} MB)，请上传 5 MB 以内的文件`)
+      return
+    }
+
+    const docId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    setDocs((prev) => [
+      {
+        id: docId,
+        fileName: file.name,
+        collectionName,
+        totalChunks: 0,
+        totalVectors: 0,
+        status: 'processing',
+        createdAt: new Date().toLocaleString(),
+      },
+      ...prev,
+    ])
+
+    try {
+      const text = await file.text()
+      const res = await fetch('/api/execute/doc-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collectionName,
+          content: text,
+          fileName: file.name,
+          modelId: embedModelId || undefined,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.status === 'success') {
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === docId
+              ? {
+                  ...d,
+                  status: 'success',
+                  totalChunks: data.output.totalChunks,
+                  totalVectors: data.output.totalVectors,
+                }
+              : d,
+          ),
+        )
+        message.success(`「${file.name}」处理完成，共 ${data.output.totalChunks} 个块`)
+        loadCollections() // 刷新集合统计
+      } else {
+        setDocs((prev) =>
+          prev.map((d) => (d.id === docId ? { ...d, status: 'error', error: data.error } : d)),
+        )
+        message.error(`「${file.name}」处理失败: ${data.error}`)
+      }
+    } catch (err: any) {
+      setDocs((prev) =>
+        prev.map((d) => (d.id === docId ? { ...d, status: 'error', error: err.message } : d)),
+      )
+      message.error(`「${file.name}」处理失败: ${err.message}`)
+    }
+  }
 
   // === Load collections ===
   const loadCollections = useCallback(async () => {
@@ -140,6 +230,23 @@ export const KnowledgeManager = () => {
   useEffect(() => {
     loadCollections()
   }, [loadCollections])
+
+  // === Load model list ===
+  const loadModels = useCallback(async () => {
+    try {
+      const res = await fetch('/api/execute/models')
+      const data = await res.json()
+      if (data.status === 'success') {
+        setModelList(data.output?.models || [])
+      }
+    } catch {
+      setModelList([])
+    }
+  }, [])
+
+  useEffect(() => {
+    loadModels()
+  }, [loadModels])
 
   // === Stats ===
   const totalCount = collections.length
@@ -407,162 +514,350 @@ export const KnowledgeManager = () => {
             知识库管理
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            管理 Qdrant 向量数据库集合和执行同步任务
+            管理 Qdrant 向量数据库集合、上传文档并自动向量化
           </Text>
         </Col>
-        <Col>
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadCollections} loading={loading}>
-              刷新
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
-              新建集合
-            </Button>
-          </Space>
-        </Col>
       </Row>
 
-      {/* ====== Stat Cards ====== */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable>
-            <Statistic
-              title="集合总数"
-              value={totalCount}
-              prefix={<DatabaseOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable>
-            <Statistic
-              title="活跃集合"
-              value={activeCount}
-              suffix={`/ ${totalCount}`}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable>
-            <Statistic
-              title="向量总数"
-              value={totalVectors.toLocaleString()}
-              prefix={<ApartmentOutlined />}
-              valueStyle={{ color: '#13c2c2' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card hoverable>
-            <Statistic
-              title="异常集合"
-              value={errorCount}
-              prefix={<WarningOutlined />}
-              valueStyle={errorCount > 0 ? { color: '#ff4d4f' } : { color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* ====== Collection Table ====== */}
-      <Card
-        title={
-          <Space>
-            <DatabaseOutlined />
-            <span>集合列表</span>
-            <Tag>{totalCount}</Tag>
-          </Space>
-        }
-        style={{ marginBottom: 24 }}
-      >
-        <Table<CollectionInfo>
-          columns={columns}
-          dataSource={collections}
-          rowKey="name"
-          loading={loading}
-          pagination={false}
-          locale={{ emptyText: <Empty description="暂无集合，点击「新建集合」创建" /> }}
-        />
-      </Card>
-
-      {/* ====== Sync Workflows ====== */}
-      <Card
-        title={
-          <Space>
-            <SyncOutlined />
-            <span>同步工作流</span>
-          </Space>
-        }
-        style={{ marginBottom: 24 }}
-      >
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          {syncWorkflowCards.map((card) => (
-            <Col key={card.key} xs={24} sm={12} md={8}>
-              <Card
-                size="small"
-                hoverable
-                actions={[
-                  <Button
-                    type="primary"
-                    size="small"
-                    icon={<PlayCircleOutlined />}
-                    loading={syncing[card.key]}
-                    onClick={() => handleSync(card.key, card.title)}
-                  >
-                    {syncing[card.key] ? '运行中' : '运行'}
-                  </Button>,
-                ]}
-              >
-                <Card.Meta
-                  avatar={
-                    <Badge
-                      count={<SyncOutlined style={{ fontSize: 18, color: '#1890ff' }} />}
-                      style={{ backgroundColor: 'transparent' }}
-                    />
-                  }
-                  title={card.title}
-                  description={
-                    <>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {card.description}
-                      </Text>
-                      <br />
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        预估耗时: {card.duration}
-                      </Text>
-                    </>
-                  }
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        {/* Sync History */}
-        <Collapse ghost style={{ background: 'transparent' }}>
-          <Panel
-            key="history"
-            header={
+      <Tabs
+        defaultActiveKey="collections"
+        items={[
+          // ===== Tab 1: 集合管理 =====
+          {
+            key: 'collections',
+            label: (
               <Space>
-                <HistoryOutlined />
-                <span>同步历史</span>
-                <Tag>{MOCK_SYNC_RECORDS.length}</Tag>
+                <DatabaseOutlined />
+                <span>集合管理</span>
               </Space>
-            }
-          >
-            <Table<SyncRecord>
-              columns={historyColumns}
-              dataSource={MOCK_SYNC_RECORDS}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          </Panel>
-        </Collapse>
-      </Card>
+            ),
+            children: (
+              <>
+                {/* Stat Cards */}
+                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card hoverable>
+                      <Statistic
+                        title="集合总数"
+                        value={totalCount}
+                        prefix={<DatabaseOutlined />}
+                        valueStyle={{ color: '#1890ff' }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card hoverable>
+                      <Statistic
+                        title="活跃集合"
+                        value={activeCount}
+                        suffix={`/ ${totalCount}`}
+                        prefix={<CheckCircleOutlined />}
+                        valueStyle={{ color: '#52c41a' }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card hoverable>
+                      <Statistic
+                        title="向量总数"
+                        value={totalVectors.toLocaleString()}
+                        prefix={<ApartmentOutlined />}
+                        valueStyle={{ color: '#13c2c2' }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card hoverable>
+                      <Statistic
+                        title="异常集合"
+                        value={errorCount}
+                        prefix={<WarningOutlined />}
+                        valueStyle={errorCount > 0 ? { color: '#ff4d4f' } : { color: '#52c41a' }}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Action bar */}
+                <Row justify="end" style={{ marginBottom: 16 }}>
+                  <Space>
+                    <Button icon={<ReloadOutlined />} onClick={loadCollections} loading={loading}>
+                      刷新
+                    </Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+                      新建集合
+                    </Button>
+                  </Space>
+                </Row>
+
+                {/* Collection Table */}
+                <Card
+                  title={
+                    <Space>
+                      <DatabaseOutlined />
+                      <span>集合列表</span>
+                      <Tag>{totalCount}</Tag>
+                    </Space>
+                  }
+                  style={{ marginBottom: 24 }}
+                >
+                  <Table<CollectionInfo>
+                    columns={columns}
+                    dataSource={collections}
+                    rowKey="name"
+                    loading={loading}
+                    pagination={false}
+                    locale={{ emptyText: <Empty description="暂无集合，点击「新建集合」创建" /> }}
+                  />
+                </Card>
+
+                {/* Sync Workflows */}
+                <Card
+                  title={
+                    <Space>
+                      <SyncOutlined />
+                      <span>同步工作流</span>
+                    </Space>
+                  }
+                  style={{ marginBottom: 24 }}
+                >
+                  <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                    {syncWorkflowCards.map((card) => (
+                      <Col key={card.key} xs={24} sm={12} md={8}>
+                        <Card
+                          size="small"
+                          hoverable
+                          actions={[
+                            <Button
+                              type="primary"
+                              size="small"
+                              icon={<PlayCircleOutlined />}
+                              loading={syncing[card.key]}
+                              onClick={() => handleSync(card.key, card.title)}
+                            >
+                              {syncing[card.key] ? '运行中' : '运行'}
+                            </Button>,
+                          ]}
+                        >
+                          <Card.Meta
+                            avatar={
+                              <Badge
+                                count={<SyncOutlined style={{ fontSize: 18, color: '#1890ff' }} />}
+                                style={{ backgroundColor: 'transparent' }}
+                              />
+                            }
+                            title={card.title}
+                            description={
+                              <div style={{ height: 80 }}>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {card.description}
+                                </Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                  预估耗时: {card.duration}
+                                </Text>
+                              </div>
+                            }
+                          />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+
+                  {/* Sync History */}
+                  <Collapse ghost style={{ background: 'transparent' }}>
+                    <Panel
+                      key="history"
+                      header={
+                        <Space>
+                          <HistoryOutlined />
+                          <span>同步历史</span>
+                          <Tag>{MOCK_SYNC_RECORDS.length}</Tag>
+                        </Space>
+                      }
+                    >
+                      <Table<SyncRecord>
+                        columns={historyColumns}
+                        dataSource={MOCK_SYNC_RECORDS}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                      />
+                    </Panel>
+                  </Collapse>
+                </Card>
+              </>
+            ),
+          },
+
+          // ===== Tab 2: 文档管理 =====
+          {
+            key: 'docs',
+            label: (
+              <Space>
+                <FileTextOutlined />
+                <span>文档管理</span>
+              </Space>
+            ),
+            children: (
+              <>
+                {/* Upload Area */}
+                <Card style={{ marginBottom: 24 }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Row gutter={[16, 12]} style={{ marginBottom: 16 }} align="middle">
+                      <Col>
+                        <Text strong>目标集合</Text>
+                      </Col>
+                      <Col>
+                        <Select
+                          placeholder="选择目标集合"
+                          style={{ width: 220 }}
+                          value={uploadCollection || undefined}
+                          onChange={setUploadCollection}
+                          options={collections.map((c) => ({
+                            value: c.name,
+                            label: c.name,
+                          }))}
+                        />
+                      </Col>
+                      <Col>
+                        <Text strong>Embedding 模型</Text>
+                      </Col>
+                      <Col>
+                        <Select
+                          placeholder="自动选择（推荐）"
+                          style={{ width: 240 }}
+                          allowClear
+                          value={embedModelId || undefined}
+                          onChange={setEmbedModelId}
+                          options={modelList.map((m) => ({
+                            value: m.id,
+                            label: m.name,
+                          }))}
+                        />
+                      </Col>
+                    </Row>
+
+                    <Upload.Dragger
+                      accept=".txt,.md,.json,.js,.ts,.jsx,.tsx,.py,.java,.go,.rs,.css,.scss,.html,.xml,.yaml,.yml,.csv"
+                      multiple
+                      showUploadList={false}
+                      beforeUpload={(file) => {
+                        if (!uploadCollection) {
+                          message.warning('请先选择目标集合')
+                          return Upload.LIST_IGNORE
+                        }
+                        handleProcessDoc(file, uploadCollection)
+                        return false // 阻止默认上传
+                      }}
+                    >
+                      <p className="ant-upload-drag-icon">
+                        <InboxOutlined />
+                      </p>
+                      <p className="ant-upload-text">
+                        点击或拖拽文件到此区域上传
+                      </p>
+                      <p className="ant-upload-hint">
+                        支持 txt / md / 代码文件（单文件 ≤ 5MB），系统将自动分块并向量化写入 Qdrant
+                      </p>
+                    </Upload.Dragger>
+                  </Space>
+                </Card>
+
+                {/* Document List */}
+                <Card
+                  title={
+                    <Space>
+                      <FileTextOutlined />
+                      <span>处理记录</span>
+                      <Tag>{docs.length}</Tag>
+                    </Space>
+                  }
+                >
+                  {docs.length === 0 ? (
+                    <Empty description="暂无文档处理记录，上传文档后自动显示" />
+                  ) : (
+                    <List
+                      dataSource={docs}
+                      renderItem={(doc) => (
+                        <List.Item
+                          actions={
+                            doc.status === 'error'
+                              ? [
+                                  <Tooltip title={doc.error}>
+                                    <Text type="danger" style={{ fontSize: 12, maxWidth: 200 }} ellipsis>
+                                      {doc.error}
+                                    </Text>
+                                  </Tooltip>,
+                                ]
+                              : undefined
+                          }
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              doc.status === 'processing' ? (
+                                <LoadingOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                              ) : doc.status === 'success' ? (
+                                <CheckCircleOutlined style={{ fontSize: 24, color: '#52c41a' }} />
+                              ) : (
+                                <CloseCircleOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                              )
+                            }
+                            title={
+                              <Space>
+                                <Text strong>{doc.fileName}</Text>
+                                <Tag>{doc.collectionName}</Tag>
+                                {doc.status === 'processing' && (
+                                  <Tag color="processing">处理中</Tag>
+                                )}
+                                {doc.status === 'success' && (
+                                  <Tag color="success">已完成</Tag>
+                                )}
+                                {doc.status === 'error' && (
+                                  <Tag color="error">失败</Tag>
+                                )}
+                              </Space>
+                            }
+                            description={
+                              <Space>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {doc.createdAt}
+                                </Text>
+                                {doc.status === 'success' && (
+                                  <>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                      | {doc.totalChunks} 个块 | {doc.totalVectors} 个向量
+                                    </Text>
+                                    <Progress
+                                      percent={100}
+                                      size="small"
+                                      style={{ width: 120, margin: 0 }}
+                                      showInfo={false}
+                                    />
+                                  </>
+                                )}
+                                {doc.status === 'processing' && (
+                                  <Progress
+                                    percent={50}
+                                    size="small"
+                                    style={{ width: 120, margin: 0 }}
+                                    showInfo={false}
+                                    status="active"
+                                  />
+                                )}
+                              </Space>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </Card>
+              </>
+            ),
+          },
+        ]}
+      />
 
       {/* ====== New Collection Modal ====== */}
       <Modal
@@ -600,12 +895,39 @@ export const KnowledgeManager = () => {
             label="描述（可选）"
             rules={[{ max: 200, message: '不超过 200 字' }]}
           >
-            <TextArea rows={3} placeholder="集合用途说明（选填）" maxLength={200} showCount />
+            <Input.TextArea rows={3} placeholder="集合用途说明（选填）" maxLength={200} showCount />
+          </Form.Item>
+          <Form.Item
+            name="embedModelId"
+            label="Embedding 模型"
+            tooltip="选择用于该集合的向量化模型，将自动匹配向量维度"
+          >
+            <Select
+              placeholder="选择模型（自动填充维度）"
+              allowClear
+              options={modelList.map((m) => ({ value: m.id, label: m.name }))}
+              onChange={async (val) => {
+                if (!val) return
+                try {
+                  const res = await fetch('/api/execute/embed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: ['hello'], modelId: val }),
+                  })
+                  const data = await res.json()
+                  if (data.status === 'success') {
+                    form.setFieldsValue({ vectorSize: data.output.dimensions })
+                  }
+                } catch {
+                  // 探测失败，保持用户手动输入
+                }
+              }}
+            />
           </Form.Item>
           <Form.Item
             name="vectorSize"
             label="向量维度"
-            tooltip="根据使用的 Embedding 模型设置，如 text-embedding-ada-002 为 1536 维"
+            tooltip="根据使用的 Embedding 模型设置"
           >
             <Input type="number" min={64} max={8192} />
           </Form.Item>

@@ -96,13 +96,23 @@ export const Route = createFileRoute('/api/execute/qdrant')({
               })
             }
 
+            const size = typeof vectorSize === 'string' ? parseInt(vectorSize, 10) : vectorSize
+            if (!size || size < 64 || size > 16384) {
+              return Response.json({
+                status: 'error',
+                output: {},
+                logs: [...logs, `无效的向量维度: ${vectorSize}`],
+                error: '向量维度必须在 64 - 16384 之间',
+              })
+            }
+
             const { ok, data } = await qdrantFetch(
               `/collections/${encodeURIComponent(collectionName)}`,
               {
                 method: 'PUT',
                 body: JSON.stringify({
                   vectors: {
-                    size: vectorSize,
+                    size,
                     distance,
                   },
                 }),
@@ -154,18 +164,19 @@ export const Route = createFileRoute('/api/execute/qdrant')({
             }
 
             const { ok, data } = await qdrantFetch(
-              `/collections/${encodeURIComponent(collectionName)}/points`,
+              `/collections/${encodeURIComponent(collectionName)}/points?wait=true`,
               {
                 method: 'PUT',
                 body: JSON.stringify({ points }),
               },
             )
-            logs.push(ok ? `写入 ${points.length} 个向量点` : '写入向量点失败')
+            const isSuccess = ok && data.status === 'ok'
+            logs.push(isSuccess ? `写入 ${points.length} 个向量点` : `写入向量点失败: ${data.status?.error || data.error || 'unknown'}`)
             return Response.json({
-              status: ok ? 'success' : 'error',
+              status: isSuccess ? 'success' : 'error',
               output: { count: points.length, result: data },
               logs,
-              error: ok ? undefined : data.status?.error || '写入向量点失败',
+              error: isSuccess ? undefined : data.status?.error || data.error || '写入向量点失败',
             })
           }
 
