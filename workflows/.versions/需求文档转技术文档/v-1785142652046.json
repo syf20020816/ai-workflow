@@ -20,8 +20,8 @@
         "y": 1.2920000000000158
       },
       "measured": {
-        "width": 160,
-        "height": 96
+        "width": 234,
+        "height": 101
       },
       "selected": false,
       "dragging": false
@@ -47,8 +47,8 @@
         "url": "https://lizhi2021.feishu.cn/wiki/TLUhwkobfi4nJzkunHVcXhZPnyb"
       },
       "measured": {
-        "width": 160,
-        "height": 74
+        "width": 146,
+        "height": 79
       }
     },
     {
@@ -81,8 +81,8 @@
         }
       },
       "measured": {
-        "width": 160,
-        "height": 58
+        "width": 166,
+        "height": 63
       }
     },
     {
@@ -112,8 +112,8 @@
         }
       },
       "measured": {
-        "width": 160,
-        "height": 77
+        "width": 234,
+        "height": 82
       },
       "dragging": false
     },
@@ -127,7 +127,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": false,
+      "selected": true,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 987.2159999999999,
@@ -139,8 +139,8 @@
         "url": "https://lizhi2021.feishu.cn/wiki/Xwq0wcVAZiK4t6krkrFcBUAcn4f"
       },
       "measured": {
-        "width": 160,
-        "height": 89
+        "width": 146,
+        "height": 94
       }
     },
     {
@@ -164,8 +164,8 @@
         "templateUrl": "https://lizhi2021.feishu.cn/docx/YmOLdUAcCorcfWxArLDctbU8nAc?&from=template_center&ccm_open_type=template_center"
       },
       "measured": {
-        "width": 160,
-        "height": 65
+        "width": 234,
+        "height": 70
       }
     },
     {
@@ -201,15 +201,15 @@
         }
       },
       "measured": {
-        "width": 160,
-        "height": 104
+        "width": 214,
+        "height": 109
       }
     },
     {
       "id": "d80811b8-3984-4f22-a99f-0a02373bddc2",
       "position": {
-        "x": 273.94422855103585,
-        "y": -188.57084385992502
+        "x": 373.2460516601216,
+        "y": -197.48254593381733
       },
       "deletable": true,
       "draggable": true,
@@ -226,8 +226,8 @@
         "memoryPath": "memory/memory.md"
       },
       "measured": {
-        "width": 160,
-        "height": 58
+        "width": 134,
+        "height": 63
       }
     }
   ],
@@ -281,6 +281,6 @@
       "id": "xy-edge__d80811b8-3984-4f22-a99f-0a02373bddc2-e8d2db2f-4673-44b5-a959-5078f68e1471"
     }
   ],
-  "createdAt": "2026-07-27T08:57:32.041Z",
-  "updatedAt": "2026-07-27T08:57:32.041Z"
+  "savedAt": "2026-07-27T08:57:32.041Z",
+  "versionId": "v-1785142652046"
 }

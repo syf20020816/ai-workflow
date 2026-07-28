@@ -16,6 +16,7 @@ export const NodeTypes = {
   SKILL: 'skill',
   LARK_TEMPLATE: 'larkTemplate',
   MEMORY: 'memory',
+  KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -232,8 +233,30 @@ export type NLarkTemplateData = NNode & {
 
 export type NLarkTemplate = Node<NLarkTemplateData, typeof NodeTypes.LARK_TEMPLATE>
 
+/** 知识库检索节点：从 Qdrant 向量数据库进行语义搜索 */
+export type NKnowledgeRetrievalData = NNode & {
+  /** Qdrant 集合名称 */
+  collectionName?: string
+  /** 搜索查询文本 */
+  query?: string
+  /** 返回结果数量，默认 5 */
+  topK?: number
+  /** 最低相似度分数，默认 0 */
+  scoreThreshold?: number
+  /** 嵌入向量维度（用于创建集合时指定），默认 1536 */
+  vectorSize?: number
+  /** 搜索结果 */
+  results?: Array<{
+    id: string | number
+    score: number
+    payload?: Record<string, any>
+  }>
+}
+
+export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
-  | NSkill | NLarkTemplate | NMemory
+  | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval
 > | null

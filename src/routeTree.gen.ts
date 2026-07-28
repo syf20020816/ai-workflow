@@ -20,8 +20,10 @@ import { Route as ApiWorkflowVersionsRouteImport } from './routes/api/workflow/v
 import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
+import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiExecuteFileWriteRouteImport } from './routes/api/execute/fileWrite'
+import { Route as ApiExecuteEmbedRouteImport } from './routes/api/execute/embed'
 import { Route as ApiExecuteCodeAgentRouteImport } from './routes/api/execute/codeAgent'
 import { Route as ApiExecuteBmadRouteImport } from './routes/api/execute/bmad'
 import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
@@ -85,6 +87,11 @@ const ApiSkillContentRoute = ApiSkillContentRouteImport.update({
   path: '/content',
   getParentRoute: () => ApiSkillRoute,
 } as any)
+const ApiExecuteQdrantRoute = ApiExecuteQdrantRouteImport.update({
+  id: '/api/execute/qdrant',
+  path: '/api/execute/qdrant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   id: '/api/execute/lark',
   path: '/api/execute/lark',
@@ -93,6 +100,11 @@ const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
 const ApiExecuteFileWriteRoute = ApiExecuteFileWriteRouteImport.update({
   id: '/api/execute/fileWrite',
   path: '/api/execute/fileWrite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteEmbedRoute = ApiExecuteEmbedRouteImport.update({
+  id: '/api/execute/embed',
+  path: '/api/execute/embed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteCodeAgentRoute = ApiExecuteCodeAgentRouteImport.update({
@@ -146,8 +158,10 @@ export interface FileRoutesByFullPath {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
@@ -168,8 +182,10 @@ export interface FileRoutesByTo {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
@@ -191,8 +207,10 @@ export interface FileRoutesById {
   '/api/execute/agent': typeof ApiExecuteAgentRoute
   '/api/execute/bmad': typeof ApiExecuteBmadRoute
   '/api/execute/codeAgent': typeof ApiExecuteCodeAgentRoute
+  '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
@@ -215,8 +233,10 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
@@ -237,8 +257,10 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
@@ -259,8 +281,10 @@ export interface FileRouteTypes {
     | '/api/execute/agent'
     | '/api/execute/bmad'
     | '/api/execute/codeAgent'
+    | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/qdrant'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/pin'
@@ -282,8 +306,10 @@ export interface RootRouteChildren {
   ApiExecuteAgentRoute: typeof ApiExecuteAgentRoute
   ApiExecuteBmadRoute: typeof ApiExecuteBmadRoute
   ApiExecuteCodeAgentRoute: typeof ApiExecuteCodeAgentRoute
+  ApiExecuteEmbedRoute: typeof ApiExecuteEmbedRoute
   ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
+  ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
   ApiWorkflowVersionsRoute: typeof ApiWorkflowVersionsRoute
 }
@@ -367,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSkillContentRouteImport
       parentRoute: typeof ApiSkillRoute
     }
+    '/api/execute/qdrant': {
+      id: '/api/execute/qdrant'
+      path: '/api/execute/qdrant'
+      fullPath: '/api/execute/qdrant'
+      preLoaderRoute: typeof ApiExecuteQdrantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/execute/lark': {
       id: '/api/execute/lark'
       path: '/api/execute/lark'
@@ -379,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/api/execute/fileWrite'
       fullPath: '/api/execute/fileWrite'
       preLoaderRoute: typeof ApiExecuteFileWriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/embed': {
+      id: '/api/execute/embed'
+      path: '/api/execute/embed'
+      fullPath: '/api/execute/embed'
+      preLoaderRoute: typeof ApiExecuteEmbedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/codeAgent': {
@@ -462,8 +502,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteAgentRoute: ApiExecuteAgentRoute,
   ApiExecuteBmadRoute: ApiExecuteBmadRoute,
   ApiExecuteCodeAgentRoute: ApiExecuteCodeAgentRoute,
+  ApiExecuteEmbedRoute: ApiExecuteEmbedRoute,
   ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
+  ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
   ApiWorkflowVersionsRoute: ApiWorkflowVersionsRoute,
 }

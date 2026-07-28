@@ -5,6 +5,7 @@ import {
   Bot,
   BrainCog,
   ChevronsLeftRightEllipsis,
+  Database,
   GitCommitHorizontal,
   GraduationCap,
   Infinity,
@@ -261,6 +262,11 @@ Icon.Memory = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <BrainCog {...rest} color="#eb2f96" />,
   })
 
+Icon.KnowledgeRetrieval = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: <Database {...rest} color="#13c2c2" />,
+  })
+
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
@@ -277,4 +283,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.LARK_TEMPLATE, Icon.LarkTemplate],
   [NodeTypes.CODE_AGENT, Icon.CodeAgent],
   [NodeTypes.MEMORY, Icon.Memory],
+  [NodeTypes.KNOWLEDGE_RETRIEVAL, Icon.KnowledgeRetrieval],
 ])

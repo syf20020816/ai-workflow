@@ -23,6 +23,7 @@ import { AddNodeBtn } from './node/edge/add'
 import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
+import { KnowledgeRetrievalNode } from './node/ai/knowledgeRetrieval'
 import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
 
@@ -42,6 +43,7 @@ export const NODE_TYPES = {
   loopCondition: LoopConditionNode,
   retry: RetryNode,
   memory: MemoryNode,
+  knowledgeRetrieval: KnowledgeRetrievalNode,
 }
 
 export const NODE_COLORS = {
@@ -60,6 +62,7 @@ export const NODE_COLORS = {
   loopCondition: '#1890ff',
   retry: '#eb2f96',
   memory: '#eb2f96',
+  knowledgeRetrieval: '#13c2c2',
 }
 
 const EDGE_TYPES = {

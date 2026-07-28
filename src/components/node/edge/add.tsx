@@ -137,6 +137,14 @@ export const AddNodeBtn = ({
           disabled: isDisabledNode(kind, NodeTypes.LARK_TEMPLATE),
           onClick: () => addNode(NodeBuilder.larkTemplate),
         },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.KNOWLEDGE_RETRIEVAL} title="知识库检索节点" />
+          ),
+          key: NodeTypes.KNOWLEDGE_RETRIEVAL,
+          disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_RETRIEVAL),
+          onClick: () => addNode(NodeBuilder.knowledgeRetrieval),
+        },
       ],
     },
     {

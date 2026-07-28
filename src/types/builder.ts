@@ -193,4 +193,19 @@ export class NodeBuilder {
       },
     }
   }
+
+  static knowledgeRetrieval(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.KNOWLEDGE_RETRIEVAL,
+      data: {
+        title: '知识库检索节点',
+        collectionName: '',
+        query: '',
+        topK: 5,
+        scoreThreshold: 0,
+        vectorSize: 1536,
+      },
+    }
+  }
 }

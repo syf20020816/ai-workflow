@@ -29,6 +29,7 @@ import { EditMemory } from './edit/memory'
 import { EditSkill } from './edit/skill'
 import { EditCodeAgent } from './edit/codeAgent'
 import { EditLarkTemplate } from './edit/larkTemplate'
+import { EditKnowledgeRetrieval } from './edit/knowledgeRetrieval'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useMemo, useState } from 'react'
@@ -85,6 +86,9 @@ export const EditPanel = (props: PanelProps) => {
                 {currentNode.type === NodeTypes.SKILL && <EditSkill />}
                 {currentNode.type === NodeTypes.LARK_TEMPLATE && (
                   <EditLarkTemplate />
+                )}
+                {currentNode.type === NodeTypes.KNOWLEDGE_RETRIEVAL && (
+                  <EditKnowledgeRetrieval />
                 )}
               </main>
               {isShrink && (

@@ -429,7 +429,7 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
       title: '团队',
       dataIndex: 'team',
       key: 'team',
-      render: (t: string) => t?.replace('-', ' '),
+      render: (t: string) => t.replace('-', ' ') || '-',
     },
     {
       title: '描述',

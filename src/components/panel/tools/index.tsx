@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNodeStore } from '#/store/node'
 import { Panel } from '@xyflow/react'
 import type { PanelProps, Node, Edge } from '@xyflow/react'
@@ -7,6 +7,7 @@ import {
   Tooltip,
   Modal,
   Input,
+  AutoComplete,
   Upload,
   message,
   Typography,
@@ -49,6 +50,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   const [exportOpen, setExportOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
+  const [workflowList, setWorkflowList] = useState<{ name: string }[]>([])
   const [importJson, setImportJson] = useState('')
   const [importError, setImportError] = useState('')
   const [exportJson, setExportJson] = useState('')
@@ -111,6 +113,16 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     URL.revokeObjectURL(url)
     message.success('工作流已下载')
   }
+
+  // 打开保存弹窗时加载已有工作流列表
+  useEffect(() => {
+    if (saveOpen) {
+      fetch('/api/workflows')
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setWorkflowList(Array.isArray(data) ? data : []))
+        .catch(() => setWorkflowList([]))
+    }
+  }, [saveOpen])
 
   const handleSaveTemplate = async () => {
     if (!saveName.trim()) {
@@ -320,11 +332,16 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         <div style={{ marginBottom: 8 }}>
           <Text>工作流名称</Text>
         </div>
-        <Input
+        <AutoComplete
           placeholder="请输入工作流模板名称"
           value={saveName}
-          onChange={(e) => setSaveName(e.target.value)}
-          onPressEnter={handleSaveTemplate}
+          onChange={(value) => setSaveName(value)}
+          onSelect={(value) => setSaveName(value)}
+          options={workflowList.map((item) => ({
+            value: item.name,
+            label: item.name,
+          }))}
+          style={{ width: '100%' }}
           autoFocus
         />
       </Modal>
