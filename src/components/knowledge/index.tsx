@@ -41,6 +41,7 @@ import {
 } from '@ant-design/icons'
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
+import { VectorGraph } from './VectorGraph'
 
 const { Text, Title } = Typography
 const { Panel } = Collapse
@@ -162,6 +163,10 @@ export const KnowledgeManager = () => {
   const [modelList, setModelList] = useState<
     Array<{ id: string; name: string; modelName: string }>
   >([])
+
+  // === Visualization state ===
+  const [visualizeCollection, setVisualizeCollection] = useState<string>('')
+  const [activeTab, setActiveTab] = useState<string>('collections')
 
   // === Sync workflow state ===
   interface SyncWorkflowItem {
@@ -600,9 +605,19 @@ export const KnowledgeManager = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 160,
+      width: 240,
       render: (_, record) => (
         <Space>
+          <Tooltip title="可视化">
+            <Button
+              type="link"
+              icon={<ApartmentOutlined />}
+              onClick={() => {
+                setVisualizeCollection(record.name)
+                setActiveTab('visualize')
+              }}
+            />
+          </Tooltip>
           {(record.status === 'red' || record.status === 'yellow') && (
             <Tooltip title="修复">
               <Button
@@ -745,7 +760,8 @@ export const KnowledgeManager = () => {
       `}</style>
 
       <Tabs
-        defaultActiveKey="collections"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           // ===== Tab 1: 集合管理 =====
           {
@@ -1141,6 +1157,19 @@ export const KnowledgeManager = () => {
                   )}
                 </Card>
               </>
+            ),
+          },
+          // ===== Tab 2: 可视化集合 =====
+          {
+            key: 'visualize',
+            label: (
+              <Space>
+                <ApartmentOutlined />
+                <span>可视化集合</span>
+              </Space>
+            ),
+            children: (
+              <VectorGraph collectionName={visualizeCollection} />
             ),
           },
         ]}

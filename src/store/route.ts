@@ -10,7 +10,10 @@ interface RouteState {
   /** 设置待打开的文件路径并切换到编辑器 */
   openInEditor: (filePath: string) => void
   /** 消费 pendingFilePath */
-  consumePendingFile: () => void
+  consumePendingFile: () => void,
+  /** 编辑器是否收起 */
+  shrink: boolean;
+  setShrink: (shrink: boolean) => void,
 }
 
 export const useRouteStore = create<RouteState>((set) => ({
@@ -19,4 +22,6 @@ export const useRouteStore = create<RouteState>((set) => ({
   openInEditor: (filePath: string) =>
     set({ activeKey: 'editor', pendingFilePath: filePath }),
   consumePendingFile: () => set({ pendingFilePath: undefined }),
+  shrink: false,
+  setShrink: (shrink: boolean) => set({ shrink }),
 }))

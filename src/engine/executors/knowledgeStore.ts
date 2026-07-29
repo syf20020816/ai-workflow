@@ -25,10 +25,38 @@ export const knowledgeStoreExecutor: NodeExecutor = {
 
     let content = ''
     const contentFields = ['content', 'result', 'text', 'output', 'response', 'analysis']
+
     for (const field of contentFields) {
-      if (input[field] && typeof input[field] === 'string') {
-        content = input[field]
-        break
+      const val = input[field]
+      if (!val) continue
+
+      // 场景1: 字段值是字符串（可能是飞书文档节点 stringified JSON）
+      if (typeof val === 'string') {
+        // 尝试解析 JSON，提取嵌套的文本内容
+        try {
+          const parsed = JSON.parse(val)
+          content =
+            parsed?.data?.document?.content ||
+            parsed?.data?.content ||
+            parsed?.content ||
+            (typeof parsed === 'string' ? parsed : '')
+          if (content) break
+        } catch {
+          // 不是 JSON，直接作为普通文本
+          content = val
+          break
+        }
+      }
+
+      // 场景2: 字段值是对象
+      if (typeof val === 'object') {
+        content =
+          val?.data?.document?.content ||
+          val?.data?.content ||
+          val?.content ||
+          val?.text ||
+          ''
+        if (content) break
       }
     }
 

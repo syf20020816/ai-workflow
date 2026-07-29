@@ -165,7 +165,7 @@ export const ExecutionResult = () => {
 
       {/* 执行结果 */}
       <div style={{ marginBottom: 8 }}>
-        <Text strong style={{ fontSize: 13 }}>
+        <Text strong style={{ fontSize: 14 }}>
           执行结果
         </Text>
       </div>

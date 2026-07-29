@@ -39,13 +39,16 @@ import { ExecutionHistory } from '../execution/history'
 import { Expand, Pin, Shrink } from 'lucide-react'
 import { Panel } from '@xyflow/react'
 import type { PanelProps } from '@xyflow/react'
+import { useRouteStore } from '#/store/route'
 
 const { Text } = Typography
 
 type ActiveKey = 'editor' | 'execution' | 'history'
 
 export const EditPanel = (props: PanelProps) => {
-  const [isShrink, setIsShrink] = useState(false)
+  // const [isShrink, setIsShrink] = useState(false)
+  const isShrink = useRouteStore((state) => state.shrink)
+  const setIsShrink = useRouteStore((state) => state.setShrink)
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const deleteCurrentNode = useNodeStore((state) => state.deleteCurrentNode)
   const loadPinnedNode = useNodeStore((state) => state.loadPinnedNode)

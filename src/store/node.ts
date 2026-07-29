@@ -51,7 +51,7 @@ async function saveExecutionHistory(
       body: JSON.stringify({
         workflowId,
         workflowName,
-        timestamp: new Date().toISOString(),
+        timestamp: String(Date.now()),
         status: ctx.globalStatus === 'completed' ? 'completed'
           : ctx.globalStatus === 'error' ? 'error'
           : ctx.globalStatus === 'paused' ? 'paused'

@@ -226,7 +226,7 @@ export const Route = createFileRoute('/api/execute/qdrant')({
 
           // === get-points: 获取集合中的点 ===
           if (action === 'get-points') {
-            const { collectionName, limit = 20, offset = 0 } = params
+            const { collectionName, limit = 20, offset = 0, withVector = false } = params
             if (!collectionName) {
               return Response.json({
                 status: 'error',
@@ -244,7 +244,7 @@ export const Route = createFileRoute('/api/execute/qdrant')({
                   limit,
                   offset: offset || undefined,
                   with_payload: true,
-                  with_vector: false,
+                  with_vector: withVector,
                 }),
               },
             )
@@ -258,6 +258,63 @@ export const Route = createFileRoute('/api/execute/qdrant')({
               output: { points, count: points.length, nextOffset },
               logs,
               error: ok ? undefined : data.status?.error || '获取点数据失败',
+            })
+          }
+
+          // === scroll: 读取集合全量向量（用于可视化） ===
+          if (action === 'scroll') {
+            const { collectionName, maxPoints = 500 } = params
+            if (!collectionName) {
+              return Response.json({
+                status: 'error',
+                output: {},
+                logs: [...logs, '缺少 collectionName'],
+                error: '请提供集合名称',
+              })
+            }
+
+            // 先获取集合信息
+            const { data: infoData } = await qdrantFetch(`/collections/${encodeURIComponent(collectionName)}`)
+
+            // 拉取集合中的点（按 vector 大小限制批次）
+            const allPoints: any[] = []
+            let offset: string | number | undefined = undefined
+            const batchSize = 100
+
+            while (true) {
+              const { ok, data } = await qdrantFetch(
+                `/collections/${encodeURIComponent(collectionName)}/points/scroll`,
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    limit: batchSize,
+                    offset,
+                    with_payload: true,
+                    with_vector: true,
+                  }),
+                },
+              )
+
+              if (!ok) break
+
+              const points = data.result?.points || []
+              if (points.length === 0) break
+
+              allPoints.push(...points)
+              if (allPoints.length >= maxPoints || !data.result?.next_page_offset) break
+
+              offset = data.result.next_page_offset
+            }
+
+            logs.push(`读取集合 ${collectionName} 的 ${allPoints.length} 个向量点`)
+            return Response.json({
+              status: 'success',
+              output: {
+                points: allPoints.slice(0, maxPoints),
+                count: allPoints.slice(0, maxPoints).length,
+                collectionInfo: infoData.result || {},
+              },
+              logs,
             })
           }
 
