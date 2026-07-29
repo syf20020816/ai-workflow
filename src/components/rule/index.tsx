@@ -11,7 +11,9 @@ import {
   Input,
   InputNumber,
   Select,
+  Tooltip,
 } from 'antd'
+import type { ButtonProps } from 'antd'
 import { useEffect, useState } from 'react'
 import {
   EditOutlined,
@@ -30,6 +32,36 @@ import { FileScan, RefreshCw, Upload } from 'lucide-react'
 
 const { Text } = Typography
 
+interface EditButtonProps extends ButtonProps {
+  kind: 'edit' | 'delete' | 'exec'
+  title: string
+}
+
+const EditButton = ({ kind, title, onClick, ...props }: EditButtonProps) => {
+  const type = () => {
+    if (kind === 'exec') return 'primary'
+    return 'default'
+  }
+
+  const icon = () => {
+    if (kind === 'edit') return <EditOutlined />
+    if (kind === 'delete') return <DeleteOutlined />
+    return <PlayCircleOutlined />
+  }
+
+  return (
+    <Tooltip title={title}>
+      <Button
+        danger={kind === 'delete'}
+        type={type()}
+        icon={icon()}
+        onClick={onClick}
+        {...props}
+      ></Button>
+    </Tooltip>
+  )
+}
+
 /** 工作流表格 */
 const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const openInEditor = useRouteStore((s) => s.openInEditor)
@@ -40,8 +72,12 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const [list, setList] = useState<any[]>([])
   const [l, setL] = useState(false)
   const [versionMap, setVersionMap] = useState<Record<string, any[]>>({})
-  const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({})
-  const [loadingVersions, setLoadingVersions] = useState<Record<string, boolean>>({})
+  const [selectedVersion, setSelectedVersion] = useState<
+    Record<string, string>
+  >({})
+  const [loadingVersions, setLoadingVersions] = useState<
+    Record<string, boolean>
+  >({})
 
   const loadList = async () => {
     setL(true)
@@ -74,7 +110,9 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       setEdges(data.edges || [])
       setWorkflowId(data.id || id)
       switchTo('workflow')
-      message.success(`已加载工作流: ${name}${versionId ? ` (版本: ${versionId})` : ''}`)
+      message.success(
+        `已加载工作流: ${name}${versionId ? ` (版本: ${versionId})` : ''}`,
+      )
     } catch (err: any) {
       message.error('加载失败: ' + err.message)
     }
@@ -89,9 +127,14 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       const res = await fetch(`/api/workflow/versions?id=${workflowId}`)
       if (res.ok) {
         const data = await res.json()
-        setVersionMap((prev) => ({ ...prev, [workflowId]: data.versions || [] }))
+        setVersionMap((prev) => ({
+          ...prev,
+          [workflowId]: data.versions || [],
+        }))
       }
-    } catch { /* 静默 */ }
+    } catch {
+      /* 静默 */
+    }
     setLoadingVersions((prev) => ({ ...prev, [workflowId]: false }))
   }
 
@@ -141,10 +184,14 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       render: (vc: number, r: any) => {
         const versions = versionMap[r.id]
         const sel = selectedVersion[r.id]
-        if (vc === 0) return <Text type="secondary" style={{ fontSize: 12 }}>latest</Text>
+        if (vc === 0)
+          return (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              latest
+            </Text>
+          )
         return (
           <Select
-            size="small"
             style={{ width: 140 }}
             placeholder={vc > 0 ? `共 ${vc} 个版本` : 'latest'}
             loading={loadingVersions[r.id]}
@@ -153,7 +200,10 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
               if (open) loadVersions(r.id)
             }}
             onChange={(v) => {
-              setSelectedVersion((prev) => ({ ...prev, [r.id]: v === 'latest' ? '' : v }))
+              setSelectedVersion((prev) => ({
+                ...prev,
+                [r.id]: v === 'latest' ? '' : v,
+              }))
             }}
             options={[
               { value: 'latest', label: 'latest (最新)' },
@@ -183,27 +233,23 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       width: 200,
       render: (_: any, r: any) => (
         <Space>
-          <Button
-            type="primary"
-            size="small"
-            icon={<PlayCircleOutlined />}
-            onClick={() => handleLoad(r.id, r.name, selectedVersion[r.id] || undefined)}
-          >
-            加载
-          </Button>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
+          <EditButton
+            title="加载"
+            kind="exec"
+            onClick={() =>
+              handleLoad(r.id, r.name, selectedVersion[r.id] || undefined)
+            }
+          ></EditButton>
+          <EditButton
+            title="编辑"
+            kind="edit"
             onClick={() => openInEditor(`workflows/${r.id}.json`)}
-          >
-            JSON
-          </Button>
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
+          ></EditButton>
+          <EditButton
+            title="删除"
+            kind="delete"
             onClick={() => handleDelete(r.id, r.name)}
-          />
+          ></EditButton>
         </Space>
       ),
     },
@@ -306,20 +352,16 @@ const ModelTab = ({ loading }: { loading: boolean }) => {
       width: 140,
       render: (_: any, r: Model) => (
         <Space>
-          <Button
-            type="primary"
-            size="small"
-            icon={<EditOutlined />}
+          <EditButton
+            title="编辑"
+            kind="edit"
             onClick={() => handleEdit(r)}
-          >
-            编辑
-          </Button>
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
+          ></EditButton>
+          <EditButton
+            title="删除"
+            kind="delete"
             onClick={() => handleDelete(r)}
-          />
+          ></EditButton>
         </Space>
       ),
     },
@@ -511,11 +553,11 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
       key: 'action',
       width: 80,
       render: (_: any, r: any) => (
-        <Button
-          danger
-          icon={<DeleteOutlined />}
+        <EditButton
+          title="删除"
+          kind="delete"
           onClick={() => handleDelete(r)}
-        ></Button>
+        ></EditButton>
       ),
     },
   ]
@@ -667,14 +709,11 @@ const PromptTab = ({ loading }: { loading: boolean }) => {
       key: 'action',
       width: 100,
       render: (_: any, r: any) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<EditOutlined />}
+        <EditButton
+          title="编辑"
+          kind="edit"
           onClick={() => openInEditor(r.relativePath)}
-        >
-          编辑
-        </Button>
+        ></EditButton>
       ),
     },
   ]
@@ -744,91 +783,11 @@ const MemoryTab = ({ loading }: { loading: boolean }) => {
       key: 'action',
       width: 100,
       render: (_: any, r: any) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<EditOutlined />}
+        <EditButton
+          title="编辑"
+          kind="edit"
           onClick={() => openInEditor(r.relativePath)}
-        >
-          编辑
-        </Button>
-      ),
-    },
-  ]
-
-  return (
-    <Table
-      dataSource={list}
-      columns={columns}
-      rowKey="relativePath"
-      loading={l || loading}
-      size="small"
-      pagination={false}
-    />
-  )
-}
-
-/** 配置表格 */
-const ConfigTab = ({ loading }: { loading: boolean }) => {
-  const openInEditor = useRouteStore((s) => s.openInEditor)
-  const [list, setList] = useState<any[]>([])
-  const [l, setL] = useState(false)
-
-  const loadList = async () => {
-    setL(true)
-    try {
-      const res = await window.fetch('/api/editor/list')
-      const data = await res.json()
-      if (data.status === 'success') {
-        for (const g of data.data) {
-          if (g.title.startsWith('配置')) {
-            setList(g.files || [])
-            return
-          }
-        }
-      }
-      setList([])
-    } catch {
-      /* ignore */
-    } finally {
-      setL(false)
-    }
-  }
-
-  useEffect(() => {
-    loadList()
-  }, [])
-
-  const columns = [
-    {
-      title: '文件名',
-      dataIndex: 'name',
-      key: 'name',
-      render: (n: string) => <Text strong>{n}</Text>,
-    },
-    {
-      title: '路径',
-      dataIndex: 'relativePath',
-      key: 'relativePath',
-      render: (p: string) => (
-        <Text type="secondary" style={{ fontSize: 11 }}>
-          {p}
-        </Text>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 100,
-      render: (_: any, r: any) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => openInEditor(r.relativePath)}
-        >
-          编辑
-        </Button>
+        ></EditButton>
       ),
     },
   ]
@@ -884,11 +843,6 @@ export const PromptManager = () => {
             label: '记忆',
             children: <MemoryTab loading={false} />,
           },
-          // {
-          //   key: 'configs',
-          //   label: '配置',
-          //   children: <ConfigTab loading={false} />,
-          // },
         ]}
       />
     </div>

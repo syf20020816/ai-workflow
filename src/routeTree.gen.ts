@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ModelsRouteImport } from './routes/models'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiSkillRouteImport } from './routes/api/skill'
@@ -35,11 +34,6 @@ import { Route as ApiEditorFsRouteImport } from './routes/api/editor/fs'
 import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
-const ModelsRoute = ModelsRouteImport.update({
-  id: '/models',
-  path: '/models',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -163,7 +157,6 @@ const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/models': typeof ModelsRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
   '/api/prompts': typeof ApiPromptsRoute
@@ -190,7 +183,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/models': typeof ModelsRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
   '/api/prompts': typeof ApiPromptsRoute
@@ -218,7 +210,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/models': typeof ModelsRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/model': typeof ApiModelRoute
   '/api/prompts': typeof ApiPromptsRoute
@@ -247,7 +238,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/models'
     | '/api/memory'
     | '/api/model'
     | '/api/prompts'
@@ -274,7 +264,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/models'
     | '/api/memory'
     | '/api/model'
     | '/api/prompts'
@@ -301,7 +290,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/models'
     | '/api/memory'
     | '/api/model'
     | '/api/prompts'
@@ -329,7 +317,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ModelsRoute: typeof ModelsRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiModelRoute: typeof ApiModelRoute
   ApiPromptsRoute: typeof ApiPromptsRoute
@@ -355,13 +342,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/models': {
-      id: '/models'
-      path: '/models'
-      fullPath: '/models'
-      preLoaderRoute: typeof ModelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -549,7 +529,6 @@ const ApiSkillRouteWithChildren = ApiSkillRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ModelsRoute: ModelsRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiModelRoute: ApiModelRoute,
   ApiPromptsRoute: ApiPromptsRoute,
