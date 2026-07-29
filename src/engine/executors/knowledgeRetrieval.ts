@@ -4,18 +4,29 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
     const { config, input } = ctx
     const data = config.data
-    const collectionName = data.collectionName || ''
+
+    // 支持新旧两种字段：collectionNames（多集合） / collectionName（兼容单集合）
+    const collectionNames: string[] =
+      data.collectionNames?.length
+        ? data.collectionNames
+        : data.collectionName
+          ? [data.collectionName]
+          : []
+
     const query = data.query || input.query || ''
     const topK = data.topK || 5
     const scoreThreshold = data.scoreThreshold || 0
-    const vectorSize = data.vectorSize || 1536
+    const filters: Array<{ field: string; match: string }> = data.filters || []
 
     const logs: string[] = []
     logs.push(`知识库检索节点开始执行`)
-    logs.push(`集合: ${collectionName || '未指定'}`)
+    logs.push(`目标集合: ${collectionNames.length > 0 ? collectionNames.join(', ') : '未指定'}`)
     logs.push(`查询: ${query ? query.slice(0, 100) : '未指定'}`)
+    if (filters.length > 0) {
+      logs.push(`筛选条件: ${filters.map((f) => `${f.field}=${f.match}`).join(', ')}`)
+    }
 
-    if (!collectionName) {
+    if (collectionNames.length === 0) {
       return {
         nodeId: config.nodeId,
         status: 'success',
@@ -56,40 +67,69 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
       const vector = embedResult.output.vector
       logs.push(`向量维度: ${embedResult.output.dimensions}`)
 
-      // Step 2: 在 Qdrant 中搜索
-      logs.push(`正在搜索集合 ${collectionName}...`)
-      const searchRes = await fetch('/api/execute/qdrant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'search',
-          collectionName,
-          vector,
-          topK,
-          scoreThreshold,
-        }),
-      })
-      const searchResult = await searchRes.json()
+      // 构建筛选条件 Qdrant filter
+      const qdrantFilter: Record<string, any> | undefined =
+        filters.length > 0
+          ? {
+              must: filters
+                .filter((f) => f.field && f.match)
+                .map((f) => ({
+                  key: f.field,
+                  match: { value: f.match },
+                })),
+            }
+          : undefined
 
-      if (searchResult.status !== 'success') {
-        return {
-          nodeId: config.nodeId,
-          status: 'error',
-          output: { results: [], count: 0 },
-          logs: [...logs, `搜索失败: ${searchResult.error}`],
-          error: `知识库搜索失败: ${searchResult.error}`,
+      // Step 2: 遍历所有集合搜索
+      const allResults: Array<{
+        id: string | number
+        score: number
+        payload?: Record<string, any>
+        collectionName: string
+      }> = []
+
+      for (const name of collectionNames) {
+        logs.push(`正在搜索集合 ${name}...`)
+        const searchRes = await fetch('/api/execute/qdrant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'search',
+            collectionName: name,
+            vector,
+            topK,
+            scoreThreshold,
+            filter: qdrantFilter,
+          }),
+        })
+        const searchResult = await searchRes.json()
+
+        if (searchResult.status !== 'success') {
+          logs.push(`集合 "${name}" 搜索失败: ${searchResult.error}`)
+          continue
         }
+
+        const results = (searchResult.output.results || []).map((r: any) => ({
+          ...r,
+          collectionName: name,
+        }))
+        logs.push(`  集合 "${name}" 返回 ${results.length} 条结果`)
+        allResults.push(...results)
       }
 
-      const results = searchResult.output.results || []
-      logs.push(`搜索到 ${results.length} 条结果`)
+      // Step 3: 合并结果，按分数降序排列
+      allResults.sort((a, b) => b.score - a.score)
+      const mergedResults = allResults.slice(0, topK)
+
+      logs.push(`共搜索到 ${allResults.length} 条结果，合并后取前 ${mergedResults.length} 条`)
 
       // 提取文本内容作为上下文
-      const contexts = results.map((r: any) => {
+      const contexts = mergedResults.map((r: any) => {
         const payload = r.payload || {}
         return {
           id: r.id,
           score: r.score,
+          source: r.collectionName,
           content: payload.content || payload.text || JSON.stringify(payload),
           ...payload,
         }
@@ -97,7 +137,10 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
 
       // 拼接检索内容
       const retrievalContent = contexts
-        .map((c: any, i: number) => `[结果${i + 1}] (相关度: ${(c.score * 100).toFixed(1)}%)\n${c.content}`)
+        .map(
+          (c: any, i: number) =>
+            `[结果${i + 1}] (相关度: ${(c.score * 100).toFixed(1)}%, 来源: ${c.source})\n${c.content}`,
+        )
         .join('\n\n')
 
       logs.push(`检索内容共 ${retrievalContent.length} 字符`)
@@ -109,7 +152,7 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
           results: contexts,
           count: contexts.length,
           retrievalContent,
-          collectionName,
+          collectionNames,
           query,
         },
         logs,

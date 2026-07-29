@@ -236,8 +236,10 @@ export type NLarkTemplate = Node<NLarkTemplateData, typeof NodeTypes.LARK_TEMPLA
 
 /** 知识库检索节点：从 Qdrant 向量数据库进行语义搜索 */
 export type NKnowledgeRetrievalData = NNode & {
-  /** Qdrant 集合名称 */
+  /** Qdrant 集合名称（兼容旧版） */
   collectionName?: string
+  /** 多集合名称（新版） */
+  collectionNames?: string[]
   /** 搜索查询文本 */
   query?: string
   /** 返回结果数量，默认 5 */
@@ -246,6 +248,11 @@ export type NKnowledgeRetrievalData = NNode & {
   scoreThreshold?: number
   /** 嵌入向量维度（用于创建集合时指定），默认 1536 */
   vectorSize?: number
+  /** 筛选条件 */
+  filters?: Array<{
+    field: string
+    match: string
+  }>
   /** 搜索结果 */
   results?: Array<{
     id: string | number

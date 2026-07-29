@@ -39,6 +39,9 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const setWorkflowId = useNodeStore((s) => s.setWorkflowId)
   const [list, setList] = useState<any[]>([])
   const [l, setL] = useState(false)
+  const [versionMap, setVersionMap] = useState<Record<string, any[]>>({})
+  const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({})
+  const [loadingVersions, setLoadingVersions] = useState<Record<string, boolean>>({})
 
   const loadList = async () => {
     setL(true)
@@ -57,9 +60,11 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
     loadList()
   }, [])
 
-  const handleLoad = async (id: string, name: string) => {
+  const handleLoad = async (id: string, name: string, versionId?: string) => {
     try {
-      const res = await fetch(`/workflows/${id}.json`)
+      const params = new URLSearchParams({ id })
+      if (versionId) params.set('versionId', versionId)
+      const res = await fetch(`/api/workflows?${params}`)
       if (!res.ok) {
         message.error('加载工作流文件失败')
         return
@@ -69,10 +74,25 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       setEdges(data.edges || [])
       setWorkflowId(data.id || id)
       switchTo('workflow')
-      message.success(`已加载工作流: ${name}`)
+      message.success(`已加载工作流: ${name}${versionId ? ` (版本: ${versionId})` : ''}`)
     } catch (err: any) {
       message.error('加载失败: ' + err.message)
     }
+  }
+
+  // 加载某工作流的版本列表
+  const loadVersions = async (workflowId: string) => {
+    const existing = versionMap[workflowId]
+    if (existing) return // 已加载
+    setLoadingVersions((prev) => ({ ...prev, [workflowId]: true }))
+    try {
+      const res = await fetch(`/api/workflow/versions?id=${workflowId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setVersionMap((prev) => ({ ...prev, [workflowId]: data.versions || [] }))
+      }
+    } catch { /* 静默 */ }
+    setLoadingVersions((prev) => ({ ...prev, [workflowId]: false }))
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -114,6 +134,39 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       render: (c: number) => <Tag>{c}</Tag>,
     },
     {
+      title: '版本',
+      dataIndex: 'versionCount',
+      key: 'versionCount',
+      width: 160,
+      render: (vc: number, r: any) => {
+        const versions = versionMap[r.id]
+        const sel = selectedVersion[r.id]
+        if (vc === 0) return <Text type="secondary" style={{ fontSize: 12 }}>latest</Text>
+        return (
+          <Select
+            size="small"
+            style={{ width: 140 }}
+            placeholder={vc > 0 ? `共 ${vc} 个版本` : 'latest'}
+            loading={loadingVersions[r.id]}
+            value={sel || 'latest'}
+            onDropdownVisibleChange={(open) => {
+              if (open) loadVersions(r.id)
+            }}
+            onChange={(v) => {
+              setSelectedVersion((prev) => ({ ...prev, [r.id]: v === 'latest' ? '' : v }))
+            }}
+            options={[
+              { value: 'latest', label: 'latest (最新)' },
+              ...(versions || []).map((v: any) => ({
+                value: v.versionId,
+                label: `${v.versionId} (${v.createdAt ? new Date(v.createdAt).toLocaleDateString() : ''})`,
+              })),
+            ]}
+          />
+        )
+      },
+    },
+    {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
@@ -134,7 +187,7 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
             type="primary"
             size="small"
             icon={<PlayCircleOutlined />}
-            onClick={() => handleLoad(r.id, r.name)}
+            onClick={() => handleLoad(r.id, r.name, selectedVersion[r.id] || undefined)}
           >
             加载
           </Button>

@@ -26,6 +26,7 @@ interface WorkflowMeta {
   nodeCount: number
   edgeCount: number
   hasKnowledgeStore: boolean
+  versionCount: number
 }
 
 export const Route = createFileRoute('/api/workflows')({
@@ -37,8 +38,27 @@ export const Route = createFileRoute('/api/workflows')({
         const url = new URL(ctx.request.url)
         const id = url.searchParams.get('id')
 
-        // 获取单条完整工作流（含 nodes/edges）
+        // 获取单条完整工作流（含 nodes/edges），可选 versionId
         if (id) {
+          const versionId = url.searchParams.get('versionId')
+          if (versionId) {
+            // 加载指定版本的快照
+            const snapshotPath = path.join(VERSIONS_DIR, id, `${versionId}.json`)
+            if (!fs.existsSync(snapshotPath)) {
+              return Response.json({ error: '版本不存在' }, { status: 404 })
+            }
+            const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'))
+            return Response.json({
+              name: snapshot.name || id,
+              id,
+              nodes: snapshot.nodes || [],
+              edges: snapshot.edges || [],
+              createdAt: snapshot.createdAt || '',
+              updatedAt: snapshot.savedAt || '',
+              versionId,
+            })
+          }
+
           const filePath = path.join(WORKFLOWS_DIR, `${id}.json`)
           if (!fs.existsSync(filePath)) {
             return Response.json({ error: '工作流不存在' }, { status: 404 })
@@ -50,15 +70,27 @@ export const Route = createFileRoute('/api/workflows')({
         // 列出所有工作流模板
         const files = fs.readdirSync(WORKFLOWS_DIR).filter((f) => f.endsWith('.json'))
         const workflows: WorkflowMeta[] = files.map((file) => {
+          const fileId = file.replace('.json', '')
           const content = JSON.parse(fs.readFileSync(path.join(WORKFLOWS_DIR, file), 'utf-8'))
+
+          // 统计版本数量
+          let versionCount = 0
+          const versionDir = path.join(VERSIONS_DIR, fileId)
+          try {
+            if (fs.existsSync(versionDir)) {
+              versionCount = fs.readdirSync(versionDir).filter((f) => f.endsWith('.json')).length
+            }
+          } catch { /* 忽略 */ }
+
           return {
-            id: file.replace('.json', ''),
-            name: content.name || file.replace('.json', ''),
+            id: fileId,
+            name: content.name || fileId,
             createdAt: content.createdAt || '',
             updatedAt: content.updatedAt || '',
             nodeCount: content.nodes?.length || 0,
             edgeCount: content.edges?.length || 0,
             hasKnowledgeStore: (content.nodes || []).some((n: any) => n.type === 'knowledgeStore'),
+            versionCount,
           }
         })
         // 按更新时间排序，最新的在前
