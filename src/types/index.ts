@@ -17,6 +17,7 @@ export const NodeTypes = {
   LARK_TEMPLATE: 'larkTemplate',
   MEMORY: 'memory',
   KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
+  KNOWLEDGE_STORE: 'knowledgeStore',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -255,8 +256,27 @@ export type NKnowledgeRetrievalData = NNode & {
 
 export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
 
+export type NKnowledgeStoreData = NNode & {
+  /** Qdrant 集合名称 */
+  collectionName?: string
+  /** Embedding 模型 ID */
+  modelId?: string
+  /** 分块大小，默认 800 */
+  chunkSize?: number
+  /** 分块重叠，默认 100 */
+  chunkOverlap?: number
+  /** 写入结果统计 */
+  result?: {
+    totalChunks: number
+    totalVectors: number
+    collectionName: string
+  }
+}
+
+export type NKnowledgeStore = Node<NKnowledgeStoreData, typeof NodeTypes.KNOWLEDGE_STORE>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
-  | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval
+  | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
 > | null

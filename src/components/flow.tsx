@@ -24,6 +24,7 @@ import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
 import { KnowledgeRetrievalNode } from './node/ai/knowledgeRetrieval'
+import { KnowledgeStoreNode } from './node/ai/knowledgeStore'
 import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
 
@@ -44,6 +45,7 @@ export const NODE_TYPES = {
   retry: RetryNode,
   memory: MemoryNode,
   knowledgeRetrieval: KnowledgeRetrievalNode,
+  knowledgeStore: KnowledgeStoreNode,
 }
 
 export const NODE_COLORS = {
@@ -54,7 +56,7 @@ export const NODE_COLORS = {
   bmadAgent: '#eb2f96',
   lark: '#1677ff',
   larkTemplate: '#1677ff',
-  codeAgent: '#13c2c2',
+  codeAgent: '#985debff',
   skill: '#985debff',
   if: '#fa8c16',
   ifCondition: '#ff7a45',
@@ -62,7 +64,8 @@ export const NODE_COLORS = {
   loopCondition: '#1890ff',
   retry: '#eb2f96',
   memory: '#eb2f96',
-  knowledgeRetrieval: '#13c2c2',
+  knowledgeRetrieval: '#52c41a',
+  knowledgeStore: '#52c41a',
 }
 
 const EDGE_TYPES = {

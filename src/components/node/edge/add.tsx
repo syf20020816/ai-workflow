@@ -145,6 +145,14 @@ export const AddNodeBtn = ({
           disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_RETRIEVAL),
           onClick: () => addNode(NodeBuilder.knowledgeRetrieval),
         },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.KNOWLEDGE_STORE} title="知识库写入节点" />
+          ),
+          key: NodeTypes.KNOWLEDGE_STORE,
+          disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_STORE),
+          onClick: () => addNode(NodeBuilder.knowledgeStore),
+        },
       ],
     },
     {

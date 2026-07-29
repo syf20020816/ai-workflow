@@ -15,6 +15,7 @@ import {
   Repeat,
   SwatchBook,
   Type,
+  DatabaseArrowUp,
 } from 'lucide-react'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -196,9 +197,7 @@ Icon.If = ({ ...rest }: SVGProps<SVGSVGElement>) =>
 
 Icon.IfCondition = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
-    children: (
-      <GitCommitHorizontal {...rest} color="#ff7a45" />
-    ),
+    children: <GitCommitHorizontal {...rest} color="#ff7a45" />,
   })
 
 Icon.Loop = ({ ...rest }: SVGProps<SVGSVGElement>) =>
@@ -254,7 +253,7 @@ Icon.Skill = ({ ...rest }: SVGProps<SVGSVGElement>) =>
 
 Icon.CodeAgent = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
-    children: <ChevronsLeftRightEllipsis {...rest} color="#13c2c2" />,
+    children: <ChevronsLeftRightEllipsis {...rest} color="#985debff" />,
   })
 
 Icon.Memory = ({ ...rest }: SVGProps<SVGSVGElement>) =>
@@ -264,17 +263,22 @@ Icon.Memory = ({ ...rest }: SVGProps<SVGSVGElement>) =>
 
 Icon.KnowledgeRetrieval = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
-    children: <Database {...rest} color="#13c2c2" />,
+    children: <Database {...rest} color="#52c41a" />,
+  })
+
+Icon.KnowledgeStore = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: <DatabaseArrowUp {...rest} color="#52c41a" />,
   })
 
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
   [NodeTypes.ANSWER, Icon.Answer],
-  [NodeTypes.AI_OUTPUT, Icon.AIOutput ],
-  [NodeTypes.BMAD_AGENT, Icon.BMadAgent ],
+  [NodeTypes.AI_OUTPUT, Icon.AIOutput],
+  [NodeTypes.BMAD_AGENT, Icon.BMadAgent],
   [NodeTypes.LARK, Icon.Lark],
-  [NodeTypes.IF, Icon.If ],
+  [NodeTypes.IF, Icon.If],
   [NodeTypes.IF_CONDITION, Icon.IfCondition],
   [NodeTypes.LOOP, Icon.Loop],
   [NodeTypes.LOOP_CONDITION, Icon.LoopCondition],
@@ -284,4 +288,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.CODE_AGENT, Icon.CodeAgent],
   [NodeTypes.MEMORY, Icon.Memory],
   [NodeTypes.KNOWLEDGE_RETRIEVAL, Icon.KnowledgeRetrieval],
+  [NodeTypes.KNOWLEDGE_STORE, Icon.KnowledgeStore],
 ])

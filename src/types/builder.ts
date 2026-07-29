@@ -208,4 +208,17 @@ export class NodeBuilder {
       },
     }
   }
+
+  static knowledgeStore(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.KNOWLEDGE_STORE,
+      data: {
+        title: '知识库写入节点',
+        collectionName: '',
+        chunkSize: 800,
+        chunkOverlap: 100,
+      },
+    }
+  }
 }

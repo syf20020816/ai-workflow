@@ -13,6 +13,7 @@ import { memoryExecutor } from './memory'
 import { skillExecutor } from './skill'
 import { larkTemplateExecutor } from './larkTemplate'
 import { knowledgeRetrievalExecutor } from './knowledgeRetrieval'
+import { knowledgeStoreExecutor } from './knowledgeStore'
 import { NodeTypes } from '#/types'
 
 /** 节点类型 → 执行器映射 */
@@ -33,6 +34,7 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.SKILL]: skillExecutor,
   [NodeTypes.LARK_TEMPLATE]: larkTemplateExecutor,
   [NodeTypes.KNOWLEDGE_RETRIEVAL]: knowledgeRetrievalExecutor,
+  [NodeTypes.KNOWLEDGE_STORE]: knowledgeStoreExecutor,
 }
 
 /** 根据节点类型获取执行器 */
@@ -62,4 +64,5 @@ export {
   memoryExecutor,
   skillExecutor,
   knowledgeRetrievalExecutor,
+  knowledgeStoreExecutor,
 }
