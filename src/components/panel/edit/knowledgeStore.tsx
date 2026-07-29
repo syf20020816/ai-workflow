@@ -1,8 +1,10 @@
 import { useNodeStore } from '#/store/node'
 import type { NKnowledgeStore, NKnowledgeStoreData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Form, Input, Select, message } from 'antd'
+import { Select, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
+import { DynEditKV } from './item'
+import type { DynEditKVRow } from './item'
 
 const { Text } = Typography
 
@@ -35,7 +37,9 @@ export const EditKnowledgeStore = () => {
         const colData = await colRes.json()
         const modelData = await modelRes.json()
         if (colData.status === 'success') {
-          setCollections(colData.output?.collections?.map((c: any) => c.name) || [])
+          setCollections(
+            colData.output?.collections?.map((c: any) => c.name) || [],
+          )
         }
         if (modelData.status === 'success') {
           setModels(modelData.output?.models || [])
@@ -49,65 +53,84 @@ export const EditKnowledgeStore = () => {
     loadData()
   }, [])
 
-  const patch = (key: keyof NKnowledgeStoreData, value: any) => {
-    patchCurrentNode((draft) => {
-      const data = d(draft)
-      ;(data as any)[key] = value
-    })
-  }
+  const rows: DynEditKVRow[] = [
+    {
+      key: 'collectionName',
+      label: '目标集合',
+      value: currentNode.data.collectionName || '',
+      valueRender: (onChange) => (
+        <Select
+          placeholder="选择 Qdrant 集合"
+          loading={loading}
+          value={currentNode.data.collectionName || undefined}
+          onChange={(val) => onChange(val)}
+          options={collections.map((c) => ({ value: c, label: c }))}
+          showSearch
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      key: 'modelId',
+      label: 'Embedding 模型',
+      value: currentNode.data.modelId || '',
+      valueRender: (onChange) => (
+        <Select
+          placeholder="自动选择（推荐）"
+          loading={loading}
+          allowClear
+          value={currentNode.data.modelId || undefined}
+          onChange={(val) => onChange(val)}
+          options={models.map((m) => ({ value: m.id, label: m.name }))}
+          showSearch
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      key: 'chunkSize',
+      label: '分块大小',
+      value: currentNode.data.chunkSize ?? 800,
+      inputType: 'number',
+      min: 100,
+      max: 4000,
+    },
+    {
+      key: 'chunkOverlap',
+      label: '分块重叠',
+      value: currentNode.data.chunkOverlap ?? 100,
+      inputType: 'number',
+      min: 0,
+      max: 1000,
+    },
+  ]
 
   return (
     <>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 8 }}>
         <Text type="secondary" style={{ fontSize: 11 }}>
-          将上游节点输出的文本内容自动分块、向量化后写入 Qdrant 知识库。通常上游接飞书文档或代码读取节点。
+          将上游节点输出的文本内容自动分块、向量化后写入 Qdrant
+          知识库。通常上游接飞书文档或代码读取节点。
         </Text>
       </div>
 
-      <Form layout="vertical" size="small">
-        <Form.Item label="目标集合" required>
-          <Select
-            placeholder="选择 Qdrant 集合"
-            loading={loading}
-            value={currentNode.data.collectionName || undefined}
-            onChange={(val) => patch('collectionName', val)}
-            options={collections.map((c) => ({ value: c, label: c }))}
-            showSearch
-          />
-        </Form.Item>
-
-        <Form.Item label="Embedding 模型" tooltip="不选则自动选择含 embedding 标识的模型">
-          <Select
-            placeholder="自动选择（推荐）"
-            loading={loading}
-            allowClear
-            value={currentNode.data.modelId || undefined}
-            onChange={(val) => patch('modelId', val)}
-            options={models.map((m) => ({ value: m.id, label: m.name }))}
-            showSearch
-          />
-        </Form.Item>
-
-        <Form.Item label="分块大小（字符）">
-          <Input
-            type="number"
-            min={100}
-            max={4000}
-            value={currentNode.data.chunkSize ?? 800}
-            onChange={(e) => patch('chunkSize', parseInt(e.target.value, 10) || 800)}
-          />
-        </Form.Item>
-
-        <Form.Item label="分块重叠（字符）">
-          <Input
-            type="number"
-            min={0}
-            max={1000}
-            value={currentNode.data.chunkOverlap ?? 100}
-            onChange={(e) => patch('chunkOverlap', parseInt(e.target.value, 10) || 0)}
-          />
-        </Form.Item>
-      </Form>
+      <DynEditKV
+        rows={rows}
+        onChange={(key, value) => {
+          patchCurrentNode((draft) => {
+            const data = d(draft)
+            if (key === 'collectionName') {
+              data.collectionName = (value || '') as string
+            } else if (key === 'modelId') {
+              data.modelId = (value || '') as string
+            } else if (key === 'chunkSize') {
+              data.chunkSize = (value ?? 800) as number
+            } else if (key === 'chunkOverlap') {
+              data.chunkOverlap = (value ?? 100) as number
+            }
+          })
+        }}
+      />
     </>
   )
 }

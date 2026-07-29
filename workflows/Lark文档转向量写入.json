@@ -1,0 +1,70 @@
+{
+  "name": "Lark文档转向量写入",
+  "id": "Lark文档转向量写入",
+  "nodes": [
+    {
+      "id": "9d357898-6f9b-40b5-9e9a-c588b177af85",
+      "position": {
+        "x": 257.5,
+        "y": -230.5
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "lark",
+      "data": {
+        "title": "Lark文档节点",
+        "action": "read",
+        "url": "https://lizhi2021.feishu.cn/wiki/QMYowXgcxioGgCk8lPJc231unSc"
+      },
+      "measured": {
+        "width": 160,
+        "height": 89
+      }
+    },
+    {
+      "id": "18679fbe-073f-4efe-a398-200c26ac6f06",
+      "position": {
+        "x": 473,
+        "y": -204
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": true,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 457.5,
+      "positionAbsoluteY": -230.5,
+      "type": "knowledgeStore",
+      "data": {
+        "title": "知识库写入节点",
+        "collectionName": "test",
+        "chunkSize": 800,
+        "chunkOverlap": 100,
+        "modelId": "692d6c1c-dc96-4bb9-9ce0-a17868dca106"
+      },
+      "measured": {
+        "width": 160,
+        "height": 65
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "9d357898-6f9b-40b5-9e9a-c588b177af85",
+      "target": "18679fbe-073f-4efe-a398-200c26ac6f06",
+      "type": "nodeEdge",
+      "id": "xy-edge__9d357898-6f9b-40b5-9e9a-c588b177af85-18679fbe-073f-4efe-a398-200c26ac6f06"
+    }
+  ],
+  "createdAt": "2026-07-29T02:21:26.454Z",
+  "updatedAt": "2026-07-29T02:21:26.454Z"
+}

@@ -19,6 +19,53 @@ import {
   resumeWorkflow,
 } from '#/engine/workflow'
 
+/** 保存执行结果到后端 */
+async function saveExecutionHistory(
+  workflowId: string,
+  workflowName: string,
+  ctx: PipelineContext,
+) {
+  try {
+    const nodeResults: Array<{
+      nodeId: string
+      nodeTitle: string
+      status: 'success' | 'error'
+      output: Record<string, any>
+    }> = []
+    for (const [nodeId, output] of Object.entries(ctx.nodeOutputs)) {
+      nodeResults.push({
+        nodeId,
+        nodeTitle: '',
+        status: ctx.nodeStatuses[nodeId] === 'success' ? 'success' : 'error',
+        output: output || {},
+      })
+    }
+    // 从日志中补充节点标题
+    for (const result of nodeResults) {
+      const log = ctx.logs.find((l) => l.nodeId === result.nodeId)
+      if (log) result.nodeTitle = log.nodeTitle
+    }
+    await fetch('/api/workflow/exec-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflowId,
+        workflowName,
+        timestamp: new Date().toISOString(),
+        status: ctx.globalStatus === 'completed' ? 'completed'
+          : ctx.globalStatus === 'error' ? 'error'
+          : ctx.globalStatus === 'paused' ? 'paused'
+          : 'completed',
+        nodeCount: nodeResults.length,
+        nodeResults,
+        logs: ctx.logs,
+      }),
+    })
+  } catch {
+    // 静默失败，不影响主流程
+  }
+}
+
 export interface UseNodeStoreProps {
   currentNode: AppNode
   setCurrentNode: (node: AppNode) => void
@@ -384,15 +431,20 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       { startNodeId, nodeOutputOverrides: pinnedOverrides },
     )
   },
-  runAll: () => {
-    const { nodes, edges } = get()
-    executeWorkflow(nodes, edges, (ctx) => {
-      set({ pipelineContext: { ...ctx } })
+  runAll: async () => {
+    const { nodes, edges, workflowId } = get()
+    // 获取工作流名称
+    const workflowName = workflowId.replace(/^workflow_/, '')
+    const pipelineCtx = await executeWorkflow(nodes, edges, (c) => {
+      set({ pipelineContext: { ...c } })
     })
+    // 执行结束后保存历史
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
   },
-  runFrom: (nodeId: string) => {
-    const { nodes, edges } = get()
-    executeWorkflow(
+  runFrom: async (nodeId: string) => {
+    const { nodes, edges, workflowId } = get()
+    const workflowName = workflowId.replace(/^workflow_/, '')
+    const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (ctx) => {
@@ -400,6 +452,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       },
       { startNodeId: nodeId },
     )
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
   },
   resumeFrom: (nodeId: string, reply: string) => {
     const { nodes, edges, pipelineContext } = get()

@@ -35,13 +35,14 @@ import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useMemo, useState } from 'react'
 import { ExecutionResult } from '../execution/result'
+import { ExecutionHistory } from '../execution/history'
 import { Expand, Pin, Shrink } from 'lucide-react'
 import { Panel } from '@xyflow/react'
 import type { PanelProps } from '@xyflow/react'
 
 const { Text } = Typography
 
-type ActiveKey = 'editor' | 'execution'
+type ActiveKey = 'editor' | 'execution' | 'history'
 
 export const EditPanel = (props: PanelProps) => {
   const [isShrink, setIsShrink] = useState(false)
@@ -181,6 +182,11 @@ export const EditPanel = (props: PanelProps) => {
       key: 'result',
       label: '执行结果',
       children: <ExecutionResult />,
+    },
+    {
+      key: 'history',
+      label: '执行历史',
+      children: <ExecutionHistory />,
     },
   ]
 

@@ -13,7 +13,6 @@ import {
   Tag,
   Tooltip,
   Typography,
-  Badge,
   Collapse,
   Empty,
   Tabs,
@@ -38,6 +37,7 @@ import {
   FileTextOutlined,
   InboxOutlined,
   LoadingOutlined,
+  EditOutlined,
 } from '@ant-design/icons'
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
@@ -71,13 +71,70 @@ interface SyncRecord {
 // ============ Mock sync records ============
 
 const MOCK_SYNC_RECORDS: SyncRecord[] = [
-  { id: 1, name: '全量同步', status: 'success', duration: '18m 32s', collections: 12, vectors: 28432, time: '2026-07-27 03:15:22' },
-  { id: 2, name: '增量更新', status: 'success', duration: '4m 12s', collections: 5, vectors: 1280, time: '2026-07-27 02:00:15' },
-  { id: 3, name: '配置模板同步', status: 'success', duration: '1m 08s', collections: 1, vectors: 256, time: '2026-07-27 01:00:00' },
-  { id: 4, name: '全量同步', status: 'fail', duration: '12m 45s', collections: 8, vectors: 0, error: 'Qdrant 连接超时，请检查 Qdrant 服务状态', time: '2026-07-26 22:30:00' },
-  { id: 5, name: '增量更新', status: 'success', duration: '3m 55s', collections: 4, vectors: 890, time: '2026-07-26 20:00:00' },
-  { id: 6, name: '全量同步', status: 'success', duration: '20m 10s', collections: 12, vectors: 30120, time: '2026-07-26 03:00:00' },
-  { id: 7, name: '配置模板同步', status: 'success', duration: '1m 12s', collections: 1, vectors: 256, time: '2026-07-26 01:00:00' },
+  {
+    id: 1,
+    name: '全量同步',
+    status: 'success',
+    duration: '18m 32s',
+    collections: 12,
+    vectors: 28432,
+    time: '2026-07-27 03:15:22',
+  },
+  {
+    id: 2,
+    name: '增量更新',
+    status: 'success',
+    duration: '4m 12s',
+    collections: 5,
+    vectors: 1280,
+    time: '2026-07-27 02:00:15',
+  },
+  {
+    id: 3,
+    name: '配置模板同步',
+    status: 'success',
+    duration: '1m 08s',
+    collections: 1,
+    vectors: 256,
+    time: '2026-07-27 01:00:00',
+  },
+  {
+    id: 4,
+    name: '全量同步',
+    status: 'fail',
+    duration: '12m 45s',
+    collections: 8,
+    vectors: 0,
+    error: 'Qdrant 连接超时，请检查 Qdrant 服务状态',
+    time: '2026-07-26 22:30:00',
+  },
+  {
+    id: 5,
+    name: '增量更新',
+    status: 'success',
+    duration: '3m 55s',
+    collections: 4,
+    vectors: 890,
+    time: '2026-07-26 20:00:00',
+  },
+  {
+    id: 6,
+    name: '全量同步',
+    status: 'success',
+    duration: '20m 10s',
+    collections: 12,
+    vectors: 30120,
+    time: '2026-07-26 03:00:00',
+  },
+  {
+    id: 7,
+    name: '配置模板同步',
+    status: 'success',
+    duration: '1m 12s',
+    collections: 1,
+    vectors: 256,
+    time: '2026-07-26 01:00:00',
+  },
 ]
 
 // ============ Component ============
@@ -87,7 +144,6 @@ export const KnowledgeManager = () => {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
-  const [syncing, setSyncing] = useState<Record<string, boolean>>({})
 
   // === Document upload state ===
   interface DocRecord {
@@ -103,7 +159,20 @@ export const KnowledgeManager = () => {
   const [docs, setDocs] = useState<DocRecord[]>([])
   const [uploadCollection, setUploadCollection] = useState<string>('')
   const [embedModelId, setEmbedModelId] = useState<string>('')
-  const [modelList, setModelList] = useState<Array<{ id: string; name: string; modelName: string }>>([])
+  const [modelList, setModelList] = useState<
+    Array<{ id: string; name: string; modelName: string }>
+  >([])
+
+  // === Sync workflow state ===
+  interface SyncWorkflowItem {
+    id: string
+    name: string
+    nodeCount: number
+    updatedAt: string
+  }
+  const [syncWorkflows, setSyncWorkflows] = useState<SyncWorkflowItem[]>([])
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [runningSyncId, setRunningSyncId] = useState<string | null>(null)
 
   // === Handle file upload and processing ===
   const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
@@ -111,7 +180,9 @@ export const KnowledgeManager = () => {
   const handleProcessDoc = async (file: File, collectionName: string) => {
     // 前端文件大小校验
     if (file.size > MAX_FILE_SIZE) {
-      message.warning(`「${file.name}」文件过大 (${(file.size / 1024 / 1024).toFixed(1)} MB)，请上传 5 MB 以内的文件`)
+      message.warning(
+        `「${file.name}」文件过大 (${(file.size / 1024 / 1024).toFixed(1)} MB)，请上传 5 MB 以内的文件`,
+      )
       return
     }
 
@@ -156,17 +227,23 @@ export const KnowledgeManager = () => {
               : d,
           ),
         )
-        message.success(`「${file.name}」处理完成，共 ${data.output.totalChunks} 个块`)
+        message.success(
+          `「${file.name}」处理完成，共 ${data.output.totalChunks} 个块`,
+        )
         loadCollections() // 刷新集合统计
       } else {
         setDocs((prev) =>
-          prev.map((d) => (d.id === docId ? { ...d, status: 'error', error: data.error } : d)),
+          prev.map((d) =>
+            d.id === docId ? { ...d, status: 'error', error: data.error } : d,
+          ),
         )
         message.error(`「${file.name}」处理失败: ${data.error}`)
       }
     } catch (err: any) {
       setDocs((prev) =>
-        prev.map((d) => (d.id === docId ? { ...d, status: 'error', error: err.message } : d)),
+        prev.map((d) =>
+          d.id === docId ? { ...d, status: 'error', error: err.message } : d,
+        ),
       )
       message.error(`「${file.name}」处理失败: ${err.message}`)
     }
@@ -193,7 +270,10 @@ export const KnowledgeManager = () => {
         const infoRes = await fetch('/api/execute/qdrant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'collection-info', collectionName: c.name }),
+          body: JSON.stringify({
+            action: 'collection-info',
+            collectionName: c.name,
+          }),
         })
         const info = await infoRes.json()
         if (info.status === 'success') {
@@ -248,11 +328,64 @@ export const KnowledgeManager = () => {
     loadModels()
   }, [loadModels])
 
+  // === Qdrant connection status ===
+  type QdrantStatus = 'checking' | 'connected' | 'disconnected'
+  const [qdrantStatus, setQdrantStatus] = useState<QdrantStatus>('checking')
+
+  const checkQdrantConnection = useCallback(async () => {
+    setQdrantStatus('checking')
+    try {
+      const res = await fetch('/api/execute/qdrant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'collections' }),
+      })
+      const data = await res.json()
+      setQdrantStatus(data.status === 'success' ? 'connected' : 'disconnected')
+    } catch {
+      setQdrantStatus('disconnected')
+    }
+  }, [])
+
+  useEffect(() => {
+    checkQdrantConnection()
+  }, [checkQdrantConnection])
+
+  // === Load sync workflows (filtered by knowledgeStore node) ===
+  const loadSyncWorkflows = useCallback(async () => {
+    setSyncLoading(true)
+    try {
+      const res = await fetch('/api/workflows')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        const filtered = data
+          .filter((wf: any) => wf.hasKnowledgeStore)
+          .map((wf: any) => ({
+            id: wf.id,
+            name: wf.name,
+            nodeCount: wf.nodeCount,
+            updatedAt: wf.updatedAt,
+          }))
+        setSyncWorkflows(filtered)
+      }
+    } catch {
+      setSyncWorkflows([])
+    } finally {
+      setSyncLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSyncWorkflows()
+  }, [loadSyncWorkflows])
+
   // === Stats ===
   const totalCount = collections.length
   const activeCount = collections.filter((c) => c.status === 'green').length
   const totalVectors = collections.reduce((sum, c) => sum + c.vectorsCount, 0)
-  const errorCount = collections.filter((c) => c.status === 'red' || c.status === 'yellow').length
+  const errorCount = collections.filter(
+    (c) => c.status === 'red' || c.status === 'yellow',
+  ).length
 
   // === Delete collection ===
   const handleDelete = (name: string) => {
@@ -267,7 +400,10 @@ export const KnowledgeManager = () => {
           const res = await fetch('/api/execute/qdrant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete-collection', collectionName: name }),
+            body: JSON.stringify({
+              action: 'delete-collection',
+              collectionName: name,
+            }),
           })
           const data = await res.json()
           if (data.status === 'success') {
@@ -318,18 +454,86 @@ export const KnowledgeManager = () => {
     }
   }
 
-  // === Sync workflow ===
-  const handleSync = async (key: string, label: string) => {
-    setSyncing((prev) => ({ ...prev, [key]: true }))
+  // === Sync workflow actions ===
+  const handleRunSync = async (id: string) => {
+    setRunningSyncId(id)
     try {
-      // Simulate sync — actual implementation would trigger a workflow
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      message.success(`「${label}」已触发`)
-    } catch {
-      message.error(`「${label}」触发失败`)
+      const res = await fetch(`/api/workflows?id=${encodeURIComponent(id)}`)
+      if (!res.ok) {
+        message.error('无法获取工作流数据')
+        return
+      }
+      const data = await res.json()
+      if (!data.nodes || !data.edges) {
+        message.error('工作流数据不完整')
+        return
+      }
+      // 加载到编辑器并执行
+      const { useNodeStore } = await import('#/store/node')
+      const store = useNodeStore.getState()
+      store.setWorkflowId(data.id || id)
+      store.setNodes(data.nodes)
+      store.setEdges(data.edges)
+      store.runAll()
+      message.success(`「${data.name || id}」已开始执行`)
+    } catch (err: any) {
+      message.error(`运行失败: ${err.message}`)
     } finally {
-      setSyncing((prev) => ({ ...prev, [key]: false }))
+      setRunningSyncId(null)
     }
+  }
+
+  const handleEditSync = async (id: string) => {
+    try {
+      const res = await fetch(`/api/workflows?id=${encodeURIComponent(id)}`)
+      if (!res.ok) {
+        message.error('无法获取工作流数据')
+        return
+      }
+      const data = await res.json()
+      if (!data.nodes || !data.edges) {
+        message.error('工作流数据不完整')
+        return
+      }
+      // 加载到编辑器并切换到工作流 tab
+      const { useNodeStore } = await import('#/store/node')
+      const { useRouteStore } = await import('#/store/route')
+      const store = useNodeStore.getState()
+      store.setWorkflowId(data.id || id)
+      store.setNodes(data.nodes)
+      store.setEdges(data.edges)
+      useRouteStore.getState().switchTo('workflow')
+      message.success(`已加载「${data.name || id}」到编辑器`)
+    } catch (err: any) {
+      message.error(`加载失败: ${err.message}`)
+    }
+  }
+
+  const handleDeleteSync = (id: string, name: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除同步工作流「${name}」吗？`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await fetch(
+            `/api/workflows?id=${encodeURIComponent(id)}`,
+            { method: 'DELETE' },
+          )
+          const data = await res.json()
+          if (data.success) {
+            message.success(`「${name}」已删除`)
+            loadSyncWorkflows()
+          } else {
+            message.error(data.error || '删除失败')
+          }
+        } catch (err: any) {
+          message.error(`删除失败: ${err.message}`)
+        }
+      },
+    })
   }
 
   // === Table columns ===
@@ -356,9 +560,10 @@ export const KnowledgeManager = () => {
           yellow: { color: 'warning', text: '初始化中' },
           red: { color: 'error', text: '异常' },
         }
-        const s = (status === 'green' || status === 'yellow' || status === 'red')
-          ? map[status]
-          : { color: 'default', text: status }
+        const s =
+          status === 'green' || status === 'yellow' || status === 'red'
+            ? map[status]
+            : { color: 'default', text: status }
         return <Tag color={s.color}>{s.text}</Tag>
       },
     },
@@ -388,7 +593,7 @@ export const KnowledgeManager = () => {
       title: '最后更新',
       dataIndex: 'lastUpdated',
       key: 'lastUpdated',
-      width: 160,
+      width: 200,
       render: (t: string) => t || '-',
     },
     {
@@ -401,7 +606,6 @@ export const KnowledgeManager = () => {
             <Tooltip title="修复">
               <Button
                 type="link"
-                size="small"
                 icon={<BugOutlined />}
                 onClick={() => handleFix(record.name)}
               />
@@ -409,8 +613,6 @@ export const KnowledgeManager = () => {
           )}
           <Tooltip title="删除集合">
             <Button
-              type="link"
-              size="small"
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(record.name)}
@@ -418,31 +620,6 @@ export const KnowledgeManager = () => {
           </Tooltip>
         </Space>
       ),
-    },
-  ]
-
-  // === New collection modal form ===
-  const syncWorkflowCards = [
-    {
-      key: 'full-sync',
-      title: '知识库全量同步',
-      description: '同步所有集合，适用于首次部署或全面重建。过程约 20-30 分钟。',
-      duration: '20-30 min',
-      icon: <SyncOutlined />,
-    },
-    {
-      key: 'incremental-sync',
-      title: '增量更新同步',
-      description: '仅同步有变更的集合，快速高效。过程约 3-5 分钟。',
-      duration: '3-5 min',
-      icon: <ReloadOutlined />,
-    },
-    {
-      key: 'config-sync',
-      title: '配置模板同步',
-      description: '仅同步 config_templates 集合，更新工作流模板配置。过程约 1-2 分钟。',
-      duration: '1-2 min',
-      icon: <ApartmentOutlined />,
     },
   ]
 
@@ -499,8 +676,7 @@ export const KnowledgeManager = () => {
       title: '错误原因',
       dataIndex: 'error',
       key: 'error',
-      render: (err: string) =>
-        err ? <Text type="danger">{err}</Text> : '-',
+      render: (err: string) => (err ? <Text type="danger">{err}</Text> : '-'),
     },
   ]
 
@@ -517,7 +693,55 @@ export const KnowledgeManager = () => {
             管理 Qdrant 向量数据库集合、上传文档并自动向量化
           </Text>
         </Col>
+        <Col>
+          <Space>
+            {/* Qdrant 连接状态 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {qdrantStatus === 'checking' ? (
+                <>
+                  <LoadingOutlined style={{ color: '#faad14', fontSize: 14 }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>正在检测连接...</Text>
+                </>
+              ) : (
+                <>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: qdrantStatus === 'connected' ? '#52c41a' : '#ff4d4f',
+                      boxShadow: qdrantStatus === 'connected'
+                        ? '0 0 0 0 rgba(82, 196, 26, 0.6)'
+                        : 'none',
+                      animation: qdrantStatus === 'connected'
+                        ? 'qdrantPulse 1.5s ease-in-out infinite'
+                        : 'none',
+                    }}
+                  />
+                  <Text style={{ fontSize: 12, color: qdrantStatus === 'connected' ? '#52c41a' : '#ff4d4f' }}>
+                    Qdrant {qdrantStatus === 'connected' ? '已连接' : '未连接'}
+                  </Text>
+                  {qdrantStatus === 'disconnected' && (
+                    <Button size="small" icon={<ReloadOutlined />} onClick={checkQdrantConnection}>
+                      测试连接
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </Space>
+        </Col>
       </Row>
+
+      {/* Qdrant pulse keyframes */}
+      <style>{`
+        @keyframes qdrantPulse {
+          0% { box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.6); }
+          70% { box-shadow: 0 0 0 6px rgba(82, 196, 26, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(82, 196, 26, 0); }
+        }
+      `}</style>
 
       <Tabs
         defaultActiveKey="collections"
@@ -572,7 +796,11 @@ export const KnowledgeManager = () => {
                         title="异常集合"
                         value={errorCount}
                         prefix={<WarningOutlined />}
-                        valueStyle={errorCount > 0 ? { color: '#ff4d4f' } : { color: '#52c41a' }}
+                        valueStyle={
+                          errorCount > 0
+                            ? { color: '#ff4d4f' }
+                            : { color: '#52c41a' }
+                        }
                       />
                     </Card>
                   </Col>
@@ -581,10 +809,18 @@ export const KnowledgeManager = () => {
                 {/* Action bar */}
                 <Row justify="end" style={{ marginBottom: 16 }}>
                   <Space>
-                    <Button icon={<ReloadOutlined />} onClick={loadCollections} loading={loading}>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={loadCollections}
+                      loading={loading}
+                    >
                       刷新
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => setModalOpen(true)}
+                    >
                       新建集合
                     </Button>
                   </Space>
@@ -607,62 +843,96 @@ export const KnowledgeManager = () => {
                     rowKey="name"
                     loading={loading}
                     pagination={false}
-                    locale={{ emptyText: <Empty description="暂无集合，点击「新建集合」创建" /> }}
+                    locale={{
+                      emptyText: (
+                        <Empty description="暂无集合，点击「新建集合」创建" />
+                      ),
+                    }}
                   />
                 </Card>
 
-                {/* Sync Workflows */}
+                {/* Sync Workflows Table */}
                 <Card
                   title={
                     <Space>
                       <SyncOutlined />
                       <span>同步工作流</span>
+                      <Tag>{syncWorkflows.length}</Tag>
                     </Space>
+                  }
+                  extra={
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={loadSyncWorkflows}
+                      loading={syncLoading}
+                    >
+                      刷新
+                    </Button>
                   }
                   style={{ marginBottom: 24 }}
                 >
-                  <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                    {syncWorkflowCards.map((card) => (
-                      <Col key={card.key} xs={24} sm={12} md={8}>
-                        <Card
-                          size="small"
-                          hoverable
-                          actions={[
+                  <Table
+                    columns={[
+                      {
+                        title: '工作流名称',
+                        dataIndex: 'name',
+                        key: 'name',
+                      },
+                      {
+                        title: '节点数',
+                        dataIndex: 'nodeCount',
+                        key: 'nodeCount',
+                        width: 80,
+                      },
+                      {
+                        title: '最后更新',
+                        dataIndex: 'updatedAt',
+                        key: 'updatedAt',
+                        width: 200,
+                        render: (t: string) =>
+                          t ? new Date(t).toLocaleString() : '-',
+                      },
+                      {
+                        title: '操作',
+                        key: 'actions',
+                        width: 280,
+                        render: (_: any, record: SyncWorkflowItem) => (
+                          <Space>
                             <Button
                               type="primary"
-                              size="small"
                               icon={<PlayCircleOutlined />}
-                              loading={syncing[card.key]}
-                              onClick={() => handleSync(card.key, card.title)}
+                              loading={runningSyncId === record.id}
+                              onClick={() => handleRunSync(record.id)}
                             >
-                              {syncing[card.key] ? '运行中' : '运行'}
-                            </Button>,
-                          ]}
-                        >
-                          <Card.Meta
-                            avatar={
-                              <Badge
-                                count={<SyncOutlined style={{ fontSize: 18, color: '#1890ff' }} />}
-                                style={{ backgroundColor: 'transparent' }}
-                              />
-                            }
-                            title={card.title}
-                            description={
-                              <div style={{ height: 80 }}>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                  {card.description}
-                                </Text>
-                                <br />
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                  预估耗时: {card.duration}
-                                </Text>
-                              </div>
-                            }
-                          />
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
+                              运行
+                            </Button>
+                            <Button
+                              icon={<EditOutlined />}
+                              onClick={() => handleEditSync(record.id)}
+                            >
+                              编辑
+                            </Button>
+                            <Button
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() =>
+                                handleDeleteSync(record.id, record.name)
+                              }
+                            ></Button>
+                          </Space>
+                        ),
+                      },
+                    ]}
+                    dataSource={syncWorkflows}
+                    rowKey="id"
+                    loading={syncLoading}
+                    pagination={false}
+                    locale={{
+                      emptyText: (
+                        <Empty description="暂无含知识库写入节点的工作流" />
+                      ),
+                    }}
+                  />
 
                   {/* Sync History */}
                   <Collapse ghost style={{ background: 'transparent' }}>
@@ -681,7 +951,6 @@ export const KnowledgeManager = () => {
                         dataSource={MOCK_SYNC_RECORDS}
                         rowKey="id"
                         pagination={false}
-                        size="small"
                       />
                     </Panel>
                   </Collapse>
@@ -704,7 +973,11 @@ export const KnowledgeManager = () => {
                 {/* Upload Area */}
                 <Card style={{ marginBottom: 24 }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
-                    <Row gutter={[16, 12]} style={{ marginBottom: 16 }} align="middle">
+                    <Row
+                      gutter={[16, 12]}
+                      style={{ marginBottom: 16 }}
+                      align="middle"
+                    >
                       <Col>
                         <Text strong>目标集合</Text>
                       </Col>
@@ -758,7 +1031,8 @@ export const KnowledgeManager = () => {
                         点击或拖拽文件到此区域上传
                       </p>
                       <p className="ant-upload-hint">
-                        支持 txt / md / 代码文件（单文件 ≤ 5MB），系统将自动分块并向量化写入 Qdrant
+                        支持 txt / md / 代码文件（单文件 ≤
+                        5MB），系统将自动分块并向量化写入 Qdrant
                       </p>
                     </Upload.Dragger>
                   </Space>
@@ -785,7 +1059,11 @@ export const KnowledgeManager = () => {
                             doc.status === 'error'
                               ? [
                                   <Tooltip title={doc.error}>
-                                    <Text type="danger" style={{ fontSize: 12, maxWidth: 200 }} ellipsis>
+                                    <Text
+                                      type="danger"
+                                      style={{ fontSize: 12, maxWidth: 200 }}
+                                      ellipsis
+                                    >
                                       {doc.error}
                                     </Text>
                                   </Tooltip>,
@@ -796,11 +1074,17 @@ export const KnowledgeManager = () => {
                           <List.Item.Meta
                             avatar={
                               doc.status === 'processing' ? (
-                                <LoadingOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                                <LoadingOutlined
+                                  style={{ fontSize: 24, color: '#1890ff' }}
+                                />
                               ) : doc.status === 'success' ? (
-                                <CheckCircleOutlined style={{ fontSize: 24, color: '#52c41a' }} />
+                                <CheckCircleOutlined
+                                  style={{ fontSize: 24, color: '#52c41a' }}
+                                />
                               ) : (
-                                <CloseCircleOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                                <CloseCircleOutlined
+                                  style={{ fontSize: 24, color: '#ff4d4f' }}
+                                />
                               )
                             }
                             title={
@@ -825,12 +1109,15 @@ export const KnowledgeManager = () => {
                                 </Text>
                                 {doc.status === 'success' && (
                                   <>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                      | {doc.totalChunks} 个块 | {doc.totalVectors} 个向量
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: 12 }}
+                                    >
+                                      | {doc.totalChunks} 个块 |{' '}
+                                      {doc.totalVectors} 个向量
                                     </Text>
                                     <Progress
                                       percent={100}
-                                      size="small"
                                       style={{ width: 120, margin: 0 }}
                                       showInfo={false}
                                     />
@@ -839,7 +1126,6 @@ export const KnowledgeManager = () => {
                                 {doc.status === 'processing' && (
                                   <Progress
                                     percent={50}
-                                    size="small"
                                     style={{ width: 120, margin: 0 }}
                                     showInfo={false}
                                     status="active"
@@ -895,7 +1181,12 @@ export const KnowledgeManager = () => {
             label="描述（可选）"
             rules={[{ max: 200, message: '不超过 200 字' }]}
           >
-            <Input.TextArea rows={3} placeholder="集合用途说明（选填）" maxLength={200} showCount />
+            <Input.TextArea
+              rows={3}
+              placeholder="集合用途说明（选填）"
+              maxLength={200}
+              showCount
+            />
           </Form.Item>
           <Form.Item
             name="embedModelId"
@@ -931,11 +1222,7 @@ export const KnowledgeManager = () => {
           >
             <Input type="number" min={64} max={8192} />
           </Form.Item>
-          <Form.Item
-            name="distance"
-            label="距离算法"
-            tooltip="影响检索相关性"
-          >
+          <Form.Item name="distance" label="距离算法" tooltip="影响检索相关性">
             <Input placeholder="Cosine / Euclidean / Dot" />
           </Form.Item>
         </Form>

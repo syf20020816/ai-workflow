@@ -31,17 +31,13 @@ export const OutputPanel = () => {
         return {
           key: node.id,
           label: (
-            <Text strong style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+            <Text strong style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
               {typeof title === 'string' ? title : '未命名节点'}
             </Text>
           ),
           children: output ? (
-            <div style={{ borderRadius: 4, overflow: 'hidden' }}>
-              <CodeEditor
-                value={JSON.stringify(output, null, 2)}
-                readOnly
-                maxHeight={400}
-              />
+            <div style={{ borderRadius: 4, overflow: 'auto', height: 400 }}>
+              <CodeEditor value={JSON.stringify(output, null, 2)} readOnly />
             </div>
           ) : (
             <Text type="secondary" style={{ fontSize: 12 }}>

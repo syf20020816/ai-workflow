@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const RESULTS_DIR = path.resolve(process.cwd(), 'workflows', 'result')
+const RESULTS_DIR = path.resolve(process.cwd(), 'workflows', 'result', '.pin')
 
 function ensureDir() {
   if (!fs.existsSync(RESULTS_DIR)) {
