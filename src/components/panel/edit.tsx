@@ -186,7 +186,7 @@ export const EditPanel = (props: PanelProps) => {
     {
       key: 'history',
       label: '执行历史',
-      children: <ExecutionHistory />,
+      children: <ExecutionHistory size='small' workflowId={workflowId} />,
     },
   ]
 

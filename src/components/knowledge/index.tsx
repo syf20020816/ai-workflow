@@ -542,6 +542,7 @@ export const KnowledgeManager = () => {
       title: '集合名称',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
       render: (name: string) => (
         <Space>
           <DatabaseOutlined style={{ color: '#13c2c2' }} />

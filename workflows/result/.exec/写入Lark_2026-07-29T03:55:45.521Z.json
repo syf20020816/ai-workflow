@@ -1,0 +1,91 @@
+{
+  "workflowId": "写入Lark",
+  "workflowName": "写入Lark",
+  "timestamp": "2026-07-29T03:55:45.521Z",
+  "status": "completed",
+  "nodeCount": 2,
+  "nodeResults": [
+    {
+      "nodeId": "e60c6a76-4edb-4f41-b31f-e74fa1c5fb0c",
+      "nodeTitle": "用户输入节点",
+      "status": "success",
+      "output": {
+        "text": "# 测试写入\n测试写入文本\n- 节点\n- 节点2",
+        "prompt": "",
+        "files": [],
+        "urls": [
+          "https://lizhi2021.feishu.cn/wiki/Xwq0wcVAZiK4t6krkrFcBUAcn4f"
+        ]
+      }
+    },
+    {
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "status": "success",
+      "output": {
+        "result": "{\n  \"ok\": true,\n  \"identity\": \"user\",\n  \"data\": {\n    \"document\": {\n      \"revision_id\": 117,\n      \"url\": \"https://lizhi2021.feishu.cn/docx/G5TVdqe9loyZ1lxwoz9crFtQnth\"\n    },\n    \"result\": \"success\",\n    \"warnings\": []\n  },\n  \"_notice\": {\n    \"skills\": {\n      \"command\": \"lark-cli update\",\n      \"current\": \"1.0.73\",\n      \"message\": \"lark-cli skills 1.0.73 out of sync with binary 1.0.57, run: lark-cli update\",\n      \"target\": \"1.0.57\"\n    },\n    \"update\": {\n      \"command\": \"lark-cli update\",\n      \"current\": \"1.0.57\",\n      \"latest\": \"1.0.79\",\n      \"message\": \"lark-cli 1.0.79 available, current 1.0.57, run: lark-cli update\"\n    }\n  }\n}\n",
+        "action": "write",
+        "url": "https://lizhi2021.feishu.cn/wiki/Xwq0wcVAZiK4t6krkrFcBUAcn4f",
+        "success": true
+      }
+    }
+  ],
+  "logs": [
+    {
+      "timestamp": 1785297344080,
+      "nodeId": "e60c6a76-4edb-4f41-b31f-e74fa1c5fb0c",
+      "nodeTitle": "用户输入节点",
+      "level": "info",
+      "message": "开始执行..."
+    },
+    {
+      "timestamp": 1785297344164,
+      "nodeId": "e60c6a76-4edb-4f41-b31f-e74fa1c5fb0c",
+      "nodeTitle": "用户输入节点",
+      "level": "info",
+      "message": "用户输入节点处理完成"
+    },
+    {
+      "timestamp": 1785297344164,
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "level": "info",
+      "message": "开始执行..."
+    },
+    {
+      "timestamp": 1785297345466,
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "level": "info",
+      "message": "Lark write 操作: https://lizhi2021.feishu.cn/wiki/Xwq0wcVAZiK4t6krkrFcBUAcn4f"
+    },
+    {
+      "timestamp": 1785297345466,
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "level": "info",
+      "message": "Lark 操作: write"
+    },
+    {
+      "timestamp": 1785297345466,
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "level": "info",
+      "message": "执行命令: lark-cli docs +update --doc \"https://lizhi2021.feishu.cn/wiki/Xwq0wcVAZiK4t6krkrFcBUAcn4f\" --command append --doc-format..."
+    },
+    {
+      "timestamp": 1785297345466,
+      "nodeId": "b19fe40f-c621-4e7c-9216-abb9b0cff812",
+      "nodeTitle": "Lark文档节点",
+      "level": "info",
+      "message": "write 操作成功"
+    },
+    {
+      "timestamp": 1785297345466,
+      "nodeId": "",
+      "nodeTitle": "",
+      "level": "info",
+      "message": "工作流执行完成"
+    }
+  ]
+}

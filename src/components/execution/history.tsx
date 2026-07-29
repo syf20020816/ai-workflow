@@ -1,5 +1,21 @@
-import { Button, Table, Typography, Tag, Space, message, Modal, Tooltip } from 'antd'
-import { DeleteOutlined, PlayCircleOutlined, UndoOutlined, HistoryOutlined } from '@ant-design/icons'
+import {
+  Button,
+  Table,
+  Typography,
+  Tag,
+  Space,
+  message,
+  Modal,
+  Tooltip,
+  Select,
+} from 'antd'
+import {
+  DeleteOutlined,
+  PlayCircleOutlined,
+  UndoOutlined,
+  HistoryOutlined,
+  FilterOutlined,
+} from '@ant-design/icons'
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
 
@@ -27,15 +43,51 @@ interface ExecHistoryRecord {
     message: string
   }>
 }
+export interface ExecHistoryProps {
+  size?: 'small' | 'medium'
+  /** 指定工作流 ID，用于编辑器 Tab 内自动过滤，此时不显示工作流选择框 */
+  workflowId?: string
+}
 
-export const ExecutionHistory = () => {
+export const ExecutionHistory = ({
+  size = 'medium',
+  workflowId,
+}: ExecHistoryProps) => {
   const [records, setRecords] = useState<ExecHistoryRecord[]>([])
   const [loading, setLoading] = useState(false)
+  const [workflowList, setWorkflowList] = useState<
+    Array<{ id: string; name: string }>
+  >([])
+  const [filterWorkflow, setFilterWorkflow] = useState<string | undefined>(
+    workflowId,
+  )
+
+  // 页面级别：加载工作流列表供选择
+  useEffect(() => {
+    if (workflowId) {
+      setFilterWorkflow(workflowId)
+      return
+    }
+    const loadWorkflows = async () => {
+      try {
+        const res = await fetch('/api/workflows')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setWorkflowList(data.map((w: any) => ({ id: w.id, name: w.name })))
+        }
+      } catch {
+        // 静默
+      }
+    }
+    loadWorkflows()
+  }, [workflowId])
 
   const loadRecords = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/workflow/exec-history')
+      const params = new URLSearchParams()
+      if (filterWorkflow) params.set('workflowId', filterWorkflow)
+      const res = await fetch(`/api/workflow/exec-history?${params}`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setRecords(data)
@@ -45,7 +97,7 @@ export const ExecutionHistory = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filterWorkflow])
 
   useEffect(() => {
     loadRecords()
@@ -60,7 +112,10 @@ export const ExecutionHistory = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          const res = await fetch(`/api/workflow/exec-history?filename=${encodeURIComponent(filename)}`, { method: 'DELETE' })
+          const res = await fetch(
+            `/api/workflow/exec-history?filename=${encodeURIComponent(filename)}`,
+            { method: 'DELETE' },
+          )
           const data = await res.json()
           if (data.success) {
             message.success('已删除')
@@ -78,7 +133,9 @@ export const ExecutionHistory = () => {
   const handleRestore = async (record: ExecHistoryRecord) => {
     try {
       // 加载完整记录（含 logs、nodeResults 详情）
-      const res = await fetch(`/api/workflow/exec-history?filename=${encodeURIComponent(record.filename)}`)
+      const res = await fetch(
+        `/api/workflow/exec-history?filename=${encodeURIComponent(record.filename)}`,
+      )
       const full = await res.json()
       if (!full.nodeResults) {
         message.error('记录数据不完整')
@@ -92,7 +149,8 @@ export const ExecutionHistory = () => {
       ctx.globalStatus = 'completed'
       for (const nr of full.nodeResults) {
         ctx.nodeOutputs[nr.nodeId] = nr.output
-        ctx.nodeStatuses[nr.nodeId] = nr.status === 'success' ? 'success' : 'error'
+        ctx.nodeStatuses[nr.nodeId] =
+          nr.status === 'success' ? 'success' : 'error'
       }
       ctx.logs = full.logs || []
       store.resetExecution()
@@ -110,7 +168,9 @@ export const ExecutionHistory = () => {
   const handleReExecute = async (record: ExecHistoryRecord) => {
     try {
       // 加载对应的工作流
-      const res = await fetch(`/api/workflows?id=${encodeURIComponent(record.workflowId)}`)
+      const res = await fetch(
+        `/api/workflows?id=${encodeURIComponent(record.workflowId)}`,
+      )
       if (!res.ok) {
         message.error('找不到对应的工作流文件')
         return
@@ -127,7 +187,9 @@ export const ExecutionHistory = () => {
       store.setNodes(data.nodes)
       store.setEdges(data.edges)
       useRouteStore.getState().switchTo('workflow')
-      message.success(`已加载「${data.name || record.workflowId}」到编辑器，点击运行即可重新执行`)
+      message.success(
+        `已加载「${data.name || record.workflowId}」到编辑器，点击运行即可重新执行`,
+      )
     } catch (err: any) {
       message.error(`加载失败: ${err.message}`)
     }
@@ -136,20 +198,19 @@ export const ExecutionHistory = () => {
   const columns: TableProps<ExecHistoryRecord>['columns'] = [
     {
       title: '工作流',
+      width: 200,
       dataIndex: 'workflowName',
       key: 'workflowName',
       render: (name: string, record: ExecHistoryRecord) => (
-        <Text strong>
-          {name || record.workflowId}
-        </Text>
+        <Text strong>{name || record.workflowId}</Text>
       ),
     },
     {
       title: '执行时间',
       dataIndex: 'timestamp',
       key: 'timestamp',
-      width: 180,
-      render: (t: string) => t ? new Date(t).toLocaleString() : '-',
+      width: 200,
+      render: (t: string) => (t ? new Date(t).toLocaleString() : '-'),
     },
     {
       title: '状态',
@@ -170,12 +231,18 @@ export const ExecutionHistory = () => {
       title: '执行节点',
       dataIndex: 'nodeCount',
       key: 'nodeCount',
-      width: 80,
+      width: 100,
       render: (_: number, record: ExecHistoryRecord) => {
-        const successCount = record.nodeResults.filter((r) => r.status === 'success').length
+        const successCount = record.nodeResults.filter(
+          (r) => r.status === 'success',
+        ).length
         return (
-          <Tooltip title={`${successCount} 成功 / ${record.nodeResults.length - successCount} 失败`}>
-            <Text>{successCount}/{record.nodeResults.length}</Text>
+          <Tooltip
+            title={`${successCount} 成功 / ${record.nodeResults.length - successCount} 失败`}
+          >
+            <Text>
+              {successCount}/{record.nodeResults.length}
+            </Text>
           </Tooltip>
         )
       },
@@ -183,32 +250,31 @@ export const ExecutionHistory = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 240,
       render: (_: any, record: ExecHistoryRecord) => (
         <Space>
-          <Button
-            size="small"
-            icon={<UndoOutlined />}
-            onClick={() => handleRestore(record)}
-          >
-            恢复
-          </Button>
-          <Button
-            size="small"
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={() => handleReExecute(record)}
-          >
-            重新执行
-          </Button>
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.filename)}
-          >
-            删除
-          </Button>
+          <Tooltip title="恢复">
+            <Button
+              size={size}
+              icon={<UndoOutlined />}
+              onClick={() => handleRestore(record)}
+            ></Button>
+          </Tooltip>
+          <Tooltip title="重新执行">
+            <Button
+              size={size}
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={() => handleReExecute(record)}
+            ></Button>
+          </Tooltip>
+          <Tooltip title="删除">
+            <Button
+              size={size}
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record.filename)}
+            ></Button>
+          </Tooltip>
         </Space>
       ),
     },
@@ -216,13 +282,42 @@ export const ExecutionHistory = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 8,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Space>
-          <HistoryOutlined />
-          <Text strong style={{ fontSize: 13 }}>执行历史</Text>
+          <span
+            style={{ fontSize: size === 'small' ? 14 : 18, fontWeight: 700 }}
+          >
+            执行历史
+          </span>
           <Tag>{records.length}</Tag>
+          {!workflowId && (
+            <Select
+              placeholder="按工作流筛选"
+              allowClear
+              style={{ width: 220 }}
+              value={filterWorkflow}
+              onChange={(val) => {
+                setFilterWorkflow(val)
+              }}
+              options={workflowList.map((w) => ({
+                value: w.id,
+                label: w.name,
+              }))}
+            />
+          )}
         </Space>
-        <Button size="small" icon={<HistoryOutlined />} onClick={loadRecords} loading={loading}>
+        <Button
+          icon={<HistoryOutlined />}
+          onClick={loadRecords}
+          loading={loading}
+        >
           刷新
         </Button>
       </div>
