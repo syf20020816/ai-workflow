@@ -177,7 +177,7 @@ export async function executeWorkflow(
         }
 
         const result = await executor.execute(execCtx)
-        return { nodeId, title: nodeTitle, status: result.status, result }
+        return { nodeId, title: nodeTitle, status: result.status, result, error: result.error }
       }),
     )
 
@@ -191,6 +191,11 @@ export async function executeWorkflow(
         ctx.nodeStatuses[r.nodeId] = 'error'
         ctx.globalStatus = 'error'
         addLog(ctx, r.nodeId, nodeTitle, 'error', r.error || '执行失败')
+        if (r.result?.logs) {
+          for (const logMsg of r.result.logs) {
+            addLog(ctx, r.nodeId, nodeTitle, 'info', logMsg)
+          }
+        }
         layerHasError = true
       } else if (r.status === 'waiting' && r.result) {
         ctx.nodeStatuses[r.nodeId] = 'waiting'

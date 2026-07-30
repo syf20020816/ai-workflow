@@ -199,7 +199,7 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
       title: '键',
       dataIndex: 'label',
       key: 'label',
-      width: 100,
+      width: 80,
       render: (text) => <strong style={{ fontSize: 12 }}>{text}</strong>,
     },
     {
@@ -278,6 +278,11 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
         showHeader={true}
         size="small"
         bordered
+        components={{
+          table: (tableProps: any) => (
+            <table {...tableProps} style={{ ...tableProps?.style, tableLayout: 'fixed' }} />
+          ),
+        }}
         styles={{ root: { marginTop: 8 } }}
       />
       <Modal

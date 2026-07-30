@@ -1,7 +1,7 @@
 import type { NodeProps } from '@xyflow/react'
 import type { NIfCondition } from '#/types'
 import styles from '../index.module.scss'
-import { Tag } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '..'
 
 /**
@@ -15,7 +15,7 @@ export const IfConditionNode = (props: NodeProps<NIfCondition>) => {
   return (
     <UNode node={props}>
       <div className={styles.row}>
-        <Tag color="orange" style={{ fontSize: 9, margin: 0, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Tag color="orange">
           {label || '条件分支'}
         </Tag>
       </div>

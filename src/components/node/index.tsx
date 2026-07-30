@@ -46,7 +46,9 @@ export const UNode = ({ node, children }: UNodeProps) => {
         <NodeHeader kind={kind} title={node.data.title || ''} />
         <Badge status={statusBadgeMap[nodeStatus]} size="small" />
       </div>
-      {children}
+      <div className={styles.node_content}>
+        {children}
+      </div>
       <div className={styles.node_tools}>
         <RunNode nodeId={node.id} />
         <PinNode nodeId={node.id} title={node.data.title || ''} />

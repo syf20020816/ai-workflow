@@ -2,7 +2,7 @@ import type { NodeProps } from '@xyflow/react'
 import { InputKinds } from '#/types'
 import type { NLark } from '#/types'
 import styles from '../../index.module.scss'
-import { Tag } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '../..'
 import { InputItem } from '../../user/input'
 

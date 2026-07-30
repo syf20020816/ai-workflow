@@ -1,7 +1,7 @@
 import type { NodeProps } from '@xyflow/react'
 import type { NLoopCondition } from '#/types'
 import styles from '../index.module.scss'
-import { Tag } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '..'
 
 /**
@@ -14,7 +14,7 @@ export const LoopConditionNode = (props: NodeProps<NLoopCondition>) => {
     <UNode node={props}>
       {props.data.condition ? (
         <div className={styles.row}>
-          <Tag color="blue" style={{ fontSize: 9, margin: 0, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Tag color="blue">
             {props.data.condition}
           </Tag>
         </div>

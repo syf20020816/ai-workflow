@@ -1,7 +1,7 @@
 import type { NodeProps } from '@xyflow/react'
 import type { NRetry } from '#/types'
 import styles from '../index.module.scss'
-import { Tag } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '..'
 
 /**
@@ -16,7 +16,7 @@ export const RetryNode = (props: NodeProps<NRetry>) => {
   return (
     <UNode node={props}>
       <div className={styles.row}>
-        <Tag color={modeColor} style={{ fontSize: 9, margin: 0 }}>
+        <Tag color={modeColor}>
           {modeLabel}
         </Tag>
         <span style={{ fontSize: 9 }}>

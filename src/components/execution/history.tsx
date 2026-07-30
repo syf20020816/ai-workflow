@@ -14,7 +14,6 @@ import {
   PlayCircleOutlined,
   UndoOutlined,
   HistoryOutlined,
-  FilterOutlined,
 } from '@ant-design/icons'
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
@@ -210,7 +209,7 @@ export const ExecutionHistory = ({
       dataIndex: 'timestamp',
       key: 'timestamp',
       width: 200,
-      render: (t: string) => (t ? new Date(t).toLocaleString() : '-'),
+      render: (t: string) => (t ? new Date(Number(t)).toLocaleString() : '-'),
     },
     {
       title: '状态',

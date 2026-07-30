@@ -221,4 +221,18 @@ export class NodeBuilder {
       },
     }
   }
+
+  static larkWikiTraversal(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.LARK_WIKI_TRAVERSAL,
+      data: {
+        title: 'Lark知识库遍历节点',
+        spaceUrl: '',
+        spaceId: '',
+        spaceName: '',
+        maxDocs: 200,
+      },
+    }
+  }
 }

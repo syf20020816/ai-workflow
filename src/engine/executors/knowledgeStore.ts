@@ -26,40 +26,48 @@ export const knowledgeStoreExecutor: NodeExecutor = {
     let content = ''
     const contentFields = ['content', 'result', 'text', 'output', 'response', 'analysis']
 
-    for (const field of contentFields) {
-      const val = input[field]
-      if (!val) continue
+    // 场景0: 上游输出 documents 数组（如 LarkWikiTraversal 节点），合并为完整文本
+    if (Array.isArray(input.documents)) {
+      content = input.documents
+        .map((d: any) => `# ${d.title || ''}\n\n${d.content || ''}`)
+        .join('\n\n---\n\n')
+      logs.push(`从上游获取到 ${input.documents.length} 个文档的文本内容，合计 ${content.length} 字符`)
+    }
 
-      // 场景1: 字段值是字符串（可能是飞书文档节点 stringified JSON）
-      if (typeof val === 'string') {
-        // 尝试解析 JSON，提取嵌套的文本内容
-        try {
-          const parsed = JSON.parse(val)
-          content =
-            parsed?.data?.document?.content ||
-            parsed?.data?.content ||
-            parsed?.content ||
-            (typeof parsed === 'string' ? parsed : '')
-          if (content) break
-        } catch {
-          // 不是 JSON，直接作为普通文本
-          content = val
-          break
+    // 场景1: 遍历常见字段名查找字符串内容
+    if (!content) {
+      for (const field of contentFields) {
+        const val = input[field]
+        if (!val) continue
+
+        if (typeof val === 'string') {
+          try {
+            const parsed = JSON.parse(val)
+            content =
+              parsed?.data?.document?.content ||
+              parsed?.data?.content ||
+              parsed?.content ||
+              (typeof parsed === 'string' ? parsed : '')
+            if (content) break
+          } catch {
+            content = val
+            break
+          }
         }
-      }
 
-      // 场景2: 字段值是对象
-      if (typeof val === 'object') {
-        content =
-          val?.data?.document?.content ||
-          val?.data?.content ||
-          val?.content ||
-          val?.text ||
-          ''
-        if (content) break
+        if (typeof val === 'object') {
+          content =
+            val?.data?.document?.content ||
+            val?.data?.content ||
+            val?.content ||
+            val?.text ||
+            ''
+          if (content) break
+        }
       }
     }
 
+    // 场景2: 兜底 — 从任意字段取第一个非空字符串
     if (!content) {
       for (const val of Object.values(input)) {
         if (typeof val === 'string' && val.length > 0) {

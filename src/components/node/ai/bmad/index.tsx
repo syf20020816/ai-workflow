@@ -1,7 +1,8 @@
 import type { NodeProps } from '@xyflow/react'
 import type { NBMadAgent } from '#/types'
 import styles from '../../index.module.scss'
-import { Tag, Typography, Tooltip, Button } from 'antd'
+import { Typography, Tooltip, Button } from 'antd'
+import { Tag } from '#/components/tag'
 import { DisconnectOutlined } from '@ant-design/icons'
 import { UNode } from '../..'
 import { useBmadAgentStore } from '#/store/bmad'
@@ -36,12 +37,12 @@ export const BmadAgentNode = (props: NodeProps<NBMadAgent>) => {
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Tag color="purple" style={{ fontSize: 8 }}>
+              <Tag color="purple">
                 <span style={{ fontSize: 8 }}>{agentConfig?.icon}</span>
                 {props.data.role || '未知角色'}
               </Tag>
               {agentConfig?.name && (
-                <Tag color="geekblue" style={{ fontSize: 8 }}>
+                <Tag color="geekblue">
                   {agentConfig.name}
                 </Tag>
               )}

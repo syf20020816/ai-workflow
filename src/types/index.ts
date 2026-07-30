@@ -18,6 +18,7 @@ export const NodeTypes = {
   MEMORY: 'memory',
   KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
   KNOWLEDGE_STORE: 'knowledgeStore',
+  LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -282,8 +283,27 @@ export type NKnowledgeStoreData = NNode & {
 
 export type NKnowledgeStore = Node<NKnowledgeStoreData, typeof NodeTypes.KNOWLEDGE_STORE>
 
+export type NLarkWikiTraversalData = NNode & {
+  /** 知识库空间 ID（内部使用，由 spaceUrl 自动解析） */
+  spaceId?: string
+  /** 知识库空间链接（用户在飞书复制粘贴） */
+  spaceUrl?: string
+  /** 知识库空间名称（用于展示） */
+  spaceName?: string
+  /** 最大处理文档数 */
+  maxDocs?: number
+  /** 执行结果 */
+  result?: {
+    totalDocs: number
+    documents: Array<{ title: string; content: string; path: string }>
+  }
+}
+
+export type NLarkWikiTraversal = Node<NLarkWikiTraversalData, typeof NodeTypes.LARK_WIKI_TRAVERSAL>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
+  | NLarkWikiTraversal
 > | null

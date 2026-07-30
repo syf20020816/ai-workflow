@@ -1,7 +1,7 @@
 import type { NodeProps } from '@xyflow/react'
 import type { NLoop } from '#/types'
 import styles from '../index.module.scss'
-import { Tag } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '..'
 
 /**
@@ -14,7 +14,7 @@ export const LoopNode = (props: NodeProps<NLoop>) => {
   return (
     <UNode node={props}>
       <div className={styles.row}>
-        <Tag color="blue" style={{ fontSize: 9, margin: 0 }}>
+        <Tag color="blue">
           最大 {props.data.maxLoopCount} 次
         </Tag>
       </div>

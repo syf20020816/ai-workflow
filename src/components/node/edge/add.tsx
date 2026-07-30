@@ -139,6 +139,14 @@ export const AddNodeBtn = ({
         },
         {
           label: (
+            <NodeHeader kind={NodeTypes.LARK_WIKI_TRAVERSAL} title="Lark知识库节点" />
+          ),
+          key: NodeTypes.LARK_WIKI_TRAVERSAL,
+          disabled: isDisabledNode(kind, NodeTypes.LARK_WIKI_TRAVERSAL),
+          onClick: () => addNode(NodeBuilder.larkWikiTraversal),
+        },
+        {
+          label: (
             <NodeHeader kind={NodeTypes.KNOWLEDGE_RETRIEVAL} title="知识库检索节点" />
           ),
           key: NodeTypes.KNOWLEDGE_RETRIEVAL,
@@ -153,6 +161,7 @@ export const AddNodeBtn = ({
           disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_STORE),
           onClick: () => addNode(NodeBuilder.knowledgeStore),
         },
+        
       ],
     },
     {

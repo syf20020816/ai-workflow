@@ -14,6 +14,7 @@ import { skillExecutor } from './skill'
 import { larkTemplateExecutor } from './larkTemplate'
 import { knowledgeRetrievalExecutor } from './knowledgeRetrieval'
 import { knowledgeStoreExecutor } from './knowledgeStore'
+import { larkWikiTraversalExecutor } from './larkWikiTraversal'
 import { NodeTypes } from '#/types'
 
 /** 节点类型 → 执行器映射 */
@@ -35,6 +36,7 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.LARK_TEMPLATE]: larkTemplateExecutor,
   [NodeTypes.KNOWLEDGE_RETRIEVAL]: knowledgeRetrievalExecutor,
   [NodeTypes.KNOWLEDGE_STORE]: knowledgeStoreExecutor,
+  [NodeTypes.LARK_WIKI_TRAVERSAL]: larkWikiTraversalExecutor,
 }
 
 /** 根据节点类型获取执行器 */
@@ -65,4 +67,5 @@ export {
   skillExecutor,
   knowledgeRetrievalExecutor,
   knowledgeStoreExecutor,
+  larkWikiTraversalExecutor,
 }

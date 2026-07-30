@@ -1,9 +1,11 @@
 import { useNodeStore } from '#/store/node'
+import { useBmadAgentStore } from '#/store/bmad'
 import type { NBMadAgent, NBMadAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography } from 'antd'
+import { Typography, Select } from 'antd'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
+import { useEffect } from 'react'
 
 const { Text } = Typography
 
@@ -16,13 +18,41 @@ export const EditBMADAgent = () => {
     (state) => state.currentNode,
   ) as NodeProps<NBMadAgent>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
+  const agents = useBmadAgentStore((state) => state.agents)
+  const fetchAgents = useBmadAgentStore((state) => state.fetchAgents)
+
+  useEffect(() => {
+    if (agents.length === 0) fetchAgents()
+  }, [agents.length, fetchAgents])
 
   const rows: DynEditKVRow[] = [
     {
       key: 'role',
       label: '角色名称',
-      value: currentNode.data.role,
-      placeholder: '如：需求分析师、架构师、Scrum Master',
+      valueRender: (onChange) => (
+        <Select
+          style={{ width: '100%' }}
+          placeholder="选择 BMad 角色"
+          allowClear
+          value={currentNode.data.role || undefined}
+          options={agents.map((a) => ({
+            label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
+            value: a.title,
+          }))}
+          onChange={(val) => {
+            onChange(val)
+            if (val) {
+              const agent = agents.find((a) => a.title === val)
+              if (agent?.description) {
+                patchCurrentNode((draft) => {
+                  const data = d(draft)
+                  data.roleDescription = agent.description
+                })
+              }
+            }
+          }}
+        />
+      ),
     },
     {
       key: 'roleDescription',

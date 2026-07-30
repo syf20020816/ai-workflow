@@ -2,7 +2,8 @@ import type { NodeProps } from '@xyflow/react'
 import type { NAgent } from '#/types'
 import { NodeTypes } from '#/types'
 import styles from '../index.module.scss'
-import { Badge, Tag } from 'antd'
+import { Badge } from 'antd'
+import { Tag } from '#/components/tag'
 import { UNode } from '../'
 import { useNodeStore } from '#/store/node'
 import { useBmadAgentStore } from '#/store/bmad'
@@ -45,7 +46,7 @@ export const AgentNode = (props: NodeProps<NAgent>) => {
       {/* 已连接 BMad 角色标签 */}
       {connectedBmadData?.role && (
         <div className={styles.row}>
-            <Tag color="purple" style={{ fontSize: 8, margin: 0 }}>
+            <Tag color="purple">
               {agentConfig?.icon} {connectedBmadData.role}
             </Tag>
           </div>

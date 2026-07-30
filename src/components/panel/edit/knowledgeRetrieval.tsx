@@ -57,7 +57,6 @@ export const EditKnowledgeRetrieval = () => {
     {
       key: 'collectionNames',
       label: '目标集合',
-      value: selectedNames,
       valueRender: (onChange) => (
         <Select
           mode="multiple"

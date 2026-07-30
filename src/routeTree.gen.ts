@@ -22,6 +22,7 @@ import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
+import { Route as ApiExecuteLarkWikiTraversalRouteImport } from './routes/api/execute/larkWikiTraversal'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiExecuteFileWriteRouteImport } from './routes/api/execute/fileWrite'
 import { Route as ApiExecuteEmbedRouteImport } from './routes/api/execute/embed'
@@ -99,6 +100,12 @@ const ApiExecuteModelsRoute = ApiExecuteModelsRouteImport.update({
   path: '/api/execute/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecuteLarkWikiTraversalRoute =
+  ApiExecuteLarkWikiTraversalRouteImport.update({
+    id: '/api/execute/larkWikiTraversal',
+    path: '/api/execute/larkWikiTraversal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   id: '/api/execute/lark',
   path: '/api/execute/lark',
@@ -173,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -226,6 +235,7 @@ export interface FileRoutesById {
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
+  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
@@ -306,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
     | '/api/execute/lark'
+    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/skill/content'
@@ -333,6 +346,7 @@ export interface RootRouteChildren {
   ApiExecuteEmbedRoute: typeof ApiExecuteEmbedRoute
   ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
+  ApiExecuteLarkWikiTraversalRoute: typeof ApiExecuteLarkWikiTraversalRoute
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
@@ -431,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/api/execute/models'
       fullPath: '/api/execute/models'
       preLoaderRoute: typeof ApiExecuteModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/larkWikiTraversal': {
+      id: '/api/execute/larkWikiTraversal'
+      path: '/api/execute/larkWikiTraversal'
+      fullPath: '/api/execute/larkWikiTraversal'
+      preLoaderRoute: typeof ApiExecuteLarkWikiTraversalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/lark': {
@@ -545,6 +566,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteEmbedRoute: ApiExecuteEmbedRoute,
   ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
+  ApiExecuteLarkWikiTraversalRoute: ApiExecuteLarkWikiTraversalRoute,
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,

@@ -10,10 +10,19 @@
   gap: 4px;
   width: 160px;
   overflow: visible;
+  &_content {
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+  }
   &_title {
     font-size: 12px;
     margin: 0;
     color: var(--xy-controls-button-color);
+    max-width: 160px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
     &_input {
       display: flex;
       align-items: center;

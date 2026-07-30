@@ -271,6 +271,34 @@ Icon.KnowledgeStore = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <DatabaseArrowUp {...rest} color="#52c41a" />,
   })
 
+Icon.LarkWikiTraversal = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: (
+      <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        p-id="12975"
+        width="200"
+        height="200"
+        {...rest}
+      >
+        <path
+          d="M736.256 47.104c-131.072 0-605.184 3.072-646.144 3.072s-40.96 49.664-40.96 49.664v156.672h583.168c93.696 0 133.12 50.688 133.12 131.584v589.312h208.896V233.472c0.512-116.736-71.168-186.368-238.08-186.368zM49.152 797.696S76.288 977.92 198.656 977.92H348.16v-332.8H49.152v152.576z"
+          p-id="12976"
+          data-spm-anchor-id="a313x.search_index.0.i6.1bf83a81mlcaZo"
+          fill="#1677ff"
+        ></path>
+        <path
+          d="M559.616 332.8H49.152v239.104h399.36V977.92h209.92V419.84c0-36.864-40.448-87.04-98.816-87.04z"
+          p-id="12977"
+          data-spm-anchor-id="a313x.search_index.0.i7.1bf83a81mlcaZo"
+          fill="#1677ff"
+        ></path>
+      </svg>
+    ),
+  })
+
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
@@ -289,4 +317,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.MEMORY, Icon.Memory],
   [NodeTypes.KNOWLEDGE_RETRIEVAL, Icon.KnowledgeRetrieval],
   [NodeTypes.KNOWLEDGE_STORE, Icon.KnowledgeStore],
+  [NodeTypes.LARK_WIKI_TRAVERSAL, Icon.LarkWikiTraversal],
 ])
