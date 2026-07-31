@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { InputKinds } from '#/types'
 import type { InputKind } from '#/types'
 import {
@@ -336,6 +336,117 @@ export const EditItem = ({
   const placeholder = explicitPlaceholder ?? kindMeta?.placeholder ?? ''
   const prefix = kindMeta?.icon
 
+  // 本地 state，避免每次按键触发父组件重渲染导致失焦
+  const [localValue, setLocalValue] = useState<string | number>((value ?? '') as string | number)
+  const [isFocused, setIsFocused] = useState(false)
+
+  // 外部 value 变化时同步到本地（仅当 input 未聚焦时，避免打断打字）
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue((value ?? '') as string | number)
+    }
+  }, [value, isFocused])
+
+  const handleFocus = () => setIsFocused(true)
+  const handleBlur = () => {
+    setIsFocused(false)
+    onChange?.(localValue)
+  }
+
+  const handleChange = (v: string | number | null | undefined) => {
+    setLocalValue(v ?? '')
+  }
+
+  if (inputType === 'textArea') {
+    return (
+      <div className={styles.line}>
+        <div className={styles.line_row}>
+          <Text>{label}</Text>
+          {onDelete && (
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<XCircle size={14} />}
+              onClick={onDelete}
+            />
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 4, width: '100%' }}>
+          <Input.TextArea
+            rows={rows}
+            value={localValue}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            style={{ flex: 1 }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (inputType === 'password') {
+    return (
+      <div className={styles.line}>
+        <div className={styles.line_row}>
+          <Text>{label}</Text>
+          {onDelete && (
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<XCircle size={14} />}
+              onClick={onDelete}
+            />
+          )}
+        </div>
+        <Input.Password
+          prefix={prefix}
+          value={localValue}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+      </div>
+    )
+  }
+
+  if (inputType === 'number') {
+    return (
+      <div className={styles.line}>
+        <div className={styles.line_row}>
+          <Text>{label}</Text>
+          {onDelete && (
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<XCircle size={14} />}
+              onClick={onDelete}
+            />
+          )}
+        </div>
+        <InputNumber
+          style={{ width: '100%' }}
+          min={min}
+          max={max}
+          step={step}
+          value={localValue}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          onChange={(v) => handleChange(v)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className={styles.line}>
       <div className={styles.line_row}>
@@ -350,45 +461,15 @@ export const EditItem = ({
           />
         )}
       </div>
-      {inputType === 'textArea' ? (
-        <div style={{ display: 'flex', gap: 4, width: '100%' }}>
-          <Input.TextArea
-            rows={rows}
-            value={value as string}
-            placeholder={placeholder}
-            readOnly={readOnly}
-            onChange={(e) => onChange?.(e.target.value)}
-            style={{ flex: 1 }}
-          />
-        </div>
-      ) : inputType === 'password' ? (
-        <Input.Password
-          prefix={prefix}
-          value={value as string}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          onChange={(e) => onChange?.(e.target.value)}
-        />
-      ) : inputType === 'number' ? (
-        <InputNumber
-          style={{ width: '100%' }}
-          min={min}
-          max={max}
-          step={step}
-          value={value as number}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          onChange={(v) => onChange?.(v ?? undefined)}
-        />
-      ) : (
-        <Input
-          prefix={prefix}
-          value={value as string}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          onChange={(e) => onChange?.(e.target.value)}
-        />
-      )}
+      <Input
+        prefix={prefix}
+        value={localValue}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        onChange={(e) => handleChange(e.target.value)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
     </div>
   )
 }

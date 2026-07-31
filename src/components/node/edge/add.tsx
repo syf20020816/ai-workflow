@@ -23,9 +23,9 @@ const isDisabledNode = (parent: NodeType | undefined, child: NodeType) => {
   // if (parent === NodeTypes.USER_INPUT) {
   //   return child !== NodeTypes.AGENT
   // }
-  // 智能体节点不能连接 用户输入节点 和 智能体节点自身
+  // 智能体节点不能连接 自身
   if (parent === NodeTypes.AGENT) {
-    return child === NodeTypes.USER_INPUT || child === NodeTypes.AGENT
+    return child === NodeTypes.AGENT
   }
 
   // codeNode 必须连接在 AgentNode 或 BMadNode 之后
@@ -139,7 +139,10 @@ export const AddNodeBtn = ({
         },
         {
           label: (
-            <NodeHeader kind={NodeTypes.LARK_WIKI_TRAVERSAL} title="Lark知识库节点" />
+            <NodeHeader
+              kind={NodeTypes.LARK_WIKI_TRAVERSAL}
+              title="Lark知识库节点"
+            />
           ),
           key: NodeTypes.LARK_WIKI_TRAVERSAL,
           disabled: isDisabledNode(kind, NodeTypes.LARK_WIKI_TRAVERSAL),
@@ -147,7 +150,10 @@ export const AddNodeBtn = ({
         },
         {
           label: (
-            <NodeHeader kind={NodeTypes.KNOWLEDGE_RETRIEVAL} title="知识库检索节点" />
+            <NodeHeader
+              kind={NodeTypes.KNOWLEDGE_RETRIEVAL}
+              title="知识库检索节点"
+            />
           ),
           key: NodeTypes.KNOWLEDGE_RETRIEVAL,
           disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_RETRIEVAL),
@@ -155,13 +161,15 @@ export const AddNodeBtn = ({
         },
         {
           label: (
-            <NodeHeader kind={NodeTypes.KNOWLEDGE_STORE} title="知识库写入节点" />
+            <NodeHeader
+              kind={NodeTypes.KNOWLEDGE_STORE}
+              title="知识库写入节点"
+            />
           ),
           key: NodeTypes.KNOWLEDGE_STORE,
           disabled: isDisabledNode(kind, NodeTypes.KNOWLEDGE_STORE),
           onClick: () => addNode(NodeBuilder.knowledgeStore),
         },
-        
       ],
     },
     {
@@ -182,6 +190,14 @@ export const AddNodeBtn = ({
           key: NodeTypes.CODE_AGENT,
           disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),
           onClick: () => addNode(NodeBuilder.codeAgent),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.KEYWORD_AGENT} title="关键词提取节点" />
+          ),
+          key: NodeTypes.KEYWORD_AGENT,
+          disabled: isDisabledNode(kind, NodeTypes.KEYWORD_AGENT),
+          onClick: () => addNode(NodeBuilder.keywordAgent),
         },
       ],
     },

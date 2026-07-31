@@ -16,6 +16,7 @@ import {
   SwatchBook,
   Type,
   DatabaseArrowUp,
+  KeyRound,
 } from 'lucide-react'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -299,6 +300,11 @@ Icon.LarkWikiTraversal = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     ),
   })
 
+Icon.KeywordAgent = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: <KeyRound {...rest} color="#985debff" />,
+  })
+
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
@@ -318,4 +324,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.KNOWLEDGE_RETRIEVAL, Icon.KnowledgeRetrieval],
   [NodeTypes.KNOWLEDGE_STORE, Icon.KnowledgeStore],
   [NodeTypes.LARK_WIKI_TRAVERSAL, Icon.LarkWikiTraversal],
+  [NodeTypes.KEYWORD_AGENT, Icon.KeywordAgent],
 ])

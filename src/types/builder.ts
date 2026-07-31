@@ -205,6 +205,7 @@ export class NodeBuilder {
         topK: 5,
         scoreThreshold: 0,
         vectorSize: 1536,
+        maxRetrievals: 40,
       },
     }
   }
@@ -232,6 +233,17 @@ export class NodeBuilder {
         spaceId: '',
         spaceName: '',
         maxDocs: 200,
+      },
+    }
+  }
+
+  static keywordAgent(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.KEYWORD_AGENT,
+      data: {
+        title: '关键词提取节点',
+        format: '{\n  "keywords": string[]\n}',
       },
     }
   }

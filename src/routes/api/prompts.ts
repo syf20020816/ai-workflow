@@ -20,6 +20,12 @@ const PROMPT_USAGE: Record<string, { name: string; usedBy: { label: string; path
       { label: '代码分析节点 (CodeAgent)', path: 'src/routes/api/execute/codeAgent.ts' },
     ],
   },
+  'keywordAgent.md': {
+    name: '关键词提取节点系统提示词',
+    usedBy: [
+      { label: '关键词提取节点 (KeywordAgent)', path: 'src/components/panel/edit/keywordAgent.tsx' },
+    ],
+  },
 }
 
 export const Route = createFileRoute('/api/prompts')({

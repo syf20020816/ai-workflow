@@ -84,20 +84,22 @@ export async function executeWorkflow(
 
   // 计算拓扑层（并行分组）
   let layers: string[][]
+  let checkNodes: Node[]
   if (options?.startNodeId) {
     const reachable = getReachableNodeIds(options.startNodeId, edges)
-    const subNodes = dagNodes.filter((n) => reachable.has(n.id))
+    checkNodes = dagNodes.filter((n) => reachable.has(n.id))
     const subEdges = edges.filter(
       (e) => reachable.has(e.source) && reachable.has(e.target),
     )
-    layers = topologicalLayers(subNodes, subEdges)
+    layers = topologicalLayers(checkNodes, subEdges)
   } else {
+    checkNodes = dagNodes
     layers = topologicalLayers(dagNodes, edges)
   }
 
   // 检测循环依赖：所有节点都应出现在层中
   const allLayered = new Set(layers.flat())
-  const missing = dagNodes.filter((n) => !allLayered.has(n.id)).map((n) => n.id)
+  const missing = checkNodes.filter((n) => !allLayered.has(n.id)).map((n) => n.id)
   if (missing.length > 0) {
     ctx.globalStatus = 'error'
     addLog(ctx, '', '', 'error', `检测到循环依赖: ${missing.join(', ')}`)
@@ -105,12 +107,12 @@ export async function executeWorkflow(
     return ctx
   }
 
-  // 初始化节点状态（只初始化 DAG 中的节点）
-  for (const node of dagNodes) {
+  // 初始化节点状态（只初始化 DAG / 子图中的节点）
+  for (const node of checkNodes) {
     ctx.nodeStatuses[node.id] = 'idle'
   }
 
-  const nodeMap = new Map(dagNodes.map((n) => [n.id, n]))
+  const nodeMap = new Map(checkNodes.map((n) => [n.id, n]))
 
   // 注入固定节点输出（PIN 节点），使下游可以直接获取
   if (options?.nodeOutputOverrides) {

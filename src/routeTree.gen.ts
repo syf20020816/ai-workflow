@@ -24,6 +24,7 @@ import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdran
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
 import { Route as ApiExecuteLarkWikiTraversalRouteImport } from './routes/api/execute/larkWikiTraversal'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
+import { Route as ApiExecuteKeywordAgentRouteImport } from './routes/api/execute/keywordAgent'
 import { Route as ApiExecuteFileWriteRouteImport } from './routes/api/execute/fileWrite'
 import { Route as ApiExecuteEmbedRouteImport } from './routes/api/execute/embed'
 import { Route as ApiExecuteDocProcessRouteImport } from './routes/api/execute/doc-process'
@@ -111,6 +112,11 @@ const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   path: '/api/execute/lark',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecuteKeywordAgentRoute = ApiExecuteKeywordAgentRouteImport.update({
+  id: '/api/execute/keywordAgent',
+  path: '/api/execute/keywordAgent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExecuteFileWriteRoute = ApiExecuteFileWriteRouteImport.update({
   id: '/api/execute/fileWrite',
   path: '/api/execute/fileWrite',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
+  '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
+  '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/api/execute/doc-process': typeof ApiExecuteDocProcessRoute
   '/api/execute/embed': typeof ApiExecuteEmbedRoute
   '/api/execute/fileWrite': typeof ApiExecuteFileWriteRoute
+  '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
+    | '/api/execute/keywordAgent'
     | '/api/execute/lark'
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
+    | '/api/execute/keywordAgent'
     | '/api/execute/lark'
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/api/execute/doc-process'
     | '/api/execute/embed'
     | '/api/execute/fileWrite'
+    | '/api/execute/keywordAgent'
     | '/api/execute/lark'
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   ApiExecuteDocProcessRoute: typeof ApiExecuteDocProcessRoute
   ApiExecuteEmbedRoute: typeof ApiExecuteEmbedRoute
   ApiExecuteFileWriteRoute: typeof ApiExecuteFileWriteRoute
+  ApiExecuteKeywordAgentRoute: typeof ApiExecuteKeywordAgentRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
   ApiExecuteLarkWikiTraversalRoute: typeof ApiExecuteLarkWikiTraversalRoute
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
@@ -461,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecuteLarkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/execute/keywordAgent': {
+      id: '/api/execute/keywordAgent'
+      path: '/api/execute/keywordAgent'
+      fullPath: '/api/execute/keywordAgent'
+      preLoaderRoute: typeof ApiExecuteKeywordAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/execute/fileWrite': {
       id: '/api/execute/fileWrite'
       path: '/api/execute/fileWrite'
@@ -565,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteDocProcessRoute: ApiExecuteDocProcessRoute,
   ApiExecuteEmbedRoute: ApiExecuteEmbedRoute,
   ApiExecuteFileWriteRoute: ApiExecuteFileWriteRoute,
+  ApiExecuteKeywordAgentRoute: ApiExecuteKeywordAgentRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
   ApiExecuteLarkWikiTraversalRoute: ApiExecuteLarkWikiTraversalRoute,
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,

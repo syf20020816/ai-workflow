@@ -25,6 +25,7 @@ import { ToolsPanel } from './panel/tools'
 import { MemoryNode } from './node/ai/memory'
 import { KnowledgeRetrievalNode } from './node/ai/knowledgeRetrieval'
 import { KnowledgeStoreNode } from './node/ai/knowledgeStore'
+import { KeywordAgentNode } from './node/ai/keywordAgent'
 import { LarkWikiTraversalNode } from './node/ai/larkWikiTraversal'
 import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
@@ -47,6 +48,7 @@ export const NODE_TYPES = {
   memory: MemoryNode,
   knowledgeRetrieval: KnowledgeRetrievalNode,
   knowledgeStore: KnowledgeStoreNode,
+  keywordAgent: KeywordAgentNode,
   larkWikiTraversal: LarkWikiTraversalNode,
 }
 
@@ -69,6 +71,7 @@ export const NODE_COLORS = {
   knowledgeRetrieval: '#52c41a',
   knowledgeStore: '#52c41a',
   larkWikiTraversal: '#1677ff',
+  keywordAgent: '#985debff',
 }
 
 const EDGE_TYPES = {

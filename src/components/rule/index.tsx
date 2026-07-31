@@ -431,7 +431,7 @@ const ModelTab = ({ loading }: { loading: boolean }) => {
             </Form.Item>
             <span>~</span>
             <Form.Item name={['token', 'max']} label="最大 Token">
-              <InputNumber min={0} max={128000} style={{ width: 120 }} />
+              <InputNumber min={0} max={307200} style={{ width: 120 }} />
             </Form.Item>
           </Space>
         </Form>

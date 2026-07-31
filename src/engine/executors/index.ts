@@ -15,6 +15,7 @@ import { larkTemplateExecutor } from './larkTemplate'
 import { knowledgeRetrievalExecutor } from './knowledgeRetrieval'
 import { knowledgeStoreExecutor } from './knowledgeStore'
 import { larkWikiTraversalExecutor } from './larkWikiTraversal'
+import { keywordAgentExecutor } from './keywordAgent'
 import { NodeTypes } from '#/types'
 
 /** 节点类型 → 执行器映射 */
@@ -37,6 +38,7 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.KNOWLEDGE_RETRIEVAL]: knowledgeRetrievalExecutor,
   [NodeTypes.KNOWLEDGE_STORE]: knowledgeStoreExecutor,
   [NodeTypes.LARK_WIKI_TRAVERSAL]: larkWikiTraversalExecutor,
+  [NodeTypes.KEYWORD_AGENT]: keywordAgentExecutor,
 }
 
 /** 根据节点类型获取执行器 */
@@ -68,4 +70,5 @@ export {
   knowledgeRetrievalExecutor,
   knowledgeStoreExecutor,
   larkWikiTraversalExecutor,
+  keywordAgentExecutor,
 }

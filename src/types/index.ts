@@ -19,6 +19,7 @@ export const NodeTypes = {
   KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
   KNOWLEDGE_STORE: 'knowledgeStore',
   LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
+  KEYWORD_AGENT: 'keywordAgent',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -241,7 +242,7 @@ export type NKnowledgeRetrievalData = NNode & {
   collectionName?: string
   /** 多集合名称（新版） */
   collectionNames?: string[]
-  /** 搜索查询文本 */
+  /** 搜索查询文本（留空则使用上游输入或 AI 自动生成） */
   query?: string
   /** 返回结果数量，默认 5 */
   topK?: number
@@ -260,6 +261,16 @@ export type NKnowledgeRetrievalData = NNode & {
     score: number
     payload?: Record<string, any>
   }>
+  /** 最大检索次数（默认 40）：无显式 query 时由 AI 自动生成多种查询进行多次搜索 */
+  maxRetrievals?: number
+  /** AI 模型配置（用于自动生成搜索查询） */
+  modal?: {
+    name: string
+    key: string
+    url: string
+    token: { min: number; max: number }
+    alias?: string
+  }
 }
 
 export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
@@ -301,9 +312,29 @@ export type NLarkWikiTraversalData = NNode & {
 
 export type NLarkWikiTraversal = Node<NLarkWikiTraversalData, typeof NodeTypes.LARK_WIKI_TRAVERSAL>
 
+/** 关键词提取节点：调用 AI 从上游内容中提取关键词列表 */
+export type NKeywordAgentData = NNode & {
+  /** 模型配置 */
+  modal?: {
+    name?: string
+    key?: string
+    url?: string
+    token?: { min: number; max: number }
+    alias?: string
+  }
+  /** 关键词输出格式（JSON 模板） */
+  format?: string
+  /** 执行结果 - 提取到的关键词数组 */
+  keywords?: string[]
+  /** 执行输出 */
+  output?: string
+}
+
+export type NKeywordAgent = Node<NKeywordAgentData, typeof NodeTypes.KEYWORD_AGENT>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
-  | NLarkWikiTraversal
+  | NLarkWikiTraversal | NKeywordAgent
 > | null

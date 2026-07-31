@@ -137,6 +137,10 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     set({
       nodes: [],
       edges: [],
+      workflowId: `workflow_${Date.now()}`,
+      currentNode: null,
+      pinnedNodes: {},
+      pipelineContext: createPipelineContext(),
     })
   },
   removeEdge: (edgeId) => {

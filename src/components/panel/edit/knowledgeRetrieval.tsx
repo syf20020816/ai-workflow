@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNodeStore } from '#/store/node'
+import { useModelStore } from '#/store/model'
 import type { NKnowledgeRetrieval, NKnowledgeRetrievalData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Space, Button, Input, Tooltip, Tag } from 'antd'
-import { PlusOutlined, DeleteOutlined, FilterOutlined } from '@ant-design/icons'
+import { Typography, Select, Space, Button, Input, Tooltip, Tag, Divider } from 'antd'
+import { PlusOutlined, DeleteOutlined, FilterOutlined, RobotOutlined } from '@ant-design/icons'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 
@@ -19,8 +20,16 @@ export const EditKnowledgeRetrieval = () => {
   ) as NodeProps<NKnowledgeRetrieval>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
+  const models = useModelStore((state) => state.models)
+  const fetchModels = useModelStore((state) => state.fetchModels)
+
   const [collections, setCollections] = useState<string[]>([])
   const [loadingCollections, setLoadingCollections] = useState(false)
+
+  // 加载模型列表
+  useEffect(() => {
+    fetchModels()
+  }, [fetchModels])
 
   // 加载集合列表
   useEffect(() => {
@@ -49,6 +58,9 @@ export const EditKnowledgeRetrieval = () => {
     : currentNode.data.collectionName
       ? [currentNode.data.collectionName]
       : []
+
+  // 当前选中的模型 ID
+  const selectedModelId = currentNode.data.modal?.name || undefined
 
   // 筛选条件
   const filters = currentNode.data.filters || []
@@ -82,7 +94,9 @@ export const EditKnowledgeRetrieval = () => {
       key: 'query',
       label: '查询文本',
       value: currentNode.data.query,
-      placeholder: '输入搜索关键词，或留空从上游节点获取',
+      placeholder: currentNode.data.modal?.url
+        ? '留空则由 AI 自动生成多种查询进行检索'
+        : '输入搜索关键词，或留空从上游节点获取',
       inputType: 'textArea',
       rows: 2,
     },
@@ -105,6 +119,15 @@ export const EditKnowledgeRetrieval = () => {
       max: 1,
       step: 0.05,
     },
+    {
+      key: 'maxRetrievals',
+      label: '最大检索次数',
+      value: currentNode.data.maxRetrievals,
+      placeholder: '40',
+      inputType: 'number',
+      min: 1,
+      max: 200,
+    },
   ]
 
   return (
@@ -122,7 +145,6 @@ export const EditKnowledgeRetrieval = () => {
             const data = d(draft)
             if (key === 'collectionNames') {
               data.collectionNames = (value || []) as string[]
-              // 同步兼容旧字段
               if (data.collectionNames.length === 1) {
                 data.collectionName = data.collectionNames[0]
               } else {
@@ -134,10 +156,61 @@ export const EditKnowledgeRetrieval = () => {
               data.topK = (value ?? 5) as number
             } else if (key === 'scoreThreshold') {
               data.scoreThreshold = (value ?? 0) as number
+            } else if (key === 'maxRetrievals') {
+              data.maxRetrievals = (value ?? 40) as number
             }
           })
         }}
       />
+
+      {/* ===== AI 模型配置 ===== */}
+      <Divider style={{ margin: '12px 0', fontSize: 12 }}>AI 模型（自动生成查询）</Divider>
+      <div style={{ marginBottom: 12, padding: '0 4px' }}>
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          配置后，当「查询文本」为空时，AI 会根据上游上下文自动生成多种查询进行多次检索
+        </Text>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
+        <Space align="center" style={{ width: '100%' }}>
+          <RobotOutlined style={{ color: '#888', fontSize: 12 }} />
+          <Select
+            style={{ flex: 1 }}
+            size="small"
+            placeholder="选择模型（可选）"
+            value={selectedModelId}
+            notFoundContent="暂无模型，请先在「规则与模型」中添加"
+            options={models.map((m) => ({
+              label: `${m.name} (${m.modelName})`,
+              value: m.name,
+            }))}
+            onChange={(modelName) => {
+              const model = models.find((m) => m.name === modelName)
+              if (model) {
+                patchCurrentNode((draft) => {
+                  const data = d(draft)
+                  data.modal = {
+                    name: model.modelName,
+                    key: model.apiKey || '',
+                    url: model.url || '',
+                    token: model.token || { min: 100, max: 4096 },
+                  }
+                })
+              } else {
+                patchCurrentNode((draft) => {
+                  d(draft).modal = undefined
+                })
+              }
+            }}
+            allowClear
+            onClear={() => {
+              patchCurrentNode((draft) => {
+                d(draft).modal = undefined
+              })
+            }}
+          />
+        </Space>
+      </div>
 
       {/* ===== 筛选条件区域 ===== */}
       <div style={{ marginTop: 16 }}>

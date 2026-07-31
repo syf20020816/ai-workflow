@@ -1,0 +1,78 @@
+{
+  "name": "测试keywordAgent",
+  "id": "测试keywordAgent",
+  "nodes": [
+    {
+      "id": "87983a32-d8eb-48f4-ba05-c426b310e748",
+      "position": {
+        "x": 204.5,
+        "y": -38.5
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": true,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "keywordAgent",
+      "data": {
+        "title": "关键词提取节点",
+        "format": "{\n  \"keywords\": string[]\n}",
+        "modal": {
+          "name": "qwen3.5:4b",
+          "key": "",
+          "url": "http://localhost:11434",
+          "token": {
+            "min": 100,
+            "max": 8000
+          },
+          "alias": "Qwen3.5:4b"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 58
+      }
+    },
+    {
+      "id": "963f8e52-da41-42e3-b5db-192721c6f8db",
+      "position": {
+        "x": -21,
+        "y": -38.5
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 400,
+      "positionAbsoluteY": 0,
+      "type": "userInput",
+      "data": {
+        "title": "用户输入节点",
+        "input": {
+          "label": "<title>技术文档模版</title>\\n\\n<table><colgroup><col/><col/></colgroup><tbody><tr><td>所属业务</td><td>小陪伴</td></tr><tr><td>需求负责人</td><td>产品：<br/>开发：<cite type=\\\"user\\\" user-id=\\\"ou_353b26e8544025110f3a44e258a7817e\\\" user-name=\\\"盛逸飞(Will)\\\"></cite></td></tr><tr><td>需求文档</td><td>https://lizhi2021.feishu.cn/wiki/QMYowXgcxioGgCk8lPJc231unSc</td></tr><tr><td>设计稿</td><td>https://www.figma.com/design/rC9RofNFGAd4l6fVhvo3ME/%E5%B0%8F%E9%99%AA%E4%BC%B4-%E7%BB%84%E4%BB%B6?node-id=4585-100</td></tr><tr><td>埋点</td><td>https://lizhi2021.feishu.cn/wiki/wikcnqNCMs5KrtSiewTqPGLP6qh</td></tr><tr><td>飞书项目迭代地址</td><td></td></tr><tr><td>灯塔迭代</td><td></td></tr><tr><td>部署地址</td><td></td></tr><tr><td>分支</td><td></td></tr><tr><td>接口文档</td><td></td></tr></tbody></table>\\n\\n# 项目\\n小陪伴-占领者玩法前端开发\\n\\n## 说明\\n1. 改造Groot系统黑叶点亮组件，新增全局维度统计点亮能力，支持配置全局占领者展示规则\\n2. H5活动页点亮组件新增占领者渲染逻辑，支持展示全站首位获得点亮积分的用户/CP/多人队伍头像、昵称信息，未占领时显示占位图+「虚位以待」默认文案\\n3. 新增占领者头像点击跳转个人主页交互，适配个人/CP赛/多人赛三种点亮维度的展示规则\\n\\n## 组件/文件修改\\n\\n| 修改组件 | 黑叶点亮组件 |\\n|-|-|\\n| 修改文件 | 1. Groot端：`src/components/light-up/index.vue`（组件渲染主文件）<br/>2. Groot端：`src/components/light-up/config.vue`（组件配置面板文件）<br/>3. H5端：`src/views/activity/components/light-up/index.vue`（H5活动页点亮组件渲染文件） |\\n| 改动说明 | 1. Groot配置面板新增字段：统计范围（普通/全局）、点亮维度（个人/CP赛/多人赛）、占领者配置（开关/样式/缩放/位置/昵称颜色）<br/>2. 新增配置联动逻辑：统计范围选「全局」时展示点亮维度、占领者配置字段，选「普通」时隐藏相关字段<br/>3. 组件渲染逻辑新增全局维度支持，根据配置拉取对应维度的全局占领者信息渲染<br/>4. 新增未占领状态占位规则：头像取配置昵称颜色加固定透明度+问号图标，昵称显示「虚位以待」<br/>5. 新增占领者头像点击跳转个人主页交互 |\\n| 图例 | 见需求文档对应图示、Figma设计稿 |\\n\\n## 接口\\n\\n| 接口名称 | 函数 | 方法 | URL | 参数 | 调用时机 |\\n|-|-|-|-|-|-|\\n| 获取全局点亮占领者信息 | getGlobalLightOccupier | GET |  | activityId: 活动ID<br/>lightPointId: 点亮点位ID<br/>dimension: 点亮维度(个人/CP赛/多人赛) | 点亮组件初始化渲染时 |\\n| 保存点亮组件配置 | saveLightComponentConfig | POST |  | 组件全量配置字段（含新增的统计范围、点亮维度、占领者配置字段） | Groot后台运营点击保存组件配置时 |\\n|  |  |  |  |  |  |"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 58
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "963f8e52-da41-42e3-b5db-192721c6f8db",
+      "target": "87983a32-d8eb-48f4-ba05-c426b310e748",
+      "type": "nodeEdge",
+      "id": "xy-edge__963f8e52-da41-42e3-b5db-192721c6f8db-87983a32-d8eb-48f4-ba05-c426b310e748"
+    }
+  ],
+  "createdAt": "2026-07-30T10:14:06.360Z",
+  "updatedAt": "2026-07-30T10:14:06.360Z"
+}

@@ -45,7 +45,12 @@ export const agentExecutor: NodeExecutor = {
       contentBlocks.push(`【输出格式模板】\n${(input as any).templateContent}`)
     }
 
-    // 3. 扫描所有输入值，收集可能的内容块（处理多个同名节点覆盖问题）
+    // 3. 知识库检索结果（单独处理，避免被 JSON.stringify 兜底时撑爆上下文）
+    if ((input as any).retrievalContent) {
+      contentBlocks.push(`【知识库检索结果】\n${(input as any).retrievalContent}`)
+    }
+
+    // 4. 扫描所有输入值，收集可能的内容块（处理多个同名节点覆盖问题）
     const skipKeys = new Set([
       'text', 'prompt', 'response', 'analysis', 'result',
       'model', 'usage', 'role', 'modal',
@@ -55,6 +60,7 @@ export const agentExecutor: NodeExecutor = {
       'url', 'action', 'success',
       'fromCodeNode', 'codeStatus', 'codeMode',
       'codeFile', 'codeBranch', 'codeError',
+      'retrievalContent', // 已在上面单独处理，避免被 JSON.stringify 兜底
     ])
     for (const [key, val] of Object.entries(input)) {
       if (typeof val === 'string' && val.length > 50 && !skipKeys.has(key)) {
@@ -66,7 +72,7 @@ export const agentExecutor: NodeExecutor = {
     }
 
     // 限制内容块总长度，防止超出模型上下文窗口
-    const MAX_CONTENT_LENGTH = 6000
+    const MAX_CONTENT_LENGTH = 30000
     let totalContentLength = 0
     const truncatedBlocks = contentBlocks.filter((b) => {
       totalContentLength += b.length
