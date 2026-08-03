@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { Node, Edge } from '@xyflow/react'
 import { parseBmadSkillsCsv, parseBmadAgents, groupSkillsByPhase } from '#/engine/bmad/parser'
 import { mapWorkflowToBmad, analyzeWorkflowPhase } from '#/engine/bmad/mapper'
+import { callAI } from '#/services/ai'
 
 /**
  * BMad 执行 API
@@ -262,81 +263,51 @@ export const Route = createFileRoute('/api/execute/bmad')({
               ? `${bmadContext}\n\n${systemPrompt}`
               : bmadContext
 
-            // 调用 AI API（与 agent 路由相同的逻辑）
-            const requestBody: Record<string, any> = {
-              model: model.modelName,
-              messages: [],
-              temperature: temperature ?? 0.3,
-            }
+            // 调用 AI（统一服务自动适配 Chat Completions / Responses API）
+            logs.push(`调用 AI 模型: ${model.modelName}`)
+            logs.push(`BMad 上下文已注入 (${skills.length} 个技能定义)`)
 
-            if (fullSystemPrompt) {
-              requestBody.messages.push({ role: 'system', content: fullSystemPrompt })
-            }
-
-            for (const msg of messages || []) {
-              requestBody.messages.push(msg)
-            }
-
-            if (requestBody.messages.length === 0) {
-              requestBody.messages.push({
+            const callMessages = [...(messages || [])]
+            if (callMessages.length === 0) {
+              callMessages.push({
                 role: 'user',
                 content: body.input || '请执行 BMad 工作流任务...',
               })
             }
 
-            if (model.token?.max) {
-              requestBody.max_tokens = model.token.max
-            }
+            try {
+              const result = await callAI({
+                model: {
+                  name: model.modelName,
+                  key: model.apiKey,
+                  url: model.url,
+                  token: model.token,
+                },
+                systemPrompt: fullSystemPrompt,
+                messages: callMessages,
+                temperature: temperature ?? 0.3,
+              })
 
-            const headers: Record<string, string> = {
-              'Content-Type': 'application/json',
-            }
-            if (model.apiKey) {
-              headers['Authorization'] = `Bearer ${model.apiKey}`
-            }
+              logs.push(`AI 响应完成 (tokens: ${result.usage?.totalTokens || 'unknown'})`)
 
-            const apiUrl = (model.url.replace(/\/+$/, '') + '/v1/chat/completions')
-
-            logs.push(`调用 AI 模型: ${model.modelName}`)
-            logs.push(`BMad 上下文已注入 (${skills.length} 个技能定义)`)
-
-            const res = await fetch(apiUrl, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify(requestBody),
-            })
-
-            if (!res.ok) {
-              const errText = await res.text()
-              logs.push(`API 返回错误: ${res.status}`)
+              return Response.json({
+                status: 'success',
+                output: {
+                  response: result.text,
+                  model: model.modelName,
+                  usage: result.usage,
+                },
+                logs,
+              })
+            } catch (err: any) {
+              logs.push(`API 调用异常: ${err.message}`)
               return Response.json({
                 status: 'error',
                 output: {},
                 logs,
-                error: `AI API 调用失败: ${res.status} ${errText.slice(0, 200)}`,
+                error: `AI API 调用失败: ${err.message}`,
               })
             }
-
-            const data = await res.json()
-            const content = data.choices?.[0]?.message?.content || ''
-
-            logs.push(`AI 响应完成 (tokens: ${data.usage?.total_tokens || 'unknown'})`)
-
-            return Response.json({
-              status: 'success',
-              output: {
-                response: content,
-                model: model.modelName,
-                usage: data.usage
-                  ? {
-                      promptTokens: data.usage.prompt_tokens,
-                      completionTokens: data.usage.completion_tokens,
-                      totalTokens: data.usage.total_tokens,
-                    }
-                  : undefined,
-              },
-              logs,
-            })
           }
 
           // === 未知操作 ===

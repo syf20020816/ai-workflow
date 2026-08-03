@@ -59,9 +59,21 @@ export const EditPanel = (props: PanelProps) => {
   const [activeKey, setActiveKey] = useState<ActiveKey>('editor')
   const [loadOpen, setLoadOpen] = useState(false)
   const [pinnedList, setPinnedList] = useState<
-    { nodeType: string; title: string; savedAt: string }[]
+    { nodeType: string; nodeId: string; title: string; savedAt: string }[]
   >([])
   const [selectedPin, setSelectedPin] = useState<string | null>(null)
+
+  // 固定选项：value 用 nodeId 唯一标识；同一 nodeType 有多份时在 label 上追加短 nodeId 区分
+  const pinOptions = useMemo(() => {
+    const counts = pinnedList.reduce<Record<string, number>>((acc, p) => {
+      acc[p.nodeType] = (acc[p.nodeType] || 0) + 1
+      return acc
+    }, {})
+    return pinnedList.map((p) => ({
+      value: p.nodeId,
+      label: `${p.title}（${p.nodeType}${counts[p.nodeType] > 1 ? ' · ' + p.nodeId.slice(0, 8) : ''}）`,
+    }))
+  }, [pinnedList])
 
   const items: TabsProps['items'] = [
     {
@@ -161,14 +173,19 @@ export const EditPanel = (props: PanelProps) => {
                         message.warning('请选择一个固定节点')
                         return
                       }
-                      const res = await fetch(
-                        `/api/workflow/pin?nodeType=${encodeURIComponent(selectedPin)}`,
-                      )
+                      const pin = pinnedList.find((p) => p.nodeId === selectedPin)
+                      if (!pin) {
+                        message.error('固定节点不存在')
+                        return
+                      }
+                      const params = new URLSearchParams({ nodeType: pin.nodeType })
+                      params.set('nodeId', pin.nodeId)
+                      const res = await fetch(`/api/workflow/pin?${params.toString()}`)
                       const json = await res.json()
                       if (json.status === 'success') {
                         loadPinnedNode(currentNode.id, json.data.output)
                         message.success(
-                          `已加载固定节点: ${json.data.title || selectedPin}`,
+                          `已加载固定节点: ${json.data.title || pin.nodeType}`,
                         )
                         setLoadOpen(false)
                       } else {
@@ -181,10 +198,7 @@ export const EditPanel = (props: PanelProps) => {
                       placeholder="选择要加载的固定节点"
                       value={selectedPin}
                       onChange={setSelectedPin}
-                      options={pinnedList.map((p) => ({
-                        value: p.nodeType,
-                        label: `${p.title}（${p.nodeType}）`,
-                      }))}
+                      options={pinOptions}
                     />
                     {selectedPin && (
                       <Button
@@ -193,8 +207,10 @@ export const EditPanel = (props: PanelProps) => {
                         size="small"
                         style={{ marginTop: 8, padding: 0 }}
                         onClick={async () => {
-                          await deletePinnedFile(selectedPin)
-                          message.success(`已删除固定文件: ${selectedPin}`)
+                          const pin = pinnedList.find((p) => p.nodeId === selectedPin)
+                          if (!pin) return
+                          await deletePinnedFile(pin.nodeType, pin.nodeId)
+                          message.success(`已删除固定文件: ${pin.title}`)
                           // 刷新列表
                           const res = await fetch('/api/workflow/pin')
                           const json = await res.json()

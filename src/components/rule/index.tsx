@@ -83,8 +83,14 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
     setL(true)
     try {
       const res = await window.fetch('/api/workflows')
-      if (res.ok) setList(await res.json())
-      else console.error('load workflow list failed:', res.status)
+      if (res.ok) {
+        const data = await res.json()
+        setList(data)
+        // 预加载有版本记录的行的版本列表，使最新版本默认可选
+        ;(data || []).forEach((row: any) => {
+          if (row.versionCount > 0) loadVersions(row.id)
+        })
+      } else console.error('load workflow list failed:', res.status)
     } catch (err) {
       console.error('load workflow list error:', err)
     } finally {
@@ -118,10 +124,9 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
     }
   }
 
-  // 加载某工作流的版本列表
-  const loadVersions = async (workflowId: string) => {
-    const existing = versionMap[workflowId]
-    if (existing) return // 已加载
+  // 加载某工作流的版本列表（force=true 时强制重新拉取）
+  const loadVersions = async (workflowId: string, force = false) => {
+    if (!force && versionMap[workflowId]) return // 已加载
     setLoadingVersions((prev) => ({ ...prev, [workflowId]: true }))
     try {
       const res = await fetch(`/api/workflow/versions?id=${workflowId}`)
@@ -136,6 +141,35 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       /* 静默 */
     }
     setLoadingVersions((prev) => ({ ...prev, [workflowId]: false }))
+  }
+
+  // 删除某个历史版本
+  const handleDeleteVersion = async (workflowId: string, versionId: string) => {
+    Modal.confirm({
+      title: `确认删除版本 "${versionId}"？`,
+      okText: '删除',
+      okType: 'danger',
+      onOk: async () => {
+        const res = await fetch(
+          `/api/workflow/versions?id=${encodeURIComponent(workflowId)}&versionId=${encodeURIComponent(versionId)}`,
+          { method: 'DELETE' },
+        )
+        if (res.ok) {
+          message.success('版本已删除')
+          // 若删除的是当前选中的版本，清空选中
+          setSelectedVersion((prev) => {
+            if (prev[workflowId] !== versionId) return prev
+            const next = { ...prev }
+            delete next[workflowId]
+            return next
+          })
+          await loadVersions(workflowId, true)
+          loadList()
+        } else {
+          message.error('删除版本失败')
+        }
+      },
+    })
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -180,9 +214,9 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
       title: '版本',
       dataIndex: 'versionCount',
       key: 'versionCount',
-      width: 160,
+      width: 260,
       render: (vc: number, r: any) => {
-        const versions = versionMap[r.id]
+        const versions = versionMap[r.id] || []
         const sel = selectedVersion[r.id]
         if (vc === 0)
           return (
@@ -190,28 +224,55 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
               latest
             </Text>
           )
+        // 按创建时间倒序，最新版本排在首位并标记为 latest
+        const sortedVersions = [...versions].sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        const effectiveValue = sel || sortedVersions[0]?.versionId
         return (
           <Select
-            style={{ width: 140 }}
+          
+            style={{ width: "100%" }}
             placeholder={vc > 0 ? `共 ${vc} 个版本` : 'latest'}
             loading={loadingVersions[r.id]}
-            value={sel || 'latest'}
+            value={effectiveValue}
             onDropdownVisibleChange={(open) => {
-              if (open) loadVersions(r.id)
+              if (open) loadVersions(r.id, true)
             }}
             onChange={(v) => {
               setSelectedVersion((prev) => ({
                 ...prev,
-                [r.id]: v === 'latest' ? '' : v,
+                [r.id]: v as string,
               }))
             }}
-            options={[
-              { value: 'latest', label: 'latest (最新)' },
-              ...(versions || []).map((v: any) => ({
-                value: v.versionId,
-                label: `${v.versionId} (${v.createdAt ? new Date(v.createdAt).toLocaleDateString() : ''})`,
-              })),
-            ]}
+            options={sortedVersions.map((v: any, idx: number) => ({
+              value: v.versionId,
+              label: `${idx === 0 ? 'latest · ' : ''} ${v.createdAt ? new Date(v.createdAt).toLocaleString() : ''}`,
+            }))}
+            optionRender={(option) => (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>{option.data.label}</span>
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  title="删除该历史版本"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDeleteVersion(r.id, String(option.data.value))
+                  }}
+                />
+              </div>
+            )}
           />
         )
       },
@@ -237,7 +298,11 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
             title="加载"
             kind="exec"
             onClick={() =>
-              handleLoad(r.id, r.name, selectedVersion[r.id] || undefined)
+              handleLoad(
+                r.id,
+                r.name,
+                selectedVersion[r.id] || versionMap[r.id]?.[0]?.versionId || undefined,
+              )
             }
           ></EditButton>
           <EditButton

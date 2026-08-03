@@ -5,6 +5,7 @@ import { z } from 'zod'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
+import { extractBaseUrl } from '#/services/ai'
 
 /**
  * CodeAgent API
@@ -34,20 +35,6 @@ async function loadSystemPrompt(projectPath?: string): Promise<string> {
   return basePrompt
 }
 
-/** 从模型 URL 中提取 OpenAI 兼容的 base URL */
-function extractBaseUrl(rawUrl: string): string {
-  let url = rawUrl
-    .replace(/\/chat\/completions\/?$/i, '')
-    .replace(/\/responses\/?$/i, '')
-    .replace(/\/+$/, '')
-  // 仅当 URL 末尾没有 API 版本号（如 v1, v2, v3）时才补 /v1
-  const lastSegment = url.split('/').pop() || ''
-  if (!/^v\d+$/i.test(lastSegment)) {
-    url += '/v1'
-  }
-  return url
-}
-
 /** 安全校验：检查路径穿越 */
 function isPathSafe(filePath: string): boolean {
   return !filePath.includes('..')
@@ -70,13 +57,25 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
         let enrichedInstruction = instruction
         if (upstreamContext) {
           const parts: string[] = []
-          // 优先使用上游的 response（需求分析/技术方案文本）
+          const upstreams: any[] = upstreamContext.upstreams || []
+          // 优先使用上游的 response（二次分析的变更范围分析）
           if (upstreamContext.response) {
-            parts.push(`## 上游需求分析\n${upstreamContext.response}`)
+            parts.push(`## 需求变更范围分析\n${upstreamContext.response}`)
+          } else {
+            // 回退：从祖先链中找第一个智能体节点的 response（如需求分析）
+            const agentUpstream = upstreams.find((u: any) => typeof u.response === 'string' && u.response)
+            if (agentUpstream) {
+              parts.push(`## 需求分析\n${agentUpstream.response}`)
+            }
           }
-          // 如果有模板内容，也传给 AI 作为输出格式参考
-          if (upstreamContext.templateContent) {
-            parts.push(`## 推荐输出格式\n请参考以下模板结构组织你的分析结果：\n${upstreamContext.templateContent}`)
+          // 输出格式模板：优先顶层，其次从祖先链中查找（模板节点可能不在直接前驱中）
+          let templateContent = upstreamContext.templateContent
+          if (!templateContent) {
+            const templateUpstream = upstreams.find((u: any) => typeof u.templateContent === 'string' && u.templateContent)
+            templateContent = templateUpstream?.templateContent
+          }
+          if (templateContent) {
+            parts.push(`## 推荐输出格式\n请参考以下模板结构组织你的分析结果：\n${templateContent}`)
           }
           if (parts.length > 0) {
             enrichedInstruction = `${instruction}\n\n## 需求分析与代码分析结合\n以下是上游输出的需求分析结果，请基于这些需求去探索代码仓库，找出需要修改的组件、文件、接口，并输出一份完整的技术方案文档。\n\n${parts.join('\n\n')}`

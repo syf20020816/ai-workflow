@@ -1,4 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { callAI } from '#/services/ai'
 
 /** 调用嵌入 API 将文本转为向量 */
 async function doEmbed(text: string): Promise<{ vector: number[]; dimensions: number }> {
@@ -62,32 +63,27 @@ async function generateQueries(
   // 附加输出格式指令，确保解析兼容
   const systemPrompt = `${basePrompt}\n\nOutput format:\n- Generate up to ${maxRetrievals} queries, one per line\n- Do NOT number the queries\n- Do NOT add any explanation or commentary\n- Output ONLY the queries, one per line`
 
-  const apiUrl = (modal.url.replace(/\/+$/, '') + '/v1/chat/completions')
   logs.push(`正在调用 AI 生成搜索查询...`)
 
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(modal.key ? { Authorization: `Bearer ${modal.key}` } : {}),
-    },
-    body: JSON.stringify({
-      model: modal.name,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate search queries for the following context:\n\n${context.slice(0, 3000)}` },
-      ],
-      temperature: 0.7,
-    }),
-  })
+  const userText = `Generate search queries for the following context:\n\n${context.slice(0, 3000)}`
 
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`AI 调用失败: ${res.status} ${errText.slice(0, 200)}`)
+  let content: string
+  try {
+    const result = await callAI({
+      model: {
+        name: modal.name,
+        key: modal.key,
+        url: modal.url,
+      },
+      systemPrompt,
+      prompt: userText,
+      temperature: 0.7,
+    })
+    content = result.text
+  } catch (err: any) {
+    throw new Error(`AI 调用失败: ${err.message}`)
   }
 
-  const data = await res.json()
-  const content = data.choices?.[0]?.message?.content || ''
   const queries = content
     .split('\n')
     .map((l: string) => l.trim())

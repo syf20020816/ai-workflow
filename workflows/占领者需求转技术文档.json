@@ -61,7 +61,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": false,
+      "selected": true,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 506,
@@ -70,9 +70,9 @@
       "data": {
         "title": "智能体节点",
         "modal": {
-          "name": "doubao-seed-2-0-code-preview-260215",
+          "name": "deepseek-v4-pro-260425",
           "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
           "token": {
             "min": 100,
             "max": 128000
@@ -178,7 +178,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": true,
+      "selected": false,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 767.5725,
@@ -191,9 +191,9 @@
         "maxIterations": 20,
         "branch": "master",
         "modal": {
-          "name": "doubao-seed-2-0-code-preview-260215",
+          "name": "deepseek-v4-pro-260425",
           "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
           "token": {
             "min": 100,
             "max": 128000
@@ -291,14 +291,14 @@
         "title": "关键词提取节点",
         "format": "{\n  \"keywords\": string[]\n}",
         "modal": {
-          "name": "doubao-seed-2-0-code-preview-260215",
+          "name": "deepseek-v4-pro-260425",
           "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
           "token": {
             "min": 100,
             "max": 128000
           },
-          "alias": "DoubaoSeedCode2"
+          "alias": "DeepSeekV4"
         }
       },
       "measured": {
@@ -326,9 +326,9 @@
         "title": "二次分析",
         "modal": {
           "alias": "",
-          "name": "doubao-seed-2-0-code-preview-260215",
+          "name": "deepseek-v4-pro-260425",
           "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
           "token": {
             "min": 100,
             "max": 128000
@@ -442,6 +442,6 @@
       "id": "xy-edge__df1eedd5-3f3b-4050-bd7b-b0549000eb77-a6248197-8918-4430-8b90-b1b5157e0504"
     }
   ],
-  "createdAt": "2026-08-03T03:20:48.265Z",
-  "updatedAt": "2026-08-03T03:20:48.265Z"
+  "createdAt": "2026-08-03T07:43:45.348Z",
+  "updatedAt": "2026-08-03T07:43:45.348Z"
 }

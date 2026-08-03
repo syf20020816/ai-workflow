@@ -161,6 +161,23 @@ export function getPredecessors(nodeId: string, edges: Edge[]): string[] {
   return edges.filter((e) => e.target === nodeId).map((e) => e.source)
 }
 
+/** 获取节点的所有上游祖先节点 ID（直接+间接，BFS 从近到远） */
+export function getAncestorIds(nodeId: string, edges: Edge[]): string[] {
+  const ancestors: string[] = []
+  const seen = new Set<string>()
+  const queue = getPredecessors(nodeId, edges)
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (seen.has(id)) continue
+    seen.add(id)
+    ancestors.push(id)
+    for (const pred of getPredecessors(id, edges)) {
+      queue.push(pred)
+    }
+  }
+  return ancestors
+}
+
 /** 获取节点的下游节点 ID（直接后继） */
 export function getSuccessors(nodeId: string, edges: Edge[]): string[] {
   return edges.filter((e) => e.source === nodeId).map((e) => e.target)

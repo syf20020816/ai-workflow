@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import fs from 'node:fs'
 import path from 'node:path'
+import { callAI } from '#/services/ai'
 
 /** 关键词提取 API 路由 */
 export const Route = createFileRoute('/api/execute/keywordAgent')({
@@ -37,41 +38,32 @@ export const Route = createFileRoute('/api/execute/keywordAgent')({
         const formatJson = format || '{\n  "keywords": string[]\n}'
         const fullSystemPrompt = `${systemPrompt}\n\nOutput format:\n\`\`\`json\n${formatJson}\`\`\``
 
-        // 3. 调用 AI
-        let apiUrl = modal.url.replace(/\/+$/, '')
-        const hasChatPath = apiUrl.includes('/chat/completions')
-        const hasResponsesPath = apiUrl.includes('/responses')
-        if (!hasChatPath && !hasResponsesPath) {
-          apiUrl += '/v1/chat/completions'
-        }
+        // 3. 调用 AI（统一服务自动适配 Chat Completions / Responses API）
+        const truncatedContent = upstreamContent.slice(0, 5000)
 
-        const aiRes = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(modal.key ? { Authorization: `Bearer ${modal.key}` } : {}),
-          },
-          body: JSON.stringify({
-            model: modal.name,
-            messages: [
-              { role: 'system', content: fullSystemPrompt },
-              { role: 'user', content: `Extract keywords from the following text:\n\n${upstreamContent.slice(0, 5000)}` },
-            ],
+        let content: string
+        try {
+          const result = await callAI({
+            model: {
+              name: modal.name,
+              key: modal.key,
+              url: modal.url,
+              token: modal.token,
+            },
+            systemPrompt: fullSystemPrompt,
+            prompt: `Extract keywords from the following text:\n\n${truncatedContent}`,
             temperature: 0.3,
-            response_format: { type: 'json_object' },
-          }),
-        })
-
-        if (!aiRes.ok) {
-          const errText = await aiRes.text()
+          })
+          content = result.text
+        } catch (err: any) {
           return new Response(
-            JSON.stringify({ status: 'error', error: `AI 调用失败: ${aiRes.status} ${errText.slice(0, 200)}` }),
+            JSON.stringify({
+              status: 'error',
+              error: `AI 调用失败: ${err.message}`,
+            }),
             { status: 500, headers: { 'Content-Type': 'application/json' } },
           )
         }
-
-        const aiData = await aiRes.json()
-        const content = aiData.choices?.[0]?.message?.content || '{}'
 
         // 4. 解析 JSON，提取 keywords
         let keywords: string[] = []

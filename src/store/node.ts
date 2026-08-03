@@ -121,11 +121,11 @@ export interface UseNodeStoreProps {
   loadPinnedNode: (nodeId: string, data: Record<string, any>) => void
   /** 取消固定：仅从内存缓存移除，不删除文件（节点不再注入该输出） */
   unpinNode: (nodeId: string) => void
-  /** 删除固定节点文件（持久化删除，不可恢复，按 nodeType 匹配文件） */
-  deletePinnedFile: (nodeType: string) => Promise<void>
-  /** 列出所有已固定的节点类型（读取文件系统） */
+  /** 删除固定节点文件（持久化删除，不可恢复；nodeId 存在时只删该节点的文件，否则删除该类型所有文件） */
+  deletePinnedFile: (nodeType: string, nodeId?: string) => Promise<void>
+  /** 列出所有已固定的节点（读取文件系统，每个文件一条记录） */
   getPinnedNodeList: () => Promise<
-    { nodeType: string; title: string; savedAt: string }[]
+    { nodeType: string; nodeId: string; title: string; savedAt: string }[]
   >
   /** 从固定节点开始执行（注入已 PIN 的输出，按 nodeId 匹配） */
   runFromWithPinned: (
@@ -419,16 +419,18 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     delete updated[nodeId]
     set({ pinnedNodes: updated })
   },
-  deletePinnedFile: async (nodeType: string) => {
-    // 持久化删除文件（按 nodeType 匹配文件）
-    await fetch(`/api/workflow/pin?nodeType=${encodeURIComponent(nodeType)}`, {
+  deletePinnedFile: async (nodeType: string, nodeId?: string) => {
+    // 持久化删除文件（带 nodeId 只删该节点的文件，否则删除该类型所有文件）
+    const params = new URLSearchParams({ nodeType })
+    if (nodeId) params.set('nodeId', nodeId)
+    await fetch(`/api/workflow/pin?${params.toString()}`, {
       method: 'DELETE',
     })
-    // 清理内存中所有该类型节点的缓存
+    // 清理内存中对应节点的缓存（未指定 nodeId 时清理所有该类型节点）
     const { nodes, pinnedNodes } = get()
     const updated = { ...pinnedNodes }
     for (const node of nodes) {
-      if (node.type === nodeType) {
+      if (node.type === nodeType && (!nodeId || node.id === nodeId)) {
         delete updated[node.id]
       }
     }

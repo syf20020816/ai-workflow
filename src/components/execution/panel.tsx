@@ -1,6 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import styles from './index.module.scss'
-import { Button, Select } from 'antd'
+import { Button, Select, Tooltip } from 'antd'
 import { Play, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 
@@ -77,9 +77,13 @@ export const ExecutionPanel = () => {
           }))}
         />
         {pipelineContext.globalStatus === 'idle' && (
-          <Button type="primary" icon={<Play size={14} />} onClick={handleRun}>
-            运行{selectedPinnedType ? '（用PIN）' : ''}
-          </Button>
+          <Tooltip title={`运行${selectedPinnedType ? '（用PIN）' : ''}`}>
+            <Button
+              type="primary"
+              icon={<Play size={14} />}
+              onClick={handleRun}
+            ></Button>
+          </Tooltip>
         )}
         {pipelineContext.globalStatus !== 'idle' && (
           <Button icon={<RotateCcw size={14} />} onClick={resetExecution}>

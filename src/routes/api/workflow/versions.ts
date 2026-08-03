@@ -111,6 +111,29 @@ export const Route = createFileRoute('/api/workflow/versions')({
 
         return Response.json({ success: true })
       },
+
+      /** 删除指定版本 */
+      DELETE: async (ctx: any) => {
+        const url = new URL(ctx.request.url)
+        const id = url.searchParams.get('id')
+        const versionId = url.searchParams.get('versionId')
+        if (!id || !versionId) {
+          return Response.json({ error: 'Missing id or versionId' }, { status: 400 })
+        }
+
+        const snapshotPath = path.join(VERSIONS_DIR, id, `${versionId}.json`)
+        // 路径穿越防护：校验解析后的路径必须位于版本目录内
+        const resolved = path.resolve(snapshotPath)
+        if (!resolved.startsWith(path.resolve(VERSIONS_DIR))) {
+          return Response.json({ error: 'Invalid path' }, { status: 400 })
+        }
+        if (!fs.existsSync(snapshotPath)) {
+          return Response.json({ error: 'Version not found' }, { status: 404 })
+        }
+        fs.unlinkSync(snapshotPath)
+
+        return Response.json({ success: true })
+      },
     },
   },
 })

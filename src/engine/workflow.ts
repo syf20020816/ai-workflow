@@ -6,8 +6,9 @@ import type {
   NodeExecutionResult,
   LogEntry,
 } from '#/types/engine'
-import { topologicalLayers, getPredecessors, getReachableNodeIds } from './topological'
+import { topologicalLayers, getPredecessors, getAncestorIds, getReachableNodeIds } from './topological'
 import { getExecutor } from './executors'
+import { extractAccumulated } from './accumulate'
 
 /** 从 node.data 中安全提取标题 */
 function getNodeTitle(node: Node): string {
@@ -158,6 +159,27 @@ export async function executeWorkflow(
           const predOutput = ctx.nodeOutputs[predId]
           if (predOutput) {
             Object.assign(input, predOutput)
+          }
+        }
+
+        // 上下文累积：收集所有上游祖先节点的"规范摘要"（按节点类型只提取关键字段），
+        // 供 agent 等节点把整条链路的上下文拼进 prompt，避免线性链路中途丢数据。
+        const ancestorIds = getAncestorIds(nodeId, edges)
+        if (ancestorIds.length > 0) {
+          const upstreams: any[] = []
+          for (const ancId of ancestorIds) {
+            const ancOutput = ctx.nodeOutputs[ancId]
+            const ancNode = nodeMap.get(ancId)
+            if (!ancOutput || !ancNode) continue
+            upstreams.push({
+              nodeId: ancId,
+              nodeType: ancNode.type || '',
+              title: getNodeTitle(ancNode),
+              ...extractAccumulated(ancNode.type || '', ancOutput),
+            })
+          }
+          if (upstreams.length > 0) {
+            input.upstreams = upstreams
           }
         }
 
