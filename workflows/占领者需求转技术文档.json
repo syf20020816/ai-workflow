@@ -70,12 +70,12 @@
       "data": {
         "title": "智能体节点",
         "modal": {
-          "name": "doubao-seed-2-0-pro-260215",
+          "name": "doubao-seed-2-0-code-preview-260215",
           "key": "***REDACTED***",
           "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "token": {
             "min": 100,
-            "max": 109600
+            "max": 128000
           },
           "alias": "Senior Software Engineer"
         }
@@ -172,7 +172,7 @@
       "id": "c9b5e271-313c-47ed-89e6-9b01bc6c99f3",
       "position": {
         "x": 1327.0809629486919,
-        "y": -1.3667045036828966
+        "y": -0.2943660283054186
       },
       "deletable": true,
       "draggable": true,
@@ -191,12 +191,12 @@
         "maxIterations": 20,
         "branch": "master",
         "modal": {
-          "name": "doubao-seed-2-0-pro-260215",
+          "name": "doubao-seed-2-0-code-preview-260215",
           "key": "***REDACTED***",
           "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "token": {
             "min": 100,
-            "max": 109600
+            "max": 128000
           }
         }
       },
@@ -291,14 +291,14 @@
         "title": "关键词提取节点",
         "format": "{\n  \"keywords\": string[]\n}",
         "modal": {
-          "name": "doubao-seed-2-0-pro-260215",
+          "name": "doubao-seed-2-0-code-preview-260215",
           "key": "***REDACTED***",
           "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "token": {
             "min": 100,
-            "max": 109600
+            "max": 128000
           },
-          "alias": "DoubaoSeed2.0-pro"
+          "alias": "DoubaoSeedCode2"
         }
       },
       "measured": {
@@ -326,12 +326,12 @@
         "title": "二次分析",
         "modal": {
           "alias": "",
-          "name": "doubao-seed-2-0-pro-260215",
+          "name": "doubao-seed-2-0-code-preview-260215",
           "key": "***REDACTED***",
           "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "token": {
             "min": 100,
-            "max": 109600
+            "max": 128000
           }
         }
       },
@@ -357,9 +357,9 @@
       "positionAbsoluteY": 27.396222746615713,
       "type": "userInput",
       "data": {
-        "title": "用户输入节点",
+        "title": "二次分析说明",
         "input": {
-          "label": "结合检索向量结果和需求分析进行二次分析，联系历史需求，确定改动范围，是否会影响历史需求等"
+          "label": "结合检索向量结果和需求分析进行二次分析，联系历史需求，确定改动范围，是否会影响历史需求等，注意检索结果为历史需求，需求分析结果为当前新需求"
         }
       },
       "measured": {
@@ -442,6 +442,6 @@
       "id": "xy-edge__df1eedd5-3f3b-4050-bd7b-b0549000eb77-a6248197-8918-4430-8b90-b1b5157e0504"
     }
   ],
-  "createdAt": "2026-07-30T10:38:06.068Z",
-  "updatedAt": "2026-07-30T10:38:06.068Z"
+  "createdAt": "2026-08-03T03:20:48.265Z",
+  "updatedAt": "2026-08-03T03:20:48.265Z"
 }

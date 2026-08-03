@@ -6,27 +6,41 @@ import { useState } from 'react'
 
 export const ExecutionPanel = () => {
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
+  const nodes = useNodeStore((state) => state.nodes)
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
-  const workflowId = useNodeStore((state) => state.workflowId)
-  const pinnedNodes = useNodeStore((state) => state.pinnedNodes)
 
   const [pinnedItems, setPinnedItems] = useState<
-    { nodeId: string; title: string }[]
+    { nodeType: string; title: string }[]
   >([])
-  const [selectedPinnedNode, setSelectedPinnedNode] = useState<string | null>(
+  const [selectedPinnedType, setSelectedPinnedType] = useState<string | null>(
     null,
   )
   const [pinnedLoading, setPinnedLoading] = useState(false)
 
-  const handleRun = () => {
-    if (selectedPinnedNode && selectedPinnedNode in pinnedNodes) {
-      const overrides: Record<string, Record<string, any>> = {}
-      for (const [nid, output] of Object.entries(pinnedNodes)) {
-        if (output) overrides[nid] = output
+  const handleRun = async () => {
+    if (selectedPinnedType) {
+      // 找到当前工作流中第一个同类型节点作为注入目标
+      const matchNode = nodes.find((n) => n.type === selectedPinnedType)
+      if (!matchNode) {
+        runAll()
+        return
       }
-      runFromWithPinned(selectedPinnedNode, overrides)
+      // 从文件系统读取 pin 数据
+      const res = await fetch(
+        `/api/workflow/pin?nodeType=${encodeURIComponent(selectedPinnedType)}`,
+      )
+      const json = await res.json()
+      if (json.status === 'success') {
+        const output = json.data.output
+        // 加载到内存（按 nodeId 隔离，只影响匹配的节点）
+        useNodeStore.getState().loadPinnedNode(matchNode.id, output)
+        // 以该节点为起点，注入 { [nodeId]: output } 执行
+        runFromWithPinned(matchNode.id, { [matchNode.id]: output })
+      } else {
+        runAll()
+      }
     } else {
       runAll()
     }
@@ -37,34 +51,19 @@ export const ExecutionPanel = () => {
       <div className={styles.header}>
         <Select
           style={{ width: '100%' }}
-          placeholder="选择固定节点（可选）"
-          value={selectedPinnedNode}
-          onChange={setSelectedPinnedNode}
+          placeholder="选择固定节点类型（可选）"
+          value={selectedPinnedType}
+          onChange={setSelectedPinnedType}
           allowClear
           loading={pinnedLoading}
           onDropdownVisibleChange={async (open) => {
             if (open) {
               setPinnedLoading(true)
               try {
-                const res = await fetch(
-                  `/api/workflow/pin?workflowId=${workflowId}`,
-                )
+                const res = await fetch('/api/workflow/pin')
                 const json = await res.json()
                 if (json.status === 'success') {
                   setPinnedItems(json.data)
-                  for (const item of json.data) {
-                    if (!(item.nodeId in pinnedNodes)) {
-                      const r = await fetch(
-                        `/api/workflow/pin?workflowId=${workflowId}&nodeId=${item.nodeId}`,
-                      )
-                      const j = await r.json()
-                      if (j.status === 'success') {
-                        useNodeStore
-                          .getState()
-                          .loadPinnedNode(item.nodeId, j.data.output)
-                      }
-                    }
-                  }
                 }
               } catch {
                 // ignore
@@ -73,13 +72,13 @@ export const ExecutionPanel = () => {
             }
           }}
           options={pinnedItems.map((p) => ({
-            value: p.nodeId,
-            label: `${p.title} (${p.nodeId.slice(0, 8)})`,
+            value: p.nodeType,
+            label: `${p.title}（${p.nodeType}）`,
           }))}
         />
         {pipelineContext.globalStatus === 'idle' && (
           <Button type="primary" icon={<Play size={14} />} onClick={handleRun}>
-            运行{selectedPinnedNode ? '（从PIN）' : ''}
+            运行{selectedPinnedType ? '（用PIN）' : ''}
           </Button>
         )}
         {pipelineContext.globalStatus !== 'idle' && (

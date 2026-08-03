@@ -51,7 +51,7 @@ export const UNode = ({ node, children }: UNodeProps) => {
       </div>
       <div className={styles.node_tools}>
         <RunNode nodeId={node.id} />
-        <PinNode nodeId={node.id} title={node.data.title || ''} />
+        <PinNode nodeId={node.id} nodeType={node.type || ''} title={node.data.title || ''} />
         <AddNodeBtn kind={kind} />
       </div>
       <Handle type="source" position={Position.Right} />

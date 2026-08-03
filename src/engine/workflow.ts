@@ -51,12 +51,15 @@ export async function executeWorkflow(
   options?: {
     startNodeId?: string
     userInputs?: Record<string, any>
-    /** 固定节点输出：{ [nodeId]: output }，注入后下游可直接拿到该输出 */
+    /** 固定节点输出：{ [nodeId]: output }，注入后该节点直接使用固定输出，跳过执行 */
     nodeOutputOverrides?: Record<string, Record<string, any>>
   },
 ): Promise<PipelineContext> {
   const ctx = createPipelineContext()
   ctx.globalStatus = 'running'
+
+  // 已注入 PIN 输出的节点 ID（跳过执行）
+  const injectedIds = new Set<string>()
 
   // 找出有连线参与的节点（DAG 中的节点），孤立节点不执行
   const connectedNodeIds = new Set<string>()
@@ -114,12 +117,16 @@ export async function executeWorkflow(
 
   const nodeMap = new Map(checkNodes.map((n) => [n.id, n]))
 
-  // 注入固定节点输出（PIN 节点），使下游可以直接获取
+  // 注入固定节点输出（PIN 节点）：按 nodeId 匹配，只注入用户明确加载了 pin 的节点
   if (options?.nodeOutputOverrides) {
-    for (const [nodeId, output] of Object.entries(options.nodeOutputOverrides)) {
-      ctx.nodeOutputs[nodeId] = output
-      ctx.nodeStatuses[nodeId] = 'success'
-      addLog(ctx, nodeId, nodeMap.get(nodeId) ? getNodeTitle(nodeMap.get(nodeId)!) : '', 'info', '使用固定节点输出（PIN）')
+    for (const [nodeId, override] of Object.entries(options.nodeOutputOverrides)) {
+      const node = nodeMap.get(nodeId)
+      if (node) {
+        ctx.nodeOutputs[nodeId] = override
+        ctx.nodeStatuses[nodeId] = 'success'
+        injectedIds.add(nodeId)
+        addLog(ctx, nodeId, getNodeTitle(node), 'info', '使用固定节点输出（PIN）')
+      }
     }
   }
 
@@ -127,9 +134,7 @@ export async function executeWorkflow(
   let hasWaiting = false
   loop: for (const layer of layers) {
     // 过滤掉已通过 PIN 注入的节点
-    const activeIds = options?.nodeOutputOverrides
-      ? layer.filter((id) => !(id in options.nodeOutputOverrides!))
-      : layer
+    const activeIds = layer.filter((id) => !injectedIds.has(id))
 
     if (activeIds.length === 0) continue
 

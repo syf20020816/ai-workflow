@@ -54,11 +54,12 @@ export const EditPanel = (props: PanelProps) => {
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const deleteCurrentNode = useNodeStore((state) => state.deleteCurrentNode)
   const loadPinnedNode = useNodeStore((state) => state.loadPinnedNode)
+  const deletePinnedFile = useNodeStore((state) => state.deletePinnedFile)
   const workflowId = useNodeStore((state) => state.workflowId)
   const [activeKey, setActiveKey] = useState<ActiveKey>('editor')
   const [loadOpen, setLoadOpen] = useState(false)
   const [pinnedList, setPinnedList] = useState<
-    { nodeId: string; title: string; savedAt: string }[]
+    { nodeType: string; title: string; savedAt: string }[]
   >([])
   const [selectedPin, setSelectedPin] = useState<string | null>(null)
 
@@ -114,14 +115,23 @@ export const EditPanel = (props: PanelProps) => {
                       icon={<Pin size={14} />}
                       block
                       onClick={async () => {
-                        const res = await fetch(
-                          `/api/workflow/pin?workflowId=${workflowId}`,
-                        )
+                        const res = await fetch('/api/workflow/pin')
                         const json = await res.json()
                         if (json.status === 'success' && json.data.length > 0) {
-                          setPinnedList(json.data)
-                          setSelectedPin(null)
-                          setLoadOpen(true)
+                          // 只展示与当前节点类型相同的固定数据
+                          const sameType = json.data.filter(
+                            (p: { nodeType: string }) =>
+                              p.nodeType === currentNode.type,
+                          )
+                          if (sameType.length > 0) {
+                            setPinnedList(sameType)
+                            setSelectedPin(null)
+                            setLoadOpen(true)
+                          } else {
+                            message.info(
+                              `当前节点类型（${currentNode.type}）暂无固定数据`,
+                            )
+                          }
                         } else {
                           message.info(
                             '没有已固定的节点数据，请先执行节点并点击 PIN 按钮',
@@ -152,11 +162,11 @@ export const EditPanel = (props: PanelProps) => {
                         return
                       }
                       const res = await fetch(
-                        `/api/workflow/pin?workflowId=${workflowId}&nodeId=${selectedPin}`,
+                        `/api/workflow/pin?nodeType=${encodeURIComponent(selectedPin)}`,
                       )
                       const json = await res.json()
                       if (json.status === 'success') {
-                        loadPinnedNode(selectedPin, json.data.output)
+                        loadPinnedNode(currentNode.id, json.data.output)
                         message.success(
                           `已加载固定节点: ${json.data.title || selectedPin}`,
                         )
@@ -172,10 +182,39 @@ export const EditPanel = (props: PanelProps) => {
                       value={selectedPin}
                       onChange={setSelectedPin}
                       options={pinnedList.map((p) => ({
-                        value: p.nodeId,
-                        label: `${p.title} (${p.nodeId})`,
+                        value: p.nodeType,
+                        label: `${p.title}（${p.nodeType}）`,
                       }))}
                     />
+                    {selectedPin && (
+                      <Button
+                        color="danger"
+                        variant="link"
+                        size="small"
+                        style={{ marginTop: 8, padding: 0 }}
+                        onClick={async () => {
+                          await deletePinnedFile(selectedPin)
+                          message.success(`已删除固定文件: ${selectedPin}`)
+                          // 刷新列表
+                          const res = await fetch('/api/workflow/pin')
+                          const json = await res.json()
+                          if (json.status === 'success') {
+                            const sameType = json.data.filter(
+                              (p: { nodeType: string }) =>
+                                p.nodeType === currentNode.type,
+                            )
+                            setPinnedList(sameType)
+                            if (sameType.length === 0) {
+                              setLoadOpen(false)
+                            } else {
+                              setSelectedPin(null)
+                            }
+                          }
+                        }}
+                      >
+                        删除该固定文件（不可恢复）
+                      </Button>
+                    )}
                   </Modal>
                 </footer>
               )}

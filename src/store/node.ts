@@ -113,19 +113,21 @@ export interface UseNodeStoreProps {
   workflowId: string
   /** 设置工作流 ID */
   setWorkflowId: (id: string) => void
-  /** 已 PIN 的输出：{ [nodeId]: output } (内存缓存) */
+  /** 已 PIN 的输出：{ [nodeId]: output } (内存缓存，按节点隔离) */
   pinnedNodes: Partial<Record<string, Record<string, any>>>
-  /** 保存当前节点的输出为固定节点 */
+  /** 保存当前节点的输出为固定节点（写入文件并加载到内存缓存） */
   pinNode: (nodeId: string, title: string) => Promise<void>
-  /** 从文件加载固定节点数据到缓存 */
+  /** 从文件加载固定节点数据到内存缓存（按 nodeId 隔离，只影响当前节点） */
   loadPinnedNode: (nodeId: string, data: Record<string, any>) => void
-  /** 删除固定节点 */
-  unpinNode: (nodeId: string) => Promise<void>
-  /** 列出当前工作流的所有固定节点 */
+  /** 取消固定：仅从内存缓存移除，不删除文件（节点不再注入该输出） */
+  unpinNode: (nodeId: string) => void
+  /** 删除固定节点文件（持久化删除，不可恢复，按 nodeType 匹配文件） */
+  deletePinnedFile: (nodeType: string) => Promise<void>
+  /** 列出所有已固定的节点类型（读取文件系统） */
   getPinnedNodeList: () => Promise<
-    { nodeId: string; title: string; savedAt: string }[]
+    { nodeType: string; title: string; savedAt: string }[]
   >
-  /** 从固定节点开始执行（注入已 PIN 的输出） */
+  /** 从固定节点开始执行（注入已 PIN 的输出，按 nodeId 匹配） */
   runFromWithPinned: (
     startNodeId: string,
     pinnedOverrides: Record<string, Record<string, any>>,
@@ -388,45 +390,63 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     set({ workflowId: id })
   },
   pinNode: async (nodeId: string, title: string) => {
-    const { workflowId, pipelineContext } = get()
+    const { pipelineContext } = get()
     const output = pipelineContext.nodeOutputs[nodeId]
     if (!output) return
 
-    // 保存到文件
+    // 通过节点 ID 找到节点类型，PIN 文件按类型存储（跨工作流共享）
+    const node = get().nodes.find((n) => n.id === nodeId)
+    const nodeType = node?.type
+    if (!nodeType) return
+
+    // 保存到文件（文件名 nodeType_nodeId.json，同类型会覆盖）
     await fetch('/api/workflow/pin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflowId, nodeId, title, output }),
+      body: JSON.stringify({ nodeType, nodeId, title, output }),
     })
 
-    // 更新内存缓存
+    // 更新内存缓存（按 nodeId 隔离，只影响当前节点）
     set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: output } })
   },
   loadPinnedNode: (nodeId: string, data: Record<string, any>) => {
+    // 按 nodeId 隔离，只影响当前节点
     set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: data } })
   },
-  unpinNode: async (nodeId: string) => {
-    const { workflowId } = get()
-    await fetch(`/api/workflow/pin?workflowId=${workflowId}&nodeId=${nodeId}`, {
-      method: 'DELETE',
-    })
+  unpinNode: (nodeId: string) => {
+    // 仅从内存缓存移除，不删除文件，节点不再注入该输出
     const updated = { ...get().pinnedNodes }
     delete updated[nodeId]
     set({ pinnedNodes: updated })
   },
+  deletePinnedFile: async (nodeType: string) => {
+    // 持久化删除文件（按 nodeType 匹配文件）
+    await fetch(`/api/workflow/pin?nodeType=${encodeURIComponent(nodeType)}`, {
+      method: 'DELETE',
+    })
+    // 清理内存中所有该类型节点的缓存
+    const { nodes, pinnedNodes } = get()
+    const updated = { ...pinnedNodes }
+    for (const node of nodes) {
+      if (node.type === nodeType) {
+        delete updated[node.id]
+      }
+    }
+    set({ pinnedNodes: updated })
+  },
   getPinnedNodeList: async () => {
-    const { workflowId } = get()
-    const res = await fetch(`/api/workflow/pin?workflowId=${workflowId}`)
+    const res = await fetch('/api/workflow/pin')
     const json = await res.json()
     if (json.status === 'success') return json.data
     return []
   },
-  runFromWithPinned: (
+  runFromWithPinned: async (
     startNodeId: string,
     pinnedOverrides: Record<string, Record<string, any>>,
   ) => {
-    const { nodes, edges } = get()
-    executeWorkflow(
+    const { nodes, edges, workflowId } = get()
+    const workflowName = workflowId.replace(/^workflow_/, '')
+    const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (ctx) => {
@@ -434,6 +454,8 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       },
       { startNodeId, nodeOutputOverrides: pinnedOverrides },
     )
+    // 执行结束后保存历史
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
   },
   runAll: async () => {
     const { nodes, edges, workflowId } = get()
