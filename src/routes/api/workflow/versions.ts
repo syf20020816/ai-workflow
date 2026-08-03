@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripNodesModals } from '#/services/modal'
 
 const WORKFLOWS_DIR = path.resolve(process.cwd(), 'workflows')
 const VERSIONS_DIR = path.join(WORKFLOWS_DIR, '.versions')
@@ -69,6 +70,8 @@ export const Route = createFileRoute('/api/workflow/versions')({
         const versionId = `v-${Date.now()}`
         const snapshot = {
           ...data,
+          // 快照同样只存模型引用，不落 API Key
+          nodes: stripNodesModals(data.nodes || []),
           savedAt: now,
           versionId,
         }
@@ -97,12 +100,12 @@ export const Route = createFileRoute('/api/workflow/versions')({
 
         const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'))
 
-        // 恢复：用版本快照覆盖工作流文件
+        // 恢复：用版本快照覆盖工作流文件（同样只写模型引用）
         const workflowPath = path.join(WORKFLOWS_DIR, `${workflowId}.json`)
         const workflow = {
           name: snapshot.name || workflowId,
           id: workflowId,
-          nodes: snapshot.nodes || [],
+          nodes: stripNodesModals(snapshot.nodes || []),
           edges: snapshot.edges || [],
           createdAt: snapshot.createdAt || now(),
           updatedAt: now(),

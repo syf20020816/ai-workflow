@@ -190,6 +190,7 @@ export const EditKnowledgeRetrieval = () => {
                 patchCurrentNode((draft) => {
                   const data = d(draft)
                   data.modal = {
+                    id: model.id,
                     name: model.modelName,
                     key: model.apiKey || '',
                     url: model.url || '',

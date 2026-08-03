@@ -78,6 +78,7 @@ export const EditCodeAgent = () => {
             patchCurrentNode((draft) => {
               const data = d(draft)
               data.modal ??= {}
+              data.modal.id = model.id
               data.modal.name = model.modelName
               data.modal.key = model.apiKey
               data.modal.url = model.url

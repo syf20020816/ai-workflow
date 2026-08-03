@@ -70,13 +70,7 @@
       "data": {
         "title": "智能体节点",
         "modal": {
-          "name": "deepseek-v4-pro-260425",
-          "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
-          "token": {
-            "min": 100,
-            "max": 128000
-          },
+          "id": "f4d207ad-67d2-4a4a-be2c-de5a72dd26c5",
           "alias": "Senior Software Engineer"
         }
       },
@@ -102,13 +96,7 @@
         "agentId": "Amelia",
         "roleDescription": "Test-first discipline (red, green, refactor), 100% pass before review, no fluff all precision. Speaks like a terminal prompt: exact file paths, AC IDs, and commit-message brevity — every statement citable.",
         "modal": {
-          "name": "qwen3.5:4b",
-          "key": "",
-          "url": "http://localhost:11434",
-          "token": {
-            "min": 100,
-            "max": 4096
-          }
+          "id": "model-01"
         }
       },
       "measured": {
@@ -191,13 +179,7 @@
         "maxIterations": 20,
         "branch": "master",
         "modal": {
-          "name": "deepseek-v4-pro-260425",
-          "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
-          "token": {
-            "min": 100,
-            "max": 128000
-          }
+          "id": "f4d207ad-67d2-4a4a-be2c-de5a72dd26c5"
         }
       },
       "measured": {
@@ -257,13 +239,7 @@
           "occupier"
         ],
         "modal": {
-          "name": "qwen3-embedding:4b",
-          "key": "",
-          "url": "http://localhost:11434",
-          "token": {
-            "min": 100,
-            "max": 4096
-          }
+          "id": "692d6c1c-dc96-4bb9-9ce0-a17868dca106"
         }
       },
       "measured": {
@@ -291,14 +267,8 @@
         "title": "关键词提取节点",
         "format": "{\n  \"keywords\": string[]\n}",
         "modal": {
-          "name": "deepseek-v4-pro-260425",
-          "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
-          "token": {
-            "min": 100,
-            "max": 128000
-          },
-          "alias": "DeepSeekV4"
+          "id": "f4d207ad-67d2-4a4a-be2c-de5a72dd26c5",
+          "alias": "DoubaoSeed2.1"
         }
       },
       "measured": {
@@ -325,14 +295,7 @@
       "data": {
         "title": "二次分析",
         "modal": {
-          "alias": "",
-          "name": "deepseek-v4-pro-260425",
-          "key": "***REDACTED***",
-          "url": "https://ark.cn-beijing.volces.com/api/v3/responses",
-          "token": {
-            "min": 100,
-            "max": 128000
-          }
+          "id": "f4d207ad-67d2-4a4a-be2c-de5a72dd26c5"
         }
       },
       "measured": {
@@ -442,6 +405,6 @@
       "id": "xy-edge__df1eedd5-3f3b-4050-bd7b-b0549000eb77-a6248197-8918-4430-8b90-b1b5157e0504"
     }
   ],
-  "createdAt": "2026-08-03T07:43:45.348Z",
-  "updatedAt": "2026-08-03T07:43:45.348Z"
+  "createdAt": "2026-08-03T09:55:17.206Z",
+  "updatedAt": "2026-08-03T09:55:17.206Z"
 }

@@ -76,6 +76,7 @@ export const EditKeywordAgent = () => {
               const model = models.find((m) => m.name === modelName)
               if (model) {
                 onChange({
+                  id: model.id,
                   name: model.modelName,
                   key: model.apiKey || '',
                   url: model.url || '',

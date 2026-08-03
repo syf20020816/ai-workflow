@@ -17,7 +17,7 @@
 | 节点类型 | 标识 | 用途 |
 |---------|------|------|
 | **用户输入节点** | `userInput` | 接受用户输入的文本、提示词、文件/URL 路径 |
-| **智能体节点** | `agent` | 调用 AI 模型进行分析和生成，接收上游所有输入 |
+| **智能体节点** | `agent` | 调用 AI 模型进行分析和生成，接收上游所有输入 + 全链路累积上下文 |
 | **BMad 角色节点** | `bmadAgent` | 赋予智能体特定角色指令（分析师/架构师/SM 等），内容同步到智能体 |
 | **Lark 文档节点** | `lark` | 读取/写入/创建飞书文档，通过 lark-cli 操作 |
 | **Lark 模板节点** | `larkTemplate` | 读取飞书文档作为内容模板，传递给下游 |
@@ -39,8 +39,11 @@
 - **节点拖拽** — 自由拖拽调整布局
 
 ### 4. 执行引擎
-- **DAG 执行引擎** — 拓扑排序（Kahn 算法）确定执行顺序，检测循环依赖
+- **DAG 执行引擎** — 拓扑排序（Kahn 算法）确定执行顺序，分层并行（`Promise.all`），检测循环依赖
 - **Pipeline 数据流** — 上游节点 output 自动传递为下游节点 input
+- **上下文累积** — 每个节点执行时 BFS 收集全部上游祖先节点，按节点类型提取"规范摘要"组成 `input.upstreams`，保证线性链路中途不丢数据、无需手动补线
+- **按节点类型字段提取** — 累积时只保留关键内容字段（agent→`response`、keywordAgent→`keywords`、knowledgeRetrieval→`retrievalContent` 等），丢弃 model/usage/results 等执行元数据，节省 Token
+- **内容块优先级与预算截断** — agent 节点把上游内容按优先级拼入 system prompt，超出上下文预算时保留高优先级块开头而非整块丢弃
 - **15+ 节点执行器** — 每种节点类型均有独立执行逻辑
 - **智能体节点真实 AI API 调用** — 兼容 OpenAI/Anthropic/Ollama 格式（含火山方舟）
 - **CodeAgent 工具调用循环** — SDK 管理的 Tool Calling（文件读取、目录遍历、Git 日志），自动循环直到任务完成
@@ -68,8 +71,8 @@
 - **工作流管理** — 独立 Tab 页面，列表展示所有已保存模板，支持加载/删除
 
 ### 8. 节点输出固定（PIN）
-- **PIN 按钮** — 每个节点执行后点击 📌 保存输出到 `workflows/result/` 目录
-- **Load 加载** — 编辑面板可选择已保存的 PIN 数据加载到内存
+- **PIN 按钮** — 每个节点执行后点击 📌 保存输出到 `workflows/result/.pin/` 目录，文件名为 `nodeType_nodeId.json`
+- **Load 加载** — 编辑面板可选择已保存的 PIN 数据加载到内存，按 nodeId 精确注入，同一类型不同节点互不干扰
 - **从 PIN 执行** — 执行面板 Select 选择 PIN 节点后运行，跳过上流节点，从该节点下游开始
 
 ### 9. 状态管理
@@ -97,7 +100,9 @@
 ```
 src/
 ├── engine/
-│   ├── workflow.ts           # DAG 执行引擎（拓扑排序 + Pipeline 数据流）
+│   ├── workflow.ts           # DAG 执行引擎（拓扑排序 + 分层并行 + 上下文累积）
+│   ├── topological.ts        # 拓扑排序 / 分层 / 祖先链（getAncestorIds / getPredecessors）
+│   ├── accumulate.ts         # 上下文累积：按节点类型提取关键字段（Token 优化）
 │   └── executors/            # 15+ 节点执行器
 │       ├── index.ts          # 执行器注册表
 │       ├── userInput.ts
@@ -196,7 +201,7 @@ npm run build
 AI 自主探索本地代码仓库的节点，使用 Vercel AI SDK 的 `generateText` + Tool Calling：
 - **工具列表**：`readFile`（读取文件）、`listDirectory`（列出目录）、`runGitLog`（Git 日志）
 - **配置**：项目路径、Git 分支、分析指令、最大迭代次数、模型选择
-- **上游集成**：可接收上游 Agent 输出的需求分析，带着需求去分析代码
+- **上游集成**：接收上游 Agent 输出的需求分析（response）作为分析依据，并可从祖先链（upstreams）回溯获取 Lark 模板（templateContent）约束最终输出格式；模板节点不在直接前驱时也能拿到
 
 ### 条件分支（if）
 支持两种判断模式：
@@ -213,6 +218,48 @@ AI 自主探索本地代码仓库的节点，使用 Vercel AI SDK 的 `generateT
 1. 执行节点后点击 📌 保存结果
 2. 执行面板 Select 选择已固定的 PIN 节点
 3. 点击「运行」→ 引擎注入 PIN 输出，从下游节点继续执行
+
+---
+
+## 处理策略与优化手段
+
+### 上下文累积（引擎级）
+- 节点输入 = 直接前驱输出合并 + `upstreams`（全部祖先节点的规范摘要，BFS 从近到远收集）
+- 保证线性链路中任意位置都能拿到整条链路的上下文，无需手动补线；链路中间节点不丢上游数据
+
+### 按节点类型的字段提取（Token 优化）
+| 节点类型 | 累积字段 | 丢弃字段 |
+|---------|---------|---------|
+| agent / codeAgent | `response` | model / usage / passThrough |
+| keywordAgent | `keywords` | queries / raw |
+| knowledgeRetrieval | `retrievalContent` | results 数组 / count / collectionNames |
+| userInput | `text` / `prompt` | files / urls |
+| larkTemplate | `templateContent` | templateUrl |
+| lark / larkWikiTraversal | `result` | action / url / success |
+| memory | `content` | — |
+| bmadAgent | `instructions` | role / agentId |
+| 其他类型 | 内容类字段回退 | 执行元数据 |
+
+### 内容块优先级与预算截断
+- agent 节点把上游内容按优先级拼入 system prompt：需求分析(10) → 指令(20) → 关键词(30) → 模板(40) → 其他内容(50) → 知识库检索结果(60)
+- 预算 = `min(tokenMax × 1.2, 150K 字符)`；超预算时按优先级保留高价值块的开头（检索结果按相关度排序，开头最相关），而非整块丢弃
+- 用户消息兜底 `JSON.stringify` 时排除 `upstreams`，避免与 system prompt 内容块重复打包
+
+### 知识库检索优化
+- **结果清洗** — 检索结果只保留 `score` + `content` 两个字段，降低 payload
+- **双重去重** — 按 `collectionName:id` 去重 → 内容包含去重（保留较长者），避免语义重复结果灌入上下文
+- **Qdrant 写入** — upsert 使用 `wait=true` 同步确认，20 points/批量，失败即时暴露
+
+### 安全与健壮性
+- **敏感配置不落盘** — 节点 `modal` 持久化时只保留模型 ID 引用（`{ id, alias }`），API Key / URL / Token 不写入工作流 JSON、版本快照、导出文件；加载时按 ID 从 `model.conf.json` 还原（`src/services/modal.ts`）
+- **路径穿越检测** — 文件读写校验 `..` 穿越
+- **文档上传限制** — ≤5MB，流式批量处理（8 chunks/embedding batch），避免内存溢出
+- **向量维度强校验** — 与 embedding 模型匹配（64-16384），避免 Qdrant 静默丢弃不匹配向量
+- **后端路由间直接函数调用** — 避免 HTTP 自调用造成内存泄漏
+
+### PIN 调试机制
+- 文件存储 `workflows/result/.pin/nodeType_nodeId.json`；注入按 `nodeId` 精确匹配，同一类型不同节点互不干扰
+- 跨工作流可按 `nodeType` 复用最新一份固定输出
 
 ---
 

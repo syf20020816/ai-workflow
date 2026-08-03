@@ -266,6 +266,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     // 提取模型配置中 bmad 需要的字段
     const bmadModal = agentModal
       ? {
+          id: agentModal.id,
           name: agentModal.name,
           key: agentModal.key,
           url: agentModal.url,

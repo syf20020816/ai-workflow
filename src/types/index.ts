@@ -57,6 +57,8 @@ export type NUserInput = Node<NUserInputData, typeof NodeTypes.USER_INPUT>
 
 export type NAgentData = NNode & {
   modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
     /** 智能体名称(模型ID) */
     name?: string
     /** 智能体密钥 */
@@ -197,6 +199,8 @@ export type NCodeAgentData = NNode & {
   maxIterations?: number
   /** 模型配置 */
   modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
     name?: string
     key?: string
     url?: string
@@ -265,6 +269,8 @@ export type NKnowledgeRetrievalData = NNode & {
   maxRetrievals?: number
   /** AI 模型配置（用于自动生成搜索查询） */
   modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
     name: string
     key: string
     url: string
@@ -316,6 +322,8 @@ export type NLarkWikiTraversal = Node<NLarkWikiTraversalData, typeof NodeTypes.L
 export type NKeywordAgentData = NNode & {
   /** 模型配置 */
   modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
     name?: string
     key?: string
     url?: string

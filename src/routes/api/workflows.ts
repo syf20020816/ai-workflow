@@ -1,9 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripNodesModals, hydrateNodesModals } from '#/services/modal'
+import type { Model } from '#/types/model'
 
 const WORKFLOWS_DIR = path.resolve(process.cwd(), 'workflows')
 const VERSIONS_DIR = path.join(WORKFLOWS_DIR, '.versions')
+const MODEL_CONF_PATH = path.resolve(process.cwd(), 'model.conf.json')
 
 function ensureDir() {
   if (!fs.existsSync(WORKFLOWS_DIR)) {
@@ -15,6 +18,15 @@ function ensureVersionsDir(id: string) {
   const dir = path.join(VERSIONS_DIR, id)
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })
+  }
+}
+
+/** 读取模型配置（不存在或解析失败时返回空数组，水合跳过） */
+function readModels(): Model[] {
+  try {
+    return JSON.parse(fs.readFileSync(MODEL_CONF_PATH, 'utf-8'))
+  } catch {
+    return []
   }
 }
 
@@ -40,6 +52,7 @@ export const Route = createFileRoute('/api/workflows')({
 
         // 获取单条完整工作流（含 nodes/edges），可选 versionId
         if (id) {
+          const models = readModels()
           const versionId = url.searchParams.get('versionId')
           if (versionId) {
             // 加载指定版本的快照
@@ -51,7 +64,7 @@ export const Route = createFileRoute('/api/workflows')({
             return Response.json({
               name: snapshot.name || id,
               id,
-              nodes: snapshot.nodes || [],
+              nodes: hydrateNodesModals(snapshot.nodes || [], models),
               edges: snapshot.edges || [],
               createdAt: snapshot.createdAt || '',
               updatedAt: snapshot.savedAt || '',
@@ -64,6 +77,8 @@ export const Route = createFileRoute('/api/workflows')({
             return Response.json({ error: '工作流不存在' }, { status: 404 })
           }
           const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+          // 读取时按模型 ID 还原完整 modal 配置（磁盘上只存引用，不存 API Key）
+          content.nodes = hydrateNodesModals(content.nodes || [], models)
           return Response.json(content)
         }
 
@@ -121,7 +136,8 @@ export const Route = createFileRoute('/api/workflows')({
             const snapshot = {
               name: existing.name,
               id: existing.id,
-              nodes: existing.nodes,
+              // 快照同样只存模型引用，不落 API Key
+              nodes: stripNodesModals(existing.nodes || []),
               edges: existing.edges,
               savedAt: now,
               versionId,
@@ -138,7 +154,8 @@ export const Route = createFileRoute('/api/workflows')({
         const workflow = {
           name,
           id,
-          nodes,
+          // 落盘时剥离 modal 敏感字段，只保留模型 ID 引用
+          nodes: stripNodesModals(nodes),
           edges,
           createdAt: now,
           updatedAt: now,

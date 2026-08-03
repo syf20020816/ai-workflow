@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNodeStore } from '#/store/node'
+import { useModelStore } from '#/store/model'
+import { stripNodesModals, hydrateNodesModals } from '#/services/modal'
 import { Panel } from '@xyflow/react'
 import type { PanelProps, Node, Edge } from '@xyflow/react'
 import {
@@ -56,11 +58,12 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   const [exportJson, setExportJson] = useState('')
 
   const buildExportJson = () => {
-    const data: WorkflowData = { nodes, edges }
+    // 导出时剥离 modal 敏感字段，只保留模型 ID 引用
+    const data: WorkflowData = { nodes: stripNodesModals(nodes), edges }
     return JSON.stringify(data, null, 2)
   }
 
-  const doImport = (jsonStr: string) => {
+  const doImport = async (jsonStr: string) => {
     try {
       const data = JSON.parse(jsonStr)
       if (!data.nodes || !Array.isArray(data.nodes)) {
@@ -78,7 +81,13 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         }
       }
       setImportError('')
-      setNodes(data.nodes)
+      // 导入时按模型 ID 还原完整 modal 配置（磁盘/导出文件只存引用）
+      let models = useModelStore.getState().models
+      if (models.length === 0) {
+        await useModelStore.getState().fetchModels()
+        models = useModelStore.getState().models
+      }
+      setNodes(hydrateNodesModals(data.nodes, models))
       setEdges(data.edges)
       setWorkflowId(data.id || data.name || `imported_${Date.now()}`)
       message.success(
