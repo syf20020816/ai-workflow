@@ -1,4 +1,5 @@
 import { useNodeStore } from '#/store/node'
+import { useGlobalStore } from '#/store/global'
 import styles from './index.module.scss'
 import { Button, Select, Tooltip } from 'antd'
 import { Play, RotateCcw } from 'lucide-react'
@@ -10,6 +11,13 @@ export const ExecutionPanel = () => {
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
+  const globalMode = useGlobalStore((state) => state.globalMode)
+
+  // Spec 模式：执行范围内必须至少有一个节点标记了阶段产物，否则禁止运行
+  const specDisabled =
+    globalMode === 'spec' && !nodes.some(
+      (n) => (n.data as { specStep?: string } | undefined)?.specStep,
+    )
 
   const [pinnedItems, setPinnedItems] = useState<
     { nodeType: string; title: string }[]
@@ -77,11 +85,18 @@ export const ExecutionPanel = () => {
           }))}
         />
         {pipelineContext.globalStatus === 'idle' && (
-          <Tooltip title={`运行${selectedPinnedType ? '（用PIN）' : ''}`}>
+          <Tooltip
+            title={
+              specDisabled
+                ? 'Spec 模式：请先在节点上用脚印按钮标记至少一个阶段产物'
+                : `运行${selectedPinnedType ? '（用PIN）' : ''}`
+            }
+          >
             <Button
               type="primary"
               icon={<Play size={14} />}
               onClick={handleRun}
+              disabled={specDisabled}
             ></Button>
           </Tooltip>
         )}

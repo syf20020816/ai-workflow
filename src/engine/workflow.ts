@@ -9,6 +9,51 @@ import type {
 import { topologicalLayers, getPredecessors, getAncestorIds, getReachableNodeIds } from './topological'
 import { getExecutor } from './executors'
 import { extractAccumulated } from './accumulate'
+import { initSpecFolder, readSpecArtifact, writeSpecArtifact } from '#/services/specFolder'
+import { SPEC_STEP_FILE } from '#/constants/spec'
+
+/** Spec 模式 · 会话日志条目（黑匣子，全量记录节点输出） */
+function buildSessionEntry(
+  nodeId: string,
+  title: string,
+  nodeType: string,
+  status: string,
+  output: Record<string, any>,
+): string {
+  return [
+    '---',
+    `## ${title}（${nodeId}）`,
+    `- 类型：${nodeType}`,
+    `- 状态：${status}`,
+    `- 时间：${new Date().toLocaleString('zh-CN')}`,
+    '',
+    '```json',
+    JSON.stringify(output, null, 2),
+    '```',
+    '',
+  ].join('\n')
+}
+
+/** Spec 模式 · 产物段落（优先用按类型提取的文本，无文本时回退完整 JSON） */
+function buildArtifactEntry(nodeType: string, title: string, output: Record<string, any>): string {
+  const extracted = extractAccumulated(nodeType, output)
+  const text = Object.values(extracted).find((v): v is string => typeof v === 'string' && v.length > 0)
+  const body = typeof text === 'string'
+    ? text
+    : '```json\n' + JSON.stringify(output, null, 2) + '\n```'
+  return `## ${title}\n\n${body}\n`
+}
+
+/** Spec 模式 · 向产物文件追加段落（保留已有内容，多节点写同一文件不互相覆盖） */
+async function appendSpecArtifact(
+  specRoot: string,
+  filename: string,
+  content: string,
+): Promise<void> {
+  const existing = await readSpecArtifact(specRoot, filename)
+  const next = existing ? `${existing}\n${content}` : content
+  await writeSpecArtifact(specRoot, filename, next)
+}
 
 /** 从 node.data 中安全提取标题 */
 function getNodeTitle(node: Node): string {
@@ -54,10 +99,52 @@ export async function executeWorkflow(
     userInputs?: Record<string, any>
     /** 固定节点输出：{ [nodeId]: output }，注入后该节点直接使用固定输出，跳过执行 */
     nodeOutputOverrides?: Record<string, Record<string, any>>
+    /** 全局模式：spec 模式下创建标准 spec 产出目录并把节点产物落盘 */
+    globalMode?: 'normal' | 'spec'
+    /** 工作流 ID（spec 目录命名用） */
+    workflowId?: string
   },
 ): Promise<PipelineContext> {
   const ctx = createPipelineContext()
   ctx.globalStatus = 'running'
+
+  // Spec 模式：执行前创建标准产出目录骨架
+  let specRoot: string | null = null
+  if (options?.globalMode === 'spec') {
+    specRoot = await initSpecFolder(
+      options.workflowId || 'workflow',
+      (options.workflowId || 'workflow').replace(/^workflow_/, ''),
+    )
+    if (specRoot) {
+      addLog(ctx, '', '', 'info', `Spec 模式：已创建产出目录 ${specRoot}`)
+    } else {
+      addLog(ctx, '', '', 'warn', 'Spec 模式：产出目录创建失败，本次执行不落盘产物')
+    }
+
+    // Spec 模式运行时检测：执行范围内必须至少有一个节点标记了阶段产物
+    if (specRoot) {
+      const reachableIds = options?.startNodeId
+        ? getReachableNodeIds(options.startNodeId, edges)
+        : new Set(nodes.filter((n) => n.type).map((n) => n.id))
+      const hasStep = nodes.some(
+        (n) => reachableIds.has(n.id) && (n.data as { specStep?: string } | undefined)?.specStep,
+      )
+      if (!hasStep) {
+        ctx.globalStatus = 'error'
+        addLog(
+          ctx,
+          '',
+          '',
+          'error',
+          'Spec 模式：执行范围内没有任何节点标记阶段产物。请在节点上用脚印按钮标记产出（至少一个），再运行工作流',
+        )
+        onUpdate({ ...ctx })
+        return ctx
+      }
+    }
+
+    onUpdate({ ...ctx })
+  }
 
   // 已注入 PIN 输出的节点 ID（跳过执行）
   const injectedIds = new Set<string>()
@@ -196,6 +283,7 @@ export async function executeWorkflow(
           input,
           globalContext: {
             userInputs: options?.userInputs || {},
+            ...(specRoot ? { specRoot } : {}),
           },
         }
 
@@ -239,6 +327,37 @@ export async function executeWorkflow(
           addLog(ctx, r.nodeId, nodeTitle, 'info', logMsg)
         }
       }
+
+      // Spec 模式：把节点产物写入产出目录（会话黑匣子 + 按 specStep 标记写标准产物文件）
+      if (specRoot) {
+        const specNode = nodeMap.get(r.nodeId)
+        const specType = specNode?.type || ''
+        const specStatus = r.status === 'error' ? 'error' : r.status
+        try {
+          await appendSpecArtifact(
+            specRoot,
+            'session/conversation-log.md',
+            buildSessionEntry(r.nodeId, nodeTitle, specType, specStatus, r.result?.output || {}),
+          )
+          if (r.status !== 'error' && r.result) {
+            const stepKey = (specNode?.data as { specStep?: string } | undefined)?.specStep
+            const artifactFile =
+              stepKey && Object.prototype.hasOwnProperty.call(SPEC_STEP_FILE, stepKey)
+                ? SPEC_STEP_FILE[stepKey as keyof typeof SPEC_STEP_FILE]
+                : null
+            if (artifactFile) {
+              await appendSpecArtifact(
+                specRoot,
+                artifactFile,
+                buildArtifactEntry(specType, nodeTitle, r.result.output),
+              )
+            }
+          }
+        } catch {
+          addLog(ctx, r.nodeId, nodeTitle, 'warn', 'Spec 产物写入失败（已忽略）')
+        }
+      }
+
       onUpdate({ ...ctx })
     }
 
@@ -267,11 +386,17 @@ export async function resumeWorkflow(
   nodes: Node[],
   edges: Edge[],
   onUpdate: (ctx: PipelineContext) => void,
+  options?: {
+    globalMode?: 'normal' | 'spec'
+    workflowId?: string
+  },
 ): Promise<PipelineContext> {
   const userInputs = { [nodeId]: userInput }
 
   return executeWorkflow(nodes, edges, onUpdate, {
     startNodeId: nodeId,
     userInputs,
+    globalMode: options?.globalMode,
+    workflowId: options?.workflowId,
   })
 }

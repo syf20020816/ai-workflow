@@ -20,6 +20,7 @@ import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
 import { Route as ApiWorkflowExecHistoryRouteImport } from './routes/api/workflow/exec-history'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
+import { Route as ApiExecuteSpecFolderRouteImport } from './routes/api/execute/specFolder'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
 import { Route as ApiExecuteLarkWikiTraversalRouteImport } from './routes/api/execute/larkWikiTraversal'
@@ -90,6 +91,11 @@ const ApiSkillContentRoute = ApiSkillContentRouteImport.update({
   id: '/content',
   path: '/content',
   getParentRoute: () => ApiSkillRoute,
+} as any)
+const ApiExecuteSpecFolderRoute = ApiExecuteSpecFolderRouteImport.update({
+  id: '/api/execute/specFolder',
+  path: '/api/execute/specFolder',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteQdrantRoute = ApiExecuteQdrantRouteImport.update({
   id: '/api/execute/qdrant',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/specFolder'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/specFolder'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/specFolder'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   ApiExecuteLarkWikiTraversalRoute: typeof ApiExecuteLarkWikiTraversalRoute
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
+  ApiExecuteSpecFolderRoute: typeof ApiExecuteSpecFolderRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
   ApiWorkflowVersionsRoute: typeof ApiWorkflowVersionsRoute
@@ -445,6 +458,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/skill/content'
       preLoaderRoute: typeof ApiSkillContentRouteImport
       parentRoute: typeof ApiSkillRoute
+    }
+    '/api/execute/specFolder': {
+      id: '/api/execute/specFolder'
+      path: '/api/execute/specFolder'
+      fullPath: '/api/execute/specFolder'
+      preLoaderRoute: typeof ApiExecuteSpecFolderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/execute/qdrant': {
       id: '/api/execute/qdrant'
@@ -590,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteLarkWikiTraversalRoute: ApiExecuteLarkWikiTraversalRoute,
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
+  ApiExecuteSpecFolderRoute: ApiExecuteSpecFolderRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
   ApiWorkflowVersionsRoute: ApiWorkflowVersionsRoute,

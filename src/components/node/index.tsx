@@ -9,6 +9,7 @@ import { RunNode } from './edge/run'
 import { PinNode } from './edge/pin-node'
 import type { NodeStatus } from '#/types/engine'
 import { Badge } from 'antd'
+import { StepMarkNode } from './edge/step'
 
 export interface UNodeProps {
   node: Exclude<AppNode, null>
@@ -46,12 +47,15 @@ export const UNode = ({ node, children }: UNodeProps) => {
         <NodeHeader kind={kind} title={node.data.title || ''} />
         <Badge status={statusBadgeMap[nodeStatus]} size="small" />
       </div>
-      <div className={styles.node_content}>
-        {children}
-      </div>
+      <div className={styles.node_content}>{children}</div>
       <div className={styles.node_tools}>
         <RunNode nodeId={node.id} />
-        <PinNode nodeId={node.id} nodeType={node.type || ''} title={node.data.title || ''} />
+        <StepMarkNode node={node} />
+        <PinNode
+          nodeId={node.id}
+          nodeType={node.type}
+          title={node.data.title || ''}
+        />
         <AddNodeBtn kind={kind} />
       </div>
       <Handle type="source" position={Position.Right} />

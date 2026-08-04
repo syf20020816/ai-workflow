@@ -1,4 +1,5 @@
 import type { Node, NodeProps } from '@xyflow/react'
+import type { SpecStepKey } from '#/constants/spec'
 
 export const NodeTypes = {
   USER_INPUT: 'userInput',
@@ -29,6 +30,8 @@ export type NNode = {
   title: string
   /** 节点描述 */
   description?: string
+  /** Spec 阶段产物标记（Spec 模式专用）：该节点输出属于哪个阶段产物，由使用者手动标记 */
+  specStep?: SpecStepKey
 }
 
 export const InputKinds = {

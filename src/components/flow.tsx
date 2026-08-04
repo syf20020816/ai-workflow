@@ -29,6 +29,8 @@ import { KeywordAgentNode } from './node/ai/keywordAgent'
 import { LarkWikiTraversalNode } from './node/ai/larkWikiTraversal'
 import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
+import { GroupPanel } from './panel/tools/group'
+import { StepLinePanel } from './panel/tools/stepLine'
 
 export const NODE_TYPES = {
   userInput: UserInputNode,
@@ -129,6 +131,8 @@ export function Flow() {
             NODE_COLORS.userInput
           }
         />
+        <StepLinePanel position="center-left"></StepLinePanel>
+        <GroupPanel position="top-center"></GroupPanel>
         <Controls position="bottom-left"></Controls>
         <ToolsPanel position="top-left"></ToolsPanel>
         <EditPanel position="top-right"></EditPanel>

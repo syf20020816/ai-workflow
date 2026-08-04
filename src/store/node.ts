@@ -18,6 +18,7 @@ import {
   executeWorkflow,
   resumeWorkflow,
 } from '#/engine/workflow'
+import { useGlobalStore } from './global'
 
 /** 保存执行结果到后端 */
 async function saveExecutionHistory(
@@ -52,10 +53,14 @@ async function saveExecutionHistory(
         workflowId,
         workflowName,
         timestamp: String(Date.now()),
-        status: ctx.globalStatus === 'completed' ? 'completed'
-          : ctx.globalStatus === 'error' ? 'error'
-          : ctx.globalStatus === 'paused' ? 'paused'
-          : 'completed',
+        status:
+          ctx.globalStatus === 'completed'
+            ? 'completed'
+            : ctx.globalStatus === 'error'
+              ? 'error'
+              : ctx.globalStatus === 'paused'
+                ? 'paused'
+                : 'completed',
         nodeCount: nodeResults.length,
         nodeResults,
         logs: ctx.logs,
@@ -175,7 +180,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     }
 
     const updatedNodes = get().nodes.map((n) =>
-      n.id === node.id ? { ...n, data: node.data } : n,
+      n.id === node.id ? { ...n, data: { ...n.data, ...node.data } } : n,
     )
     set({ currentNode: node, nodes: updatedNodes })
   },
@@ -185,7 +190,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
 
     const patched = produce(current, recipe)
     const updatedNodes = get().nodes.map((n) =>
-      n.id === patched.id ? { ...n, data: patched.data } : n,
+      n.id === patched.id ? { ...n, data: { ...n.data, ...patched.data } } : n,
     )
     set({ currentNode: patched, nodes: updatedNodes })
   },
@@ -193,8 +198,23 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   edges: [],
 
   onNodesChange: (changes) => {
+    // React Flow 受控同步时会对节点发 replace change，用其内部节点对象整体替换，
+    // 导致自定义 data 字段（如 specStep 阶段标记）丢失。这里保留 store 中已有的自定义字段：
+    // 以新 item 的字段为准，仅补充 item 里没有、但 store 节点里存在的字段。
+    const protectedChanges = changes.map((c) => {
+      if (c.type !== 'replace') return c
+      const prev = get().nodes.find((n) => n.id === c.id)
+      if (!prev) return c
+      const itemData = c.item.data
+      const preserved = Object.fromEntries(
+        Object.entries(prev.data).filter(([k]) => !(k in itemData)),
+      )
+      if (Object.keys(preserved).length === 0) return c
+      return { ...c, item: { ...c.item, data: { ...preserved, ...itemData } } }
+    }) as NodeChange[]
+
     set({
-      nodes: applyNodeChanges(changes, get().nodes),
+      nodes: applyNodeChanges(protectedChanges, get().nodes),
     })
     // 如果 currentNode 被删除，同步清空
     const currentNodeId = get().currentNode?.id
@@ -449,13 +469,19 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
   ) => {
     const { nodes, edges, workflowId } = get()
     const workflowName = workflowId.replace(/^workflow_/, '')
+    const globalMode = useGlobalStore.getState().globalMode
     const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (ctx) => {
         set({ pipelineContext: { ...ctx } })
       },
-      { startNodeId, nodeOutputOverrides: pinnedOverrides },
+      {
+        startNodeId,
+        nodeOutputOverrides: pinnedOverrides,
+        globalMode,
+        workflowId,
+      },
     )
     // 执行结束后保存历史
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
@@ -464,30 +490,46 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const { nodes, edges, workflowId } = get()
     // 获取工作流名称
     const workflowName = workflowId.replace(/^workflow_/, '')
-    const pipelineCtx = await executeWorkflow(nodes, edges, (c) => {
-      set({ pipelineContext: { ...c } })
-    })
+    const globalMode = useGlobalStore.getState().globalMode
+    const pipelineCtx = await executeWorkflow(
+      nodes,
+      edges,
+      (c) => {
+        set({ pipelineContext: { ...c } })
+      },
+      { globalMode, workflowId },
+    )
     // 执行结束后保存历史
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
   },
   runFrom: async (nodeId: string) => {
     const { nodes, edges, workflowId } = get()
     const workflowName = workflowId.replace(/^workflow_/, '')
+    const globalMode = useGlobalStore.getState().globalMode
     const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (ctx) => {
         set({ pipelineContext: { ...ctx } })
       },
-      { startNodeId: nodeId },
+      { startNodeId: nodeId, globalMode, workflowId },
     )
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
   },
   resumeFrom: (nodeId: string, reply: string) => {
-    const { nodes, edges, pipelineContext } = get()
-    resumeWorkflow(nodeId, reply, pipelineContext, nodes, edges, (ctx) => {
-      set({ pipelineContext: { ...ctx } })
-    })
+    const { nodes, edges, pipelineContext, workflowId } = get()
+    const globalMode = useGlobalStore.getState().globalMode
+    resumeWorkflow(
+      nodeId,
+      reply,
+      pipelineContext,
+      nodes,
+      edges,
+      (ctx) => {
+        set({ pipelineContext: { ...ctx } })
+      },
+      { globalMode, workflowId },
+    )
   },
   resetExecution: () => {
     set({ pipelineContext: createPipelineContext() })

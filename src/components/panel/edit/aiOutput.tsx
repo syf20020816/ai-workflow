@@ -33,7 +33,7 @@ export const EditAIOutput = () => {
         rows={rows}
         onChange={(key, value) => {
           patchCurrentNode((draft) => {
-            d(draft)[key as keyof NAIOutputData] = (value as string) || ''
+            ;(d(draft) as Record<string, any>)[key] = (value as string) || ''
           })
         }}
       />
