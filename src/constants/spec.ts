@@ -6,14 +6,14 @@
  */
 
 export const SPEC_STEPS = [
-  { key: 'spec', label: '功能规格(spec: FR/SC/GWT)', file: 'spec.md', required: true },
-  { key: 'plan', label: '技术方案(plan)', file: 'plan.md', required: true },
-  { key: 'tasks', label: '分批次任务清单(tasks)', file: 'tasks.md', required: true },
-  { key: 'report', label: '自检报告(report)', file: 'check_reports/check_summary.md', required: false },
-  { key: 'research', label: '调研分析(research)', file: 'research.md', required: false },
-  { key: 'data-model', label: '数据模型(data-model)', file: 'data-model.md', required: false },
-  { key: 'contracts', label: '接口契约(contracts)', file: 'contracts/api.md', required: false },
-  { key: 'adr', label: '架构决策记录(adr)', file: 'adr/ADR.md', required: false },
+  { key: 'spec', label: '功能规格', file: 'spec.md', required: true },
+  { key: 'plan', label: '技术方案', file: 'plan.md', required: true },
+  { key: 'tasks', label: '分批次任务清单', file: 'tasks.md', required: true },
+  { key: 'report', label: '自检报告', file: 'check_reports/check_summary.md', required: false },
+  { key: 'research', label: '调研分析', file: 'research.md', required: false },
+  { key: 'data-model', label: '数据模型', file: 'data-model.md', required: false },
+  { key: 'contracts', label: '接口契约', file: 'contracts/api.md', required: false },
+  { key: 'adr', label: '架构决策记录', file: 'adr/ADR.md', required: false },
 ] as const
 
 export type SpecStepKey = (typeof SPEC_STEPS)[number]['key']

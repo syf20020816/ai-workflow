@@ -63,7 +63,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  
+
   &_weak {
     color: var(--xy-edge-stroke-default);
   }
@@ -76,7 +76,6 @@
   width: 100%;
 }
 
-
 .node_tools {
   position: absolute;
   top: 0px;
@@ -86,4 +85,30 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
+
+.step_mark {
+  &_menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 4px);
+    z-index: 1000;
+    width: 80px;
+    background-color: var(--xy-node-background-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    
+  }
+  &_item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px;
+    padding: 2px 5.6px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 6.2px;
+    font-weight: 700;
+  }
 }
