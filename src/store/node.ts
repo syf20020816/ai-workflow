@@ -25,6 +25,7 @@ async function saveExecutionHistory(
   workflowId: string,
   workflowName: string,
   ctx: PipelineContext,
+  globalMode: 'normal' | 'spec',
 ) {
   try {
     const nodeResults: Array<{
@@ -61,6 +62,8 @@ async function saveExecutionHistory(
               : ctx.globalStatus === 'paused'
                 ? 'paused'
                 : 'completed',
+        globalMode,
+        specDir: ctx.specRoot,
         nodeCount: nodeResults.length,
         nodeResults,
         logs: ctx.logs,
@@ -484,7 +487,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       },
     )
     // 执行结束后保存历史
-    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
   },
   runAll: async () => {
     const { nodes, edges, workflowId } = get()
@@ -500,7 +503,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       { globalMode, workflowId },
     )
     // 执行结束后保存历史
-    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
   },
   runFrom: async (nodeId: string) => {
     const { nodes, edges, workflowId } = get()
@@ -514,7 +517,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       },
       { startNodeId: nodeId, globalMode, workflowId },
     )
-    await saveExecutionHistory(workflowId, workflowName, pipelineCtx)
+    await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
   },
   resumeFrom: (nodeId: string, reply: string) => {
     const { nodes, edges, pipelineContext, workflowId } = get()

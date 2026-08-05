@@ -1,11 +1,9 @@
 import { useNodeStore } from '#/store/node'
 import { useSkillStore } from '#/store/skill'
-import { useRouteStore } from '#/store/route'
 import type { NSkill, NSkillData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { useEffect } from 'react'
-import { Select, Button } from 'antd'
-import { ExternalLink } from 'lucide-react'
+import { Select } from 'antd'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { EditButton } from '#/components/button'
@@ -22,8 +20,6 @@ export const EditSkill = () => {
 
   const skills = useSkillStore((state) => state.skills)
   const fetchSkills = useSkillStore((state) => state.fetchSkills)
-
-  const openInEditor = useRouteStore((s) => s.openInEditor)
 
   useEffect(() => {
     fetchSkills()

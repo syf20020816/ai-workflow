@@ -12,7 +12,7 @@
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": true,
+      "selected": false,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 200,
@@ -32,14 +32,14 @@
     {
       "id": "b51f7dc5-1177-45b9-9b75-619e9efe2721",
       "position": {
-        "x": 371,
+        "x": 370,
         "y": 12
       },
       "deletable": true,
       "draggable": true,
       "dragging": false,
       "selectable": true,
-      "selected": false,
+      "selected": true,
       "zIndex": 1,
       "isConnectable": true,
       "positionAbsoluteX": 200,
@@ -51,7 +51,8 @@
         "modal": {
           "id": "f4d207ad-67d2-4a4a-be2c-de5a72dd26c5",
           "alias": "DoubaoSeed2.1"
-        }
+        },
+        "specStep": "tasks"
       },
       "measured": {
         "width": 160,
@@ -67,6 +68,6 @@
       "id": "xy-edge__c945e729-1e13-408b-ac14-4e0f9be39b88-b51f7dc5-1177-45b9-9b75-619e9efe2721"
     }
   ],
-  "createdAt": "2026-08-05T07:25:36.339Z",
-  "updatedAt": "2026-08-05T07:25:36.339Z"
+  "createdAt": "2026-08-05T08:13:50.121Z",
+  "updatedAt": "2026-08-05T08:13:50.121Z"
 }

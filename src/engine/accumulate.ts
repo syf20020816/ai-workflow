@@ -33,9 +33,6 @@ export function extractAccumulated(
 
     case NodeTypes.TASK_PLANNER:
       if (typeof output.response === 'string') acc.response = output.response
-      else if (typeof output.tasksMarkdown === 'string') {
-        acc.response = output.tasksMarkdown
-      }
       break
 
     case NodeTypes.KNOWLEDGE_RETRIEVAL:

@@ -37,7 +37,8 @@ export const taskPlannerExecutor: NodeExecutor = {
     // 1a. 优先读 Spec 目录 plan.md（上游已把 plan 落盘时的最准确来源）
     if (specRoot) {
       const fromSpec = await readSpecArtifact(specRoot, 'plan.md')
-      if (fromSpec) {
+      // 跳过占位模板（文件被创建但尚未被上游写入真实内容）
+      if (fromSpec && fromSpec.trim().length > 50 && !/^#\s*plan\.md\b/m.test(fromSpec)) {
         planContent = fromSpec
         logs.push('已从 Spec 目录读取 plan.md')
       }
@@ -113,7 +114,7 @@ export const taskPlannerExecutor: NodeExecutor = {
         nodeId: config.nodeId,
         status: 'success',
         output: {
-          tasksMarkdown,
+          // 只保留 response 一份全文，tasks 内容由 extractAccumulated 按文本累积/写盘
           response: tasksMarkdown,
           batchCount,
           taskCount,

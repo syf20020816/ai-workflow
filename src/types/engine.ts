@@ -15,6 +15,8 @@ export interface PipelineContext {
   logs: LogEntry[]
   /** 全局运行状态 */
   globalStatus: 'idle' | 'running' | 'paused' | 'completed' | 'error'
+  /** Spec 模式产出目录（绝对路径），常规模式为 undefined */
+  specRoot?: string
 }
 
 /** 日志条目 */

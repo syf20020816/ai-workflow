@@ -117,6 +117,8 @@ export async function executeWorkflow(
     )
     if (specRoot) {
       addLog(ctx, '', '', 'info', `Spec 模式：已创建产出目录 ${specRoot}`)
+      // 写入 ctx 供执行历史记录 spec 产物目录，方便执行结果页展示文件产物
+      ctx.specRoot = specRoot
     } else {
       addLog(ctx, '', '', 'warn', 'Spec 模式：产出目录创建失败，本次执行不落盘产物')
     }
@@ -214,6 +216,33 @@ export async function executeWorkflow(
         ctx.nodeStatuses[nodeId] = 'success'
         injectedIds.add(nodeId)
         addLog(ctx, nodeId, getNodeTitle(node), 'info', '使用固定节点输出（PIN）')
+
+        // Spec 模式：PIN 节点跳过执行、走不到下方写盘循环，需在此补写产物
+        // （会话黑匣子 + 按 specStep 标记写标准产物文件，保证下游能读到权威产物）
+        if (specRoot) {
+          const specType = node.type || ''
+          try {
+            await appendSpecArtifact(
+              specRoot,
+              'session/conversation-log.md',
+              buildSessionEntry(nodeId, getNodeTitle(node), specType, 'success', override),
+            )
+            const stepKey = (node.data as { specStep?: string } | undefined)?.specStep
+            const artifactFile =
+              stepKey && Object.prototype.hasOwnProperty.call(SPEC_STEP_FILE, stepKey)
+                ? SPEC_STEP_FILE[stepKey as keyof typeof SPEC_STEP_FILE]
+                : null
+            if (artifactFile) {
+              await appendSpecArtifact(
+                specRoot,
+                artifactFile,
+                buildArtifactEntry(specType, getNodeTitle(node), override),
+              )
+            }
+          } catch {
+            addLog(ctx, nodeId, getNodeTitle(node), 'warn', 'Spec 产物写入失败（已忽略）')
+          }
+        }
       }
     }
   }

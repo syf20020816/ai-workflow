@@ -4,7 +4,7 @@
   scrollbar-width: thin;
   display: flex;
   flex-direction: column;
-  
+
   .header {
     display: flex;
     align-items: center;
@@ -37,4 +37,220 @@
   background-color: var(--deep-color);
   padding: 4px;
   border-radius: 4px;
+}
+
+/* ===== 执行结果页 ===== */
+.container {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #303030;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar_header {
+  padding: 12px;
+  border-bottom: 1px solid #303030;
+}
+
+.sidebar_title_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sidebar_title {
+  font-size: 15px;
+}
+
+.sidebar_list {
+  flex: 1;
+  overflow: auto;
+}
+
+.item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.item_selected {
+  background: rgba(24, 144, 255, 0.14);
+  border-left-color: #1890ff;
+}
+
+.item_title_row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item_name {
+  font-size: 12px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item_meta_row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.item_time {
+  font-size: 11px;
+}
+
+.empty_pad {
+  padding: 24px;
+}
+
+.detail {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 8px;
+  min-width: 0;
+}
+
+.detail_empty {
+  margin-top: 80px;
+}
+
+.detail_header {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail_title {
+  font-size: 16px;
+}
+
+.detail_time {
+  font-size: 12px;
+}
+
+.detail_spacer {
+  flex: 1;
+}
+
+.log_timeline {
+  margin-top: 12px;
+}
+
+.log_item {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.log_node {
+  color: #888;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.node_label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node_title {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.output_box {
+  border-radius: 4px;
+  overflow-y: auto;
+  max-height: 360px;
+
+}
+
+.raw_btn {
+  padding-left: 0;
+}
+
+.files_body {
+  display: flex;
+  height: calc(100vh - 140px);
+  min-height: 240px;
+}
+
+.files_tree {
+  width: 220px;
+  border-right: 1px solid #303030;
+  overflow: auto;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.files_content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  min-width: 0;
+  
+}
+
+.file_path {
+  font-size: 12px;
+}
+
+.editor_box {
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.tree_row {
+  padding: 3px 8px;
+  padding-left: calc(var(--row-depth, 0) * 14px + 8px);
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.tree_selected {
+  background: rgba(24, 144, 255, 0.18);
+}
+
+.tree_arrow {
+  width: 12px;
+  font-size: 9px;
+  color: #888;
+}
+
+.tree_icon_folder {
+  color: #faad14;
+}
+
+.tree_icon_file {
+  color: #5b8ff9;
+}
+
+.tree_name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* antd Tag 默认右侧间距去掉 */
+.tag_nomargin {
+  margin-inline-end: 0 !important;
 }

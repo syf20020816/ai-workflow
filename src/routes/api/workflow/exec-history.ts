@@ -15,6 +15,10 @@ interface ExecHistoryItem {
   workflowName: string
   timestamp: string
   status: 'completed' | 'error' | 'paused'
+  /** 执行模式：常规 / Spec */
+  globalMode?: 'normal' | 'spec'
+  /** Spec 模式产出目录（绝对路径），常规模式无此字段 */
+  specDir?: string
   nodeCount: number
   nodeResults: Array<{
     nodeId: string
@@ -63,6 +67,8 @@ export const Route = createFileRoute('/api/workflow/exec-history')({
               workflowName: content.workflowName,
               timestamp: content.timestamp,
               status: content.status,
+              globalMode: content.globalMode,
+              specDir: content.specDir,
               nodeCount: content.nodeCount,
               nodeResults: content.nodeResults,
             }

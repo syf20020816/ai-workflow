@@ -358,15 +358,13 @@ export type NTaskPlannerData = NNode & {
   }
   /** 自定义拆解指令（追加到系统提示词之后，如限定批次粒度/技术栈） */
   instruction?: string
-  /** 执行输出 - 完整 tasks.md 文本 */
-  tasksMarkdown?: string
   /** 执行输出 - 批次数量 */
   batchCount?: number
   /** 执行输出 - 任务总数 */
   taskCount?: number
   /** 执行输出 - 校验警告 */
   warnings?: string[]
-  /** 执行输出（与 response 对齐，供下游按文本累积） */
+  /** 执行输出（tasks.md 全文，供下游按文本累积） */
   response?: string
 }
 

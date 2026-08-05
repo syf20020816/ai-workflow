@@ -1,11 +1,9 @@
 import { useEffect } from 'react'
 import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
-import { useRouteStore } from '#/store/route'
 import type { NTaskPlanner, NTaskPlannerData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Divider, Input, Button } from 'antd'
-import { ExternalLink } from 'lucide-react'
+import { Typography, Select, Divider, Input } from 'antd'
 import { DynEditKV } from './item'
 import { EditButton } from '#/components/button'
 

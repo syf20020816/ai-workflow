@@ -27,6 +27,9 @@ import { EditButton } from '../button'
 
 const { Text } = Typography
 
+/** 版本选择框的默认项：表示加载主文件（工作流当前状态），而非某个历史版本快照 */
+const LATEST_VERSION_KEY = '__latest__'
+
 /** 工作流表格 */
 const WorkflowTab = ({ loading }: { loading: boolean }) => {
   const openInEditor = useRouteStore((s) => s.openInEditor)
@@ -189,16 +192,18 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
               latest
             </Text>
           )
-        // 按创建时间倒序，最新版本排在首位并标记为 latest
+        // 按 versionId 内嵌的创建时间戳倒序（比 createdAt 字符串排序更可靠），最新版本排首位
         const sortedVersions = [...versions].sort(
           (a: any, b: any) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            Number(String(b.versionId).replace('v-', '')) -
+            Number(String(a.versionId).replace('v-', '')),
         )
-        const effectiveValue = sel || sortedVersions[0]?.versionId
+        // 未显式选择版本时默认选中 latest（对应加载主文件 = 工作流当前状态）
+        const effectiveValue = sel || LATEST_VERSION_KEY
         return (
           <Select
             style={{ width: '100%' }}
-            placeholder={vc > 0 ? `共 ${vc} 个版本` : 'latest'}
+            placeholder={vc > 0 ? '选择历史版本' : 'latest'}
             loading={loadingVersions[r.id]}
             value={effectiveValue}
             onDropdownVisibleChange={(open) => {
@@ -210,10 +215,16 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
                 [r.id]: v as string,
               }))
             }}
-            options={sortedVersions.map((v: any, idx: number) => ({
-              value: v.versionId,
-              label: `${idx === 0 ? 'latest · ' : ''} ${v.createdAt ? new Date(v.createdAt).toLocaleString() : ''}`,
-            }))}
+            options={[
+              {
+                value: LATEST_VERSION_KEY,
+                label: `latest · ${r.updatedAt ? new Date(r.updatedAt).toLocaleString() : ''}`,
+              },
+              ...sortedVersions.map((v: any) => ({
+                value: v.versionId,
+                label: `${v.createdAt ? new Date(v.createdAt).toLocaleString() : ''}`,
+              })),
+            ]}
             optionRender={(option) => (
               <div
                 style={{
@@ -223,18 +234,20 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
                 }}
               >
                 <span>{option.data.label}</span>
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  title="删除该历史版本"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteVersion(r.id, String(option.data.value))
-                  }}
-                />
+                {option.data.value !== LATEST_VERSION_KEY && (
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    title="删除该历史版本"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteVersion(r.id, String(option.data.value))
+                    }}
+                  />
+                )}
               </div>
             )}
           />
@@ -261,15 +274,15 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
           <EditButton
             title="加载"
             kind="exec"
-            onClick={() =>
+            onClick={() => {
+              // latest（或未选择）加载主文件 = 工作流当前状态；显式选择的历史版本才加载快照
+              const selV = selectedVersion[r.id]
               handleLoad(
                 r.id,
                 r.name,
-                selectedVersion[r.id] ||
-                  versionMap[r.id]?.[0]?.versionId ||
-                  undefined,
+                !selV || selV === LATEST_VERSION_KEY ? undefined : selV,
               )
-            }
+            }}
           ></EditButton>
           <EditButton
             title="编辑"
