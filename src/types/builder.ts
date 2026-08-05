@@ -185,7 +185,7 @@ export class NodeBuilder {
       ...NodeBuilder.basicProps(pos.x, pos.y),
       type: NodeTypes.CODE_AGENT,
       data: {
-        title: '代码分析节点',
+        title: '代码处理节点',
         projectPath: '',
         branch: '',
         instruction: '请分析这个项目的结构和功能',

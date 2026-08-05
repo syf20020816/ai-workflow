@@ -193,6 +193,8 @@ export type NRetry = Node<NRetryData, typeof NodeTypes.RETRY>
 
 /** codeAgentNode：代码自主探索节点 — AI 通过 Tool Calling 自主分析项目 */
 export type NCodeAgentData = NNode & {
+  /** 执行模式：analyze（代码分析，默认）/ batch（按 tasks.md 分批写代码） */
+  mode?: 'analyze' | 'batch'
   /** 项目路径（本地目录或 Git 仓库 URL） */
   projectPath?: string
   /** Git 分支 */
@@ -210,6 +212,10 @@ export type NCodeAgentData = NNode & {
     url?: string
     token?: { min: number; max: number }
   }
+  /** 执行输出 - batch 模式已完成的批次号 */
+  completedBatches?: number[]
+  /** 执行输出 - batch 模式总批次 */
+  totalBatches?: number
 }
 
 export type NCodeAgent = Node<NCodeAgentData, typeof NodeTypes.CODE_AGENT>

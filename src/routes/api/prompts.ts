@@ -17,7 +17,7 @@ const PROMPT_USAGE: Record<string, { name: string; usedBy: { label: string; path
   'codeAgent.md': {
     name: 'CodeAgent 系统提示词',
     usedBy: [
-      { label: '代码分析节点 (CodeAgent)', path: 'src/routes/api/execute/codeAgent.ts' },
+      { label: '代码处理节点 (CodeAgent)', path: 'src/routes/api/execute/codeAgent.ts' },
     ],
   },
   'keywordAgent.md': {

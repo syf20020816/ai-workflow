@@ -185,7 +185,7 @@ export const AddNodeBtn = ({
         },
         {
           label: (
-            <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码分析节点" />
+            <NodeHeader kind={NodeTypes.CODE_AGENT} title="代码处理节点" />
           ),
           key: NodeTypes.CODE_AGENT,
           disabled: isDisabledNode(kind, NodeTypes.CODE_AGENT),

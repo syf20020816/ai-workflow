@@ -19,7 +19,7 @@
       "positionAbsoluteY": 0,
       "type": "codeAgent",
       "data": {
-        "title": "代码分析节点",
+        "title": "代码处理节点",
         "projectPath": "/Users/lizhi/Desktop/work/workflow/tests",
         "branch": "tt",
         "instruction": "请分析这个项目的结构和功能",

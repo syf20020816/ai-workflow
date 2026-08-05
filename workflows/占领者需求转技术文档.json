@@ -173,7 +173,7 @@
       "positionAbsoluteY": 18.64399999999999,
       "type": "codeAgent",
       "data": {
-        "title": "代码分析节点",
+        "title": "代码处理节点",
         "projectPath": "/Users/lizhi/Desktop/work/hylive-groot-components-repo/packages/hy-light-up-component",
         "instruction": "通过需求分析后对项目代码进行了解，关注特殊的地方，最终输出技术文档",
         "maxIterations": 20,

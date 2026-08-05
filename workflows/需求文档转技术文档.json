@@ -185,7 +185,7 @@
       "positionAbsoluteY": 18.64399999999999,
       "type": "codeAgent",
       "data": {
-        "title": "代码分析节点",
+        "title": "代码处理节点",
         "projectPath": "/Users/lizhi/Desktop/work/lizhi_hy/hy-repo/packages/apps/bms",
         "instruction": "这是BMS后台项目",
         "maxIterations": 20,

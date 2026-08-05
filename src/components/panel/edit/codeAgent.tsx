@@ -29,6 +29,7 @@ export const EditCodeAgent = () => {
   }, [])
 
   const selectedModelId = currentNode.data.modal?.name || undefined
+  const mode = currentNode.data.mode ?? 'analyze'
 
   const rows: DynEditKVRow[] = [
     {
@@ -45,9 +46,12 @@ export const EditCodeAgent = () => {
     },
     {
       key: 'instruction',
-      label: '分析指令',
+      label: mode === 'batch' ? '编码指令' : '分析指令',
       value: currentNode.data.instruction,
-      placeholder: '如：请分析这个项目的结构和功能',
+      placeholder:
+        mode === 'batch'
+          ? '如：保持现有代码风格，不引入新依赖'
+          : '如：请分析这个项目的结构和功能',
       inputType: 'textArea',
       rows: 3,
     },
@@ -108,8 +112,29 @@ export const EditCodeAgent = () => {
     <>
       <div style={{ marginBottom: 8 }}>
         <Text type="secondary" style={{ fontSize: 11 }}>
-          AI 将通过 Tool Calling 自主探索和分析项目代码。只需配置项目路径和分析目标，AI 会自主决定查看哪些文件。
+          {mode === 'batch'
+            ? '按上游「任务拆解」产出的 tasks.md 逐批实现代码：每批完成后任务打勾（可续跑）、diff 记录到 session/。'
+            : 'AI 将通过 Tool Calling 自主探索和分析项目代码。只需配置项目路径和分析目标，AI 会自主决定查看哪些文件。'}
         </Text>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <Text type="secondary" style={{ fontSize: 11, marginRight: 8 }}>
+          执行模式
+        </Text>
+        <Select
+          style={{ width: '100%' }}
+          value={mode}
+          options={[
+            { value: 'analyze', label: 'analyze · 代码分析（只读探索，产出技术方案）' },
+            { value: 'batch', label: 'batch · 分批编码（按 tasks.md 批次写代码）' },
+          ]}
+          onChange={(value) => {
+            patchCurrentNode((draft) => {
+              d(draft).mode = value as 'analyze' | 'batch'
+            })
+          }}
+        />
       </div>
 
       <DynEditKV
