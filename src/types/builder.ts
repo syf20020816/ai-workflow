@@ -247,4 +247,15 @@ export class NodeBuilder {
       },
     }
   }
+
+  static taskPlanner(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.TASK_PLANNER,
+      data: {
+        title: '任务拆解节点',
+        instruction: '',
+      },
+    }
+  }
 }

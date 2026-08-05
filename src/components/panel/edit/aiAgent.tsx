@@ -10,11 +10,13 @@ import { DisconnectOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
+import { EditButton } from '#/components/button'
 
 const { Text } = Typography
 
-const d = (draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>) =>
-  draft.data as NAgentData
+const d = (
+  draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>,
+) => draft.data as NAgentData
 
 export const EditAgent = () => {
   const currentNode = useNodeStore(
@@ -23,7 +25,9 @@ export const EditAgent = () => {
   const nodes = useNodeStore((state) => state.nodes)
   const edges = useNodeStore((state) => state.edges)
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
-  const addBmadAgentForCurrent = useNodeStore((state) => state.addBmadAgentForCurrent)
+  const addBmadAgentForCurrent = useNodeStore(
+    (state) => state.addBmadAgentForCurrent,
+  )
   const removeConnectedBmad = useNodeStore((state) => state.removeConnectedBmad)
 
   const models = useModelStore((state) => state.models)
@@ -90,9 +94,7 @@ export const EditAgent = () => {
           }}
         />
       ),
-      actionRender: (
-        <Button size="small" onClick={() => switchTo('prompts')}>管理</Button>
-      ),
+      actionRender: <EditButton.To url={'prompts'} />,
     },
     {
       key: 'agent',
@@ -100,11 +102,13 @@ export const EditAgent = () => {
       valueRender: (onChange) => (
         <Select
           style={{ width: '100%' }}
-          placeholder={hasBmadConnection ? '已连接角色（可换选）' : '选择角色...'}
+          placeholder={
+            hasBmadConnection ? '已连接角色（可换选）' : '选择角色...'
+          }
           value={connectedAgentId}
           notFoundContent="暂无角色，请先添加"
           options={agents.map((a) => ({
-            label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
+            label: `${a.title} (${a.name})`,
             value: a.id,
           }))}
           onChange={(agentId) => {
@@ -129,7 +133,9 @@ export const EditAgent = () => {
         />
       ),
       actionRender: (
-        <Button size="small" onClick={() => switchTo('prompts')}>管理</Button>
+        <Button size="small" onClick={() => switchTo('prompts')}>
+          管理
+        </Button>
       ),
     },
   ]
@@ -182,7 +188,13 @@ export const EditAgent = () => {
 
       {/* 当前选择的信息展示 */}
       {selectedModelId && (
-        <div style={{ fontSize: 11, color: 'var(--xy-edge-stroke-default)', marginTop: 4 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--xy-edge-stroke-default)',
+            marginTop: 4,
+          }}
+        >
           <Text type="secondary">
             API URL: {currentNode.data.modal?.url || '未配置'}
           </Text>

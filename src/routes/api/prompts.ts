@@ -26,6 +26,12 @@ const PROMPT_USAGE: Record<string, { name: string; usedBy: { label: string; path
       { label: '关键词提取节点 (KeywordAgent)', path: 'src/components/panel/edit/keywordAgent.tsx' },
     ],
   },
+  'taskPlanner.md': {
+    name: '任务拆解节点系统提示词',
+    usedBy: [
+      { label: '任务拆解节点 (TaskPlanner)', path: 'src/components/panel/edit/taskPlanner.tsx' },
+    ],
+  },
 }
 
 export const Route = createFileRoute('/api/prompts')({

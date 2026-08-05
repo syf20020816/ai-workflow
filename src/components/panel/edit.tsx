@@ -32,6 +32,7 @@ import { EditLarkTemplate } from './edit/larkTemplate'
 import { EditKnowledgeRetrieval } from './edit/knowledgeRetrieval'
 import { EditKnowledgeStore } from './edit/knowledgeStore'
 import { EditKeywordAgent } from './edit/keywordAgent'
+import { EditTaskPlanner } from './edit/taskPlanner'
 import { EditLarkWikiTraversal } from './edit/larkWikiTraversal'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
@@ -115,6 +116,9 @@ export const EditPanel = (props: PanelProps) => {
                 )}
                 {currentNode.type === NodeTypes.KEYWORD_AGENT && (
                   <EditKeywordAgent />
+                )}
+                {currentNode.type === NodeTypes.TASK_PLANNER && (
+                  <EditTaskPlanner />
                 )}
                 {currentNode.type === NodeTypes.LARK_WIKI_TRAVERSAL && (
                   <EditLarkWikiTraversal />

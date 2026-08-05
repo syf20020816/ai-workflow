@@ -11,16 +11,10 @@ import {
   Input,
   InputNumber,
   Select,
-  Tooltip,
 } from 'antd'
-import type { ButtonProps } from 'antd'
+
 import { useEffect, useState } from 'react'
-import {
-  EditOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  PlayCircleOutlined,
-} from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useRouteStore } from '#/store/route'
 import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
@@ -29,38 +23,9 @@ import { useSkillStore } from '#/store/skill'
 import type { Model } from '#/types/model'
 import { ModalKinds } from '#/types/model'
 import { FileScan, RefreshCw, Upload } from 'lucide-react'
+import { EditButton } from '../button'
 
 const { Text } = Typography
-
-interface EditButtonProps extends ButtonProps {
-  kind: 'edit' | 'delete' | 'exec'
-  title: string
-}
-
-const EditButton = ({ kind, title, onClick, ...props }: EditButtonProps) => {
-  const type = () => {
-    if (kind === 'exec') return 'primary'
-    return 'default'
-  }
-
-  const icon = () => {
-    if (kind === 'edit') return <EditOutlined />
-    if (kind === 'delete') return <DeleteOutlined />
-    return <PlayCircleOutlined />
-  }
-
-  return (
-    <Tooltip title={title}>
-      <Button
-        danger={kind === 'delete'}
-        type={type()}
-        icon={icon()}
-        onClick={onClick}
-        {...props}
-      ></Button>
-    </Tooltip>
-  )
-}
 
 /** 工作流表格 */
 const WorkflowTab = ({ loading }: { loading: boolean }) => {
@@ -232,8 +197,7 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
         const effectiveValue = sel || sortedVersions[0]?.versionId
         return (
           <Select
-          
-            style={{ width: "100%" }}
+            style={{ width: '100%' }}
             placeholder={vc > 0 ? `共 ${vc} 个版本` : 'latest'}
             loading={loadingVersions[r.id]}
             value={effectiveValue}
@@ -301,7 +265,9 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
               handleLoad(
                 r.id,
                 r.name,
-                selectedVersion[r.id] || versionMap[r.id]?.[0]?.versionId || undefined,
+                selectedVersion[r.id] ||
+                  versionMap[r.id]?.[0]?.versionId ||
+                  undefined,
               )
             }
           ></EditButton>

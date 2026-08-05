@@ -21,6 +21,7 @@ export const NodeTypes = {
   KNOWLEDGE_STORE: 'knowledgeStore',
   LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
   KEYWORD_AGENT: 'keywordAgent',
+  TASK_PLANNER: 'taskPlanner',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -343,9 +344,37 @@ export type NKeywordAgentData = NNode & {
 
 export type NKeywordAgent = Node<NKeywordAgentData, typeof NodeTypes.KEYWORD_AGENT>
 
+/** 任务拆解节点：把 plan.md + 现有 spec 骨架拆解为可独立执行的 batch 任务清单（不直接写代码） */
+export type NTaskPlannerData = NNode & {
+  /** 模型配置 */
+  modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
+    name?: string
+    key?: string
+    url?: string
+    token?: { min: number; max: number }
+    alias?: string
+  }
+  /** 自定义拆解指令（追加到系统提示词之后，如限定批次粒度/技术栈） */
+  instruction?: string
+  /** 执行输出 - 完整 tasks.md 文本 */
+  tasksMarkdown?: string
+  /** 执行输出 - 批次数量 */
+  batchCount?: number
+  /** 执行输出 - 任务总数 */
+  taskCount?: number
+  /** 执行输出 - 校验警告 */
+  warnings?: string[]
+  /** 执行输出（与 response 对齐，供下游按文本累积） */
+  response?: string
+}
+
+export type NTaskPlanner = Node<NTaskPlannerData, typeof NodeTypes.TASK_PLANNER>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
-  | NLarkWikiTraversal | NKeywordAgent
+  | NLarkWikiTraversal | NKeywordAgent | NTaskPlanner
 > | null

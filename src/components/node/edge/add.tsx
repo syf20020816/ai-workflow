@@ -199,6 +199,14 @@ export const AddNodeBtn = ({
           disabled: isDisabledNode(kind, NodeTypes.KEYWORD_AGENT),
           onClick: () => addNode(NodeBuilder.keywordAgent),
         },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.TASK_PLANNER} title="任务拆解节点" />
+          ),
+          key: NodeTypes.TASK_PLANNER,
+          disabled: isDisabledNode(kind, NodeTypes.TASK_PLANNER),
+          onClick: () => addNode(NodeBuilder.taskPlanner),
+        },
       ],
     },
     {

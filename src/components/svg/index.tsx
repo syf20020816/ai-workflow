@@ -17,6 +17,7 @@ import {
   Type,
   DatabaseArrowUp,
   KeyRound,
+  ListTodo,
 } from 'lucide-react'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -305,6 +306,11 @@ Icon.KeywordAgent = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <KeyRound {...rest} color="#985debff" />,
   })
 
+Icon.TaskPlanner = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: <ListTodo {...rest} color="#13c2c2" />,
+  })
+
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
@@ -325,4 +331,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.KNOWLEDGE_STORE, Icon.KnowledgeStore],
   [NodeTypes.LARK_WIKI_TRAVERSAL, Icon.LarkWikiTraversal],
   [NodeTypes.KEYWORD_AGENT, Icon.KeywordAgent],
+  [NodeTypes.TASK_PLANNER, Icon.TaskPlanner],
 ])

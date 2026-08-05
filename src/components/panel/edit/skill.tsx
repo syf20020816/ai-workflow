@@ -1,11 +1,14 @@
 import { useNodeStore } from '#/store/node'
 import { useSkillStore } from '#/store/skill'
+import { useRouteStore } from '#/store/route'
 import type { NSkill, NSkillData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { useEffect } from 'react'
-import { Select } from 'antd'
+import { Select, Button } from 'antd'
+import { ExternalLink } from 'lucide-react'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
+import { EditButton } from '#/components/button'
 
 const d = (
   draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>,
@@ -20,15 +23,19 @@ export const EditSkill = () => {
   const skills = useSkillStore((state) => state.skills)
   const fetchSkills = useSkillStore((state) => state.fetchSkills)
 
+  const openInEditor = useRouteStore((s) => s.openInEditor)
+
   useEffect(() => {
     fetchSkills()
   }, [])
+
+  const skillId = currentNode.data.skillId || ''
 
   const rows: DynEditKVRow[] = [
     {
       key: 'skill',
       label: '选择技能',
-      value: currentNode.data.skillId || '',
+      value: skillId,
       valueRender: (onChange) => (
         <Select
           style={{ width: '100%' }}
@@ -52,7 +59,7 @@ export const EditSkill = () => {
       ),
       actionRender: (
         <div style={{ display: 'flex', gap: 2 }}>
-          {/* 管理按钮已通过 Tab 切换实现 */}
+          <EditButton.To url={`workflows/skills/${skillId}/skill.md`} isEdit />
         </div>
       ),
     },
