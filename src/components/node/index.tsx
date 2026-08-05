@@ -10,6 +10,7 @@ import { PinNode } from './edge/pin-node'
 import type { NodeStatus } from '#/types/engine'
 import { Badge } from 'antd'
 import { StepMarkNode } from './edge/step'
+import { useGlobalStore } from '#/store/global'
 
 export interface UNodeProps {
   node: Exclude<AppNode, null>
@@ -29,6 +30,7 @@ const statusBadgeMap: Record<
 
 export const UNode = ({ node, children }: UNodeProps) => {
   const setCurrentNode = useNodeStore((state) => state.setCurrentNode)
+  const mode = useGlobalStore((state) => state.globalMode)
   const currentNode = useNodeStore((state) => state.currentNode)
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
   const kind = node.type
@@ -43,6 +45,9 @@ export const UNode = ({ node, children }: UNodeProps) => {
       }}
     >
       <Handle type="target" position={Position.Left} />
+      {mode === 'spec' && node.data.specStep && (
+        <div className={styles.node_step}>{node.data.specStep}</div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <NodeHeader kind={kind} title={node.data.title || ''} />
         <Badge status={statusBadgeMap[nodeStatus]} size="small" />

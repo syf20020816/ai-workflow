@@ -2,7 +2,7 @@ import { useGlobalStore } from '#/store/global'
 import { useNodeStore } from '#/store/node'
 import { Panel } from '@xyflow/react'
 import type { PanelProps } from '@xyflow/react'
-import { Checkbox } from 'antd'
+import { Checkbox, Tooltip } from 'antd'
 import { SPEC_STEPS } from '#/constants/spec'
 import styles from '../index.module.scss'
 import { PanelLeftClose, PanelRightClose } from 'lucide-react'
@@ -38,48 +38,54 @@ export const StepLinePanel = (props: PanelProps) => {
 
   return (
     <Panel {...props}>
-      {isOpen ? (
-        <div className={styles.stepLine}>
-          <div className={styles.stepLine_title}>
-            Spec 阶段产物{' '}
-            <PanelLeftClose height={16} onClick={() => setIsOpen(!isOpen)}>
-              {' '}
-            </PanelLeftClose>
-          </div>
-          {markedList.length === 0 ? (
-            <div className={styles.stepLine_tip}>未标记任何阶段产物</div>
+      <div
+        className={`${styles.stepLine} ${!isOpen && styles.stepLine_startCenter}`}
+        style={{
+          width: isOpen ? '140px' : '32px',
+          padding: isOpen ? '12px' : '12px 0',
+        }}
+      >
+        <div
+          className={`${styles.stepLine_title} ${!isOpen && styles.stepLine_center}`}
+        >
+          {isOpen ? (
+            <>
+              Spec 阶段产物{' '}
+              <PanelLeftClose
+                style={{ cursor: 'pointer' }}
+                height={16}
+                onClick={() => setIsOpen(!isOpen)}
+              >
+                {' '}
+              </PanelLeftClose>
+            </>
           ) : (
-            <Checkbox.Group
-              disabled
-              className={styles.stepLine_group}
-              options={markedList.map((s) => ({
-                label: s.required ? `*${s.label}` : s.label,
-                value: s.key,
-              }))}
-              value={markedList.map((s) => s.key)}
-            />
+            <PanelRightClose
+              style={{ cursor: 'pointer' }}
+              height={16}
+              width={16}
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {' '}
+            </PanelRightClose>
           )}
-          <div className={styles.stepLine_tip}>
-            {markedList.length === 0 ? (
-              <span className={styles.stepLine_warn}>
-                运行时将提示：至少标记一个阶段产物
-              </span>
-            ) : missingRequired.length > 0 ? (
-              <span className={styles.stepLine_warn}>
-                缺失必选：{missingRequired.map((s) => s.key).join('、')}
-              </span>
-            ) : (
-              <span className={styles.stepLine_ok}>必选步骤（带*）已齐全</span>
-            )}
-          </div>
         </div>
-      ) : (
-        <div className={styles.stepLine} style={{width: 24, paddingLeft: 0, paddingRight: 0}}>
-          <PanelRightClose height={16} onClick={() => setIsOpen(!isOpen)}>
-            {' '}
-          </PanelRightClose>
-        </div>
-      )}
+        {markedList.length >= 1 && (
+          <Checkbox.Group
+            disabled
+            className={styles.stepLine_group}
+            value={markedList.map((s) => s.key)}
+          >
+            {markedList.map((s) => (
+              <Tooltip title={!isOpen ? s.label : ''} placement="right">
+                <Checkbox key={s.key} value={s.key}>
+                  {isOpen ? (s.required ? `*${s.label}` : s.label) : ''}
+                </Checkbox>
+              </Tooltip>
+            ))}
+          </Checkbox.Group>
+        )}
+      </div>
     </Panel>
   )
 }

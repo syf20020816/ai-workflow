@@ -32,6 +32,30 @@
     }
   }
 
+  &_step {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: fit-content;
+    padding: 2px 4px;
+    border-radius: 2px;
+    background-color: #ff4d4f;
+    white-space: nowrap;
+    font-size: 10px;
+    &::after {
+      content: '';
+      height: 12px;
+      width: 1px;
+      background-color: #ff4d4f;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 100%);
+
+    }
+  }
+
   hr {
     border-color: var(--xy-edge-stroke-default);
   }

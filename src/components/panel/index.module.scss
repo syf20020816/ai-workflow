@@ -76,7 +76,7 @@
 }
 
 .stepLine {
-  height: 50vh;
+  height: 40vh;
   min-height: 300px;
   width: 140px;
   background-color: var(--xy-node-background-color);
@@ -88,6 +88,17 @@
   gap: 8px;
   overflow-y: auto;
 
+  &_startCenter {
+    align-items: center;
+  }
+
+  &_center {
+    display: flex;
+    align-items: center;
+    justify-content: center !important;
+   
+  }
+
   &_title {
     font-size: 13px;
     font-weight: 600;
@@ -95,6 +106,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 4px;
+    height: 18px;
   }
 
   &_group {
@@ -110,8 +122,8 @@
 
   &_tip {
     font-size: 12px;
-
     margin-top: 4px;
+    width: 100%;
   }
 
   &_warn {
