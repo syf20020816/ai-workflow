@@ -426,7 +426,6 @@ export const Execution = () => {
                     value={isRaw ? JSON.stringify(r.output, null, 2) : text}
                     readOnly
                     language={isRaw ? 'json' : undefined}
-                   
                   />
                 </div>
                 {(extra || !text) && (

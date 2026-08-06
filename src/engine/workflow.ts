@@ -5,6 +5,7 @@ import type {
   NodeExecutionContext,
   NodeExecutionResult,
   LogEntry,
+  NodeStatus,
 } from '#/types/engine'
 import { topologicalLayers, getPredecessors, getAncestorIds, getReachableNodeIds } from './topological'
 import { getExecutor } from './executors'
@@ -72,6 +73,45 @@ export function createPipelineContext(): PipelineContext {
   }
 }
 
+/** 断点续跑 · 持久化执行状态 checkpoint（P0-5） */
+async function persistExecState(
+  ctx: PipelineContext,
+  workflowId: string,
+  globalMode?: 'normal' | 'spec',
+): Promise<void> {
+  try {
+    await fetch('/api/workflow/exec-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflowId,
+        state: {
+          workflowId,
+          globalMode,
+          globalStatus: ctx.globalStatus,
+          nodeOutputs: ctx.nodeOutputs,
+          nodeStatuses: ctx.nodeStatuses,
+          specRoot: ctx.specRoot,
+          savedAt: new Date().toISOString(),
+        },
+      }),
+    })
+  } catch {
+    // checkpoint 写盘失败不阻断执行
+  }
+}
+
+/** 断点续跑 · 清除执行状态 checkpoint（执行彻底完成 / 重置时） */
+async function clearExecState(workflowId: string): Promise<void> {
+  try {
+    await fetch(`/api/workflow/exec-state?workflowId=${encodeURIComponent(workflowId)}`, {
+      method: 'DELETE',
+    })
+  } catch {
+    // 忽略
+  }
+}
+
 /** 添加日志 */
 function addLog(ctx: PipelineContext, nodeId: string, nodeTitle: string, level: LogEntry['level'], message: string): void {
   ctx.logs.push({
@@ -103,6 +143,12 @@ export async function executeWorkflow(
     globalMode?: 'normal' | 'spec'
     /** 工作流 ID（spec 目录命名用） */
     workflowId?: string
+    /** 断点续跑：恢复上次暂停时已完成的节点输出（P0-5），启动时跳过已完成节点 */
+    restoreState?: {
+      nodeOutputs: Partial<Record<string, Record<string, any>>>
+      nodeStatuses: Partial<Record<string, NodeStatus>>
+      specRoot?: string
+    }
   },
 ): Promise<PipelineContext> {
   const ctx = createPipelineContext()
@@ -110,22 +156,29 @@ export async function executeWorkflow(
 
   // Spec 模式：执行前创建标准产出目录骨架
   let specRoot: string | null = null
-  if (options?.globalMode === 'spec') {
-    specRoot = await initSpecFolder(
-      options.workflowId || 'workflow',
-      (options.workflowId || 'workflow').replace(/^workflow_/, ''),
-    )
-    if (specRoot) {
-      addLog(ctx, '', '', 'info', `Spec 模式：已创建产出目录 ${specRoot}`)
-      // 写入 ctx 供执行历史记录 spec 产物目录，方便执行结果页展示文件产物
+  if (options && options.globalMode === 'spec') {
+    if (options.restoreState?.specRoot) {
+      // 断点续跑：沿用上次产物目录，避免新建目录导致产物分叉
+      specRoot = options.restoreState.specRoot
       ctx.specRoot = specRoot
+      addLog(ctx, '', '', 'info', `断点续跑：沿用 Spec 产出目录 ${specRoot}`)
     } else {
-      addLog(ctx, '', '', 'warn', 'Spec 模式：产出目录创建失败，本次执行不落盘产物')
+      specRoot = await initSpecFolder(
+        options.workflowId || 'workflow',
+        (options.workflowId || 'workflow').replace(/^workflow_/, ''),
+      )
+      if (specRoot) {
+        addLog(ctx, '', '', 'info', `Spec 模式：已创建产出目录 ${specRoot}`)
+        // 写入 ctx 供执行历史记录 spec 产物目录，方便执行结果页展示文件产物
+        ctx.specRoot = specRoot
+      } else {
+        addLog(ctx, '', '', 'warn', 'Spec 模式：产出目录创建失败，本次执行不落盘产物')
+      }
     }
 
     // Spec 模式运行时检测：执行范围内必须至少有一个节点标记了阶段产物
     if (specRoot) {
-      const reachableIds = options?.startNodeId
+      const reachableIds = options.startNodeId
         ? getReachableNodeIds(options.startNodeId, edges)
         : new Set(nodes.filter((n) => n.type).map((n) => n.id))
       const hasStep = nodes.some(
@@ -206,6 +259,33 @@ export async function executeWorkflow(
   }
 
   const nodeMap = new Map(checkNodes.map((n) => [n.id, n]))
+
+  // 断点续跑（P0-5）：恢复上次暂停时已完成的节点输出（供下游读取），
+  // 执行范围内已恢复的节点加入 injectedIds 跳过执行
+  if (options?.restoreState) {
+    const { nodeOutputs = {}, nodeStatuses = {} } = options.restoreState
+    let restoredCount = 0
+    for (const [restoredId, output] of Object.entries(nodeOutputs)) {
+      if (!output || typeof output !== 'object') continue
+      ctx.nodeOutputs[restoredId] = output
+      if (nodeStatuses[restoredId] === 'success') {
+        ctx.nodeStatuses[restoredId] = 'success'
+        if (nodeMap.has(restoredId)) {
+          injectedIds.add(restoredId)
+          restoredCount++
+        }
+      }
+    }
+    if (restoredCount > 0) {
+      addLog(
+        ctx,
+        '',
+        '',
+        'info',
+        `断点续跑：已恢复 ${restoredCount} 个已完成节点并跳过（如需全新执行，请先重置执行状态）`,
+      )
+    }
+  }
 
   // 注入固定节点输出（PIN 节点）：按 nodeId 匹配，只注入用户明确加载了 pin 的节点
   if (options?.nodeOutputOverrides) {
@@ -390,6 +470,11 @@ export async function executeWorkflow(
       onUpdate({ ...ctx })
     }
 
+    // 每层执行完成：持久化执行状态 checkpoint（断点续跑，覆盖正常/暂停/错误任一情况）
+    if (options?.workflowId) {
+      await persistExecState(ctx, options.workflowId, options.globalMode)
+    }
+
     if (layerHasError) break loop
     if (hasWaiting) return ctx
   }
@@ -399,6 +484,10 @@ export async function executeWorkflow(
     ctx.globalStatus = 'completed'
     ctx.currentNodeId = null
     addLog(ctx, '', '', 'info', '工作流执行完成')
+    // 执行彻底完成：清除 checkpoint，避免下次运行误恢复
+    if (options?.workflowId) {
+      await clearExecState(options.workflowId)
+    }
     onUpdate({ ...ctx })
   }
 
@@ -418,6 +507,12 @@ export async function resumeWorkflow(
   options?: {
     globalMode?: 'normal' | 'spec'
     workflowId?: string
+    /** 断点续跑：恢复上次暂停时已完成的节点输出（P0-5） */
+    restoreState?: {
+      nodeOutputs: Partial<Record<string, Record<string, any>>>
+      nodeStatuses: Partial<Record<string, NodeStatus>>
+      specRoot?: string
+    }
   },
 ): Promise<PipelineContext> {
   const userInputs = { [nodeId]: userInput }
@@ -427,5 +522,6 @@ export async function resumeWorkflow(
     userInputs,
     globalMode: options?.globalMode,
     workflowId: options?.workflowId,
+    ...(options?.restoreState ? { restoreState: options.restoreState } : {}),
   })
 }

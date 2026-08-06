@@ -74,6 +74,44 @@ async function saveExecutionHistory(
   }
 }
 
+/** 读取断点续跑状态（仅 globalStatus === 'paused' 时返回有效状态，P0-5） */
+async function loadExecState(
+  workflowId: string,
+): Promise<{
+  nodeOutputs: Record<string, Record<string, any>>
+  nodeStatuses: Record<string, any>
+  specRoot?: string
+} | null> {
+  try {
+    const res = await fetch(
+      `/api/workflow/exec-state?workflowId=${encodeURIComponent(workflowId)}`,
+    )
+    const json = await res.json()
+    if (json.status === 'success' && json.state?.globalStatus === 'paused') {
+      return {
+        nodeOutputs: json.state.nodeOutputs || {},
+        nodeStatuses: json.state.nodeStatuses || {},
+        ...(json.state.specRoot ? { specRoot: json.state.specRoot } : {}),
+      }
+    }
+  } catch {
+    // 读取失败视为无断点
+  }
+  return null
+}
+
+/** 清除断点 checkpoint（用户重置执行状态时） */
+async function clearExecStateFile(workflowId: string) {
+  try {
+    await fetch(
+      `/api/workflow/exec-state?workflowId=${encodeURIComponent(workflowId)}`,
+      { method: 'DELETE' },
+    )
+  } catch {
+    // 忽略
+  }
+}
+
 export interface UseNodeStoreProps {
   currentNode: AppNode
   setCurrentNode: (node: AppNode) => void
@@ -107,8 +145,8 @@ export interface UseNodeStoreProps {
   runAll: () => void
   /** 从指定节点开始执行子图 */
   runFrom: (nodeId: string) => void
-  /** 恢复执行（Answer 节点用户回复后恢复） */
-  resumeFrom: (nodeId: string, reply: string) => void
+  /** 恢复执行（Answer 节点用户回复后恢复，支持断点续跑） */
+  resumeFrom: (nodeId: string, reply: string) => Promise<void>
   /** 重置执行状态 */
   resetExecution: () => void
   /** 删除指定边 */
@@ -494,13 +532,15 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     // 获取工作流名称
     const workflowName = workflowId.replace(/^workflow_/, '')
     const globalMode = useGlobalStore.getState().globalMode
+    // 断点续跑（P0-5）：上次 paused 则恢复已完成节点，跳过执行
+    const restored = await loadExecState(workflowId)
     const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (c) => {
         set({ pipelineContext: { ...c } })
       },
-      { globalMode, workflowId },
+      { globalMode, workflowId, ...(restored ? { restoreState: restored } : {}) },
     )
     // 执行结束后保存历史
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
@@ -509,20 +549,29 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const { nodes, edges, workflowId } = get()
     const workflowName = workflowId.replace(/^workflow_/, '')
     const globalMode = useGlobalStore.getState().globalMode
+    // 断点续跑（P0-5）：上次 paused 则恢复已完成节点，保证该节点能看到上游输出
+    const restored = await loadExecState(workflowId)
     const pipelineCtx = await executeWorkflow(
       nodes,
       edges,
       (ctx) => {
         set({ pipelineContext: { ...ctx } })
       },
-      { startNodeId: nodeId, globalMode, workflowId },
+      {
+        startNodeId: nodeId,
+        globalMode,
+        workflowId,
+        ...(restored ? { restoreState: restored } : {}),
+      },
     )
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
   },
-  resumeFrom: (nodeId: string, reply: string) => {
+  resumeFrom: async (nodeId: string, reply: string) => {
     const { nodes, edges, pipelineContext, workflowId } = get()
     const globalMode = useGlobalStore.getState().globalMode
-    resumeWorkflow(
+    // 断点续跑（P0-5）：恢复上次暂停时已完成的节点输出，从 Answer 节点继续
+    const restored = await loadExecState(workflowId)
+    await resumeWorkflow(
       nodeId,
       reply,
       pipelineContext,
@@ -531,10 +580,17 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       (ctx) => {
         set({ pipelineContext: { ...ctx } })
       },
-      { globalMode, workflowId },
+      {
+        globalMode,
+        workflowId,
+        ...(restored ? { restoreState: restored } : {}),
+      },
     )
   },
   resetExecution: () => {
+    const { workflowId } = get()
     set({ pipelineContext: createPipelineContext() })
+    // 重置执行状态时同时清除断点 checkpoint，避免下次运行误恢复
+    void clearExecStateFile(workflowId)
   },
 }))

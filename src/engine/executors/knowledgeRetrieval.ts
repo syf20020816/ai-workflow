@@ -1,5 +1,6 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
 import { callAI } from '#/services/ai'
+import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /** 调用嵌入 API 将文本转为向量 */
 async function doEmbed(text: string): Promise<{ vector: number[]; dimensions: number }> {
@@ -351,7 +352,18 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
     // 模式 B：自动模式 — AI 根据上游上下文生成多种查询，多次检索
     // ============================================================
     try {
-      const context = input.content || input.text || input.instruction || input.query || input.prompt || input.result || Object.values(input).find(v => typeof v === 'string' && v.length > 50) || ''
+      // P0-4：优先用「优先级排序 + 预算截断」后的累积上下文（覆盖整条祖先链路），
+      // 无累积时回退平铺单字段提取
+      const budgeted = buildBudgetedContext(input, modal?.token?.max)
+      const context =
+        budgeted.response ||
+        input.content ||
+        input.text ||
+        input.instruction ||
+        input.query ||
+        input.prompt ||
+        input.result ||
+        ''
 
       if (!context) {
         return {

@@ -1,4 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { buildBudgetedContext } from '#/services/upstreamContext'
 
 export const keywordAgentExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
@@ -19,8 +20,11 @@ export const keywordAgentExecutor: NodeExecutor = {
       }
     }
 
-    // 从上游输入中提取内容
+    // 从上游输入中提取内容（P0-4：优先用「优先级排序 + 预算截断」后的累积上下文，
+    // 覆盖整条祖先链路而非只取平铺字段；无累积时回退单字段提取）
+    const budgeted = buildBudgetedContext(input, modal.token?.max)
     const upstreamContent =
+      budgeted.response ||
       input.content ||
       input.text ||
       input.instruction ||
@@ -28,7 +32,6 @@ export const keywordAgentExecutor: NodeExecutor = {
       input.result ||
       input.prompt ||
       input.query ||
-      Object.values(input).find((v: any) => typeof v === 'string' && v.length > 50) ||
       ''
 
     if (!upstreamContent) {

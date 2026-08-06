@@ -17,6 +17,7 @@ import { Route as ApiModelRouteImport } from './routes/api/model'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiWorkflowVersionsRouteImport } from './routes/api/workflow/versions'
 import { Route as ApiWorkflowPinRouteImport } from './routes/api/workflow/pin'
+import { Route as ApiWorkflowExecStateRouteImport } from './routes/api/workflow/exec-state'
 import { Route as ApiWorkflowExecHistoryRouteImport } from './routes/api/workflow/exec-history'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
@@ -76,6 +77,11 @@ const ApiWorkflowVersionsRoute = ApiWorkflowVersionsRouteImport.update({
 const ApiWorkflowPinRoute = ApiWorkflowPinRouteImport.update({
   id: '/api/workflow/pin',
   path: '/api/workflow/pin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkflowExecStateRoute = ApiWorkflowExecStateRouteImport.update({
+  id: '/api/workflow/exec-state',
+  path: '/api/workflow/exec-state',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWorkflowExecHistoryRoute = ApiWorkflowExecHistoryRouteImport.update({
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
+  '/api/workflow/exec-state': typeof ApiWorkflowExecStateRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
   '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
+  '/api/workflow/exec-state': typeof ApiWorkflowExecStateRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
   '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
+  '/api/workflow/exec-state': typeof ApiWorkflowExecStateRoute
   '/api/workflow/pin': typeof ApiWorkflowPinRoute
   '/api/workflow/versions': typeof ApiWorkflowVersionsRoute
 }
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
+    | '/api/workflow/exec-state'
     | '/api/workflow/pin'
     | '/api/workflow/versions'
   fileRoutesByTo: FileRoutesByTo
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
+    | '/api/workflow/exec-state'
     | '/api/workflow/pin'
     | '/api/workflow/versions'
   id:
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
+    | '/api/workflow/exec-state'
     | '/api/workflow/pin'
     | '/api/workflow/versions'
   fileRoutesById: FileRoutesById
@@ -389,6 +401,7 @@ export interface RootRouteChildren {
   ApiExecuteSpecFolderRoute: typeof ApiExecuteSpecFolderRoute
   ApiExecuteTaskPlannerRoute: typeof ApiExecuteTaskPlannerRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
+  ApiWorkflowExecStateRoute: typeof ApiWorkflowExecStateRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
   ApiWorkflowVersionsRoute: typeof ApiWorkflowVersionsRoute
 }
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/api/workflow/pin'
       fullPath: '/api/workflow/pin'
       preLoaderRoute: typeof ApiWorkflowPinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workflow/exec-state': {
+      id: '/api/workflow/exec-state'
+      path: '/api/workflow/exec-state'
+      fullPath: '/api/workflow/exec-state'
+      preLoaderRoute: typeof ApiWorkflowExecStateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/workflow/exec-history': {
@@ -633,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteSpecFolderRoute: ApiExecuteSpecFolderRoute,
   ApiExecuteTaskPlannerRoute: ApiExecuteTaskPlannerRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,
+  ApiWorkflowExecStateRoute: ApiWorkflowExecStateRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
   ApiWorkflowVersionsRoute: ApiWorkflowVersionsRoute,
 }

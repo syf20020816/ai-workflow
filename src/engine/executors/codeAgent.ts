@@ -1,5 +1,6 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
 import { readSpecArtifact } from '#/services/specFolder'
+import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /**
  * CodeAgent 节点执行器
@@ -91,6 +92,9 @@ export const codeAgentExecutor: NodeExecutor = {
     }
 
     try {
+      // 上游上下文做「优先级排序 + 预算截断」，避免把未经裁剪的累积上下文整个透传（token 效率专项 P0-4）
+      const budgetedContext = buildBudgetedContext(input, modal.token?.max)
+
       const res = await fetch('/api/execute/codeAgent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,8 +112,8 @@ export const codeAgentExecutor: NodeExecutor = {
           },
           // batch 模式专用
           ...(mode === 'batch' ? { tasksMarkdown, specRoot: specRoot || undefined } : {}),
-          // 传递上游节点（如 Agent 节点）的上下文
-          upstreamContext: ctx.input,
+          // 传递上游节点（如 Agent 节点）的上下文（已裁剪）
+          upstreamContext: budgetedContext,
         }),
       })
 
