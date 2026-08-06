@@ -293,6 +293,27 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
 
           logs.push(`Token 用量: 输入 ${result.usage.inputTokens || 0} / 输出 ${result.usage.outputTokens || 0} / 总计 ${result.usage.totalTokens || 0}`)
 
+          // 达到迭代上限且最后一步仍在调用工具 → 分析被截断，输出不完整，
+          // 必须标记 error，避免把中间叙述当作分析结果传播给下游节点。
+          // 中间输出保留在 partialResponse 供执行结果页查看，response 置空
+          if (isTruncatedByStepCap(result, maxIterations)) {
+            logs.push(`达到最大迭代次数（${maxIterations}），分析未完成即被截断`)
+            return Response.json({
+              status: 'error',
+              output: {
+                // 未完成：response 为空字符串（不完整的分析不得作为最终结果），中间输出单独保留
+                response: '',
+                partialResponse: result.text,
+                model: modal.name,
+                iterations: stepCount,
+                projectPath,
+                truncated: true,
+              },
+              logs,
+              error: `达到最大迭代次数（${maxIterations}）时仍在进行工具调用，分析未完成。请增大「最大迭代次数」或缩小分析范围后重试。`,
+            })
+          }
+
           return Response.json({
             status: 'success',
             output: {
@@ -570,6 +591,15 @@ async function handleBatchMode(input: BatchModeInput) {
         tools: batchTools,
       })
 
+      // 本批被截断（达到迭代上限仍在调用工具）→ 任务可能未实现完，
+      // 不能打勾标记完成，停止后续批次（已完成的批次进度保留，可增大迭代次数后续跑）
+      if (isTruncatedByStepCap(result, maxIterations)) {
+        logs.push(
+          `Batch ${batch.index} 达到最大迭代次数被截断，本批未标记完成。请增大「最大迭代次数」或缩小本批任务范围后重跑续跑`,
+        )
+        break
+      }
+
       // 本批完成：打勾 + 记录 diff
       currentMd = markBatchDone(currentMd, batch.index)
       const diffText = collectGitDiff(projectRoot)
@@ -646,4 +676,21 @@ function isStepCount(maxSteps: number) {
     count++
     return count > maxSteps
   }
+}
+
+/**
+ * 判断工具调用循环是否因达到迭代上限被截断。
+ * 特征：步骤数达到上限，且最后一步仍在调用工具（未自然产出最终文本）。
+ * 截断时 result.text 只是中间叙述，不能当作完整输出传播给下游。
+ */
+function isTruncatedByStepCap(result: any, maxIterations: number): boolean {
+  const steps: any[] = result?.steps || []
+  if (steps.length < maxIterations) return false
+  const last = steps[steps.length - 1]
+  if (!last) return false
+  const toolCalls: any[] =
+    last.toolCalls ||
+    (last.parts || []).filter((p: any) => p.type === 'tool-call') ||
+    []
+  return toolCalls.length > 0
 }

@@ -17,6 +17,10 @@ export interface PipelineContext {
   globalStatus: 'idle' | 'running' | 'paused' | 'completed' | 'error'
   /** Spec 模式产出目录（绝对路径），常规模式为 undefined */
   specRoot?: string
+  /** 执行开始时间（ms，断点续跑沿用首次开始时间） */
+  startedAt?: number
+  /** 执行结束时间（ms，completed/error 时写入） */
+  endedAt?: number
 }
 
 /** 日志条目 */

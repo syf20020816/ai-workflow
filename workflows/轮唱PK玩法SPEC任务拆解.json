@@ -1,0 +1,105 @@
+{
+  "name": "轮唱PK玩法SPEC任务拆解",
+  "id": "轮唱PK玩法SPEC任务拆解",
+  "nodes": [
+    {
+      "id": "8d0ea8e9-798a-4c5c-8190-a2f6560f061a",
+      "position": {
+        "x": -18.5,
+        "y": -85
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "lark",
+      "data": {
+        "title": "Lark文档节点",
+        "specStep": "plan",
+        "url": "https://lizhi2021.feishu.cn/wiki/STX0wW6mhiyPzqkTusOc3sqknCf",
+        "action": "read"
+      },
+      "measured": {
+        "width": 160,
+        "height": 89
+      }
+    },
+    {
+      "id": "9235a0ef-0719-4f13-957d-5223d06ac76a",
+      "position": {
+        "x": 205.5,
+        "y": -85.5
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "taskPlanner",
+      "data": {
+        "title": "任务拆解节点",
+        "instruction": "",
+        "specStep": "tasks",
+        "modal": {
+          "id": "e60f9a67-f9e8-413e-951d-b6e9e779173e",
+          "alias": "deepseek-v4"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 39
+      }
+    },
+    {
+      "id": "a3cf1a0d-bcea-4edb-b94a-0d79c37d17bf",
+      "position": {
+        "x": 418.5,
+        "y": -90
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": true,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 405.5,
+      "positionAbsoluteY": -85.5,
+      "type": "lark",
+      "data": {
+        "title": "Lark文档节点",
+        "action": "write",
+        "url": "https://lizhi2021.feishu.cn/wiki/STX0wW6mhiyPzqkTusOc3sqknCf"
+      },
+      "measured": {
+        "width": 160,
+        "height": 89
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "8d0ea8e9-798a-4c5c-8190-a2f6560f061a",
+      "target": "9235a0ef-0719-4f13-957d-5223d06ac76a",
+      "type": "nodeEdge",
+      "id": "xy-edge__8d0ea8e9-798a-4c5c-8190-a2f6560f061a-9235a0ef-0719-4f13-957d-5223d06ac76a"
+    },
+    {
+      "id": "9235a0ef-0719-4f13-957d-5223d06ac76a-a3cf1a0d-bcea-4edb-b94a-0d79c37d17bf",
+      "source": "9235a0ef-0719-4f13-957d-5223d06ac76a",
+      "target": "a3cf1a0d-bcea-4edb-b94a-0d79c37d17bf",
+      "type": "nodeEdge"
+    }
+  ],
+  "createdAt": "2026-08-06T03:46:59.767Z",
+  "updatedAt": "2026-08-06T03:46:59.767Z"
+}

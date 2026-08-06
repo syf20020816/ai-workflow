@@ -149,10 +149,14 @@ export async function executeWorkflow(
       nodeStatuses: Partial<Record<string, NodeStatus>>
       specRoot?: string
     }
+    /** 执行开始时间（ms），断点续跑时沿用首次执行的时间 */
+    startedAt?: number
   },
 ): Promise<PipelineContext> {
   const ctx = createPipelineContext()
   ctx.globalStatus = 'running'
+  // 执行开始时间（断点续跑沿用上次传入的 startedAt，不重置）
+  ctx.startedAt = options?.startedAt || Date.now()
 
   // Spec 模式：执行前创建标准产出目录骨架
   let specRoot: string | null = null
@@ -248,6 +252,7 @@ export async function executeWorkflow(
   const missing = checkNodes.filter((n) => !allLayered.has(n.id)).map((n) => n.id)
   if (missing.length > 0) {
     ctx.globalStatus = 'error'
+    ctx.endedAt = Date.now()
     addLog(ctx, '', '', 'error', `检测到循环依赖: ${missing.join(', ')}`)
     onUpdate(ctx)
     return ctx
@@ -416,6 +421,7 @@ export async function executeWorkflow(
       if (r.status === 'error') {
         ctx.nodeStatuses[r.nodeId] = 'error'
         ctx.globalStatus = 'error'
+        ctx.endedAt = Date.now()
         addLog(ctx, r.nodeId, nodeTitle, 'error', r.error || '执行失败')
         if (r.result?.logs) {
           for (const logMsg of r.result.logs) {
@@ -483,6 +489,7 @@ export async function executeWorkflow(
   if (ctx.globalStatus === 'running') {
     ctx.globalStatus = 'completed'
     ctx.currentNodeId = null
+    ctx.endedAt = Date.now()
     addLog(ctx, '', '', 'info', '工作流执行完成')
     // 执行彻底完成：清除 checkpoint，避免下次运行误恢复
     if (options?.workflowId) {
@@ -513,6 +520,8 @@ export async function resumeWorkflow(
       nodeStatuses: Partial<Record<string, NodeStatus>>
       specRoot?: string
     }
+    /** 执行开始时间（ms），续跑沿用首次执行的时间 */
+    startedAt?: number
   },
 ): Promise<PipelineContext> {
   const userInputs = { [nodeId]: userInput }
@@ -523,5 +532,6 @@ export async function resumeWorkflow(
     globalMode: options?.globalMode,
     workflowId: options?.workflowId,
     ...(options?.restoreState ? { restoreState: options.restoreState } : {}),
+    ...(options?.startedAt ? { startedAt: options.startedAt } : {}),
   })
 }

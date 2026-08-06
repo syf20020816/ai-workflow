@@ -8,6 +8,7 @@ import { useState } from 'react'
 export const ExecutionPanel = () => {
   const pipelineContext = useNodeStore((state) => state.pipelineContext)
   const nodes = useNodeStore((state) => state.nodes)
+  const pinnedNodes = useNodeStore((state) => state.pinnedNodes)
   const runAll = useNodeStore((state) => state.runAll)
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
@@ -15,40 +16,29 @@ export const ExecutionPanel = () => {
 
   // Spec 模式：执行范围内必须至少有一个节点标记了阶段产物，否则禁止运行
   const specDisabled =
-    globalMode === 'spec' && !nodes.some(
-      (n) => (n.data as { specStep?: string } | undefined)?.specStep,
-    )
+    globalMode === 'spec' &&
+    !nodes.some((n) => (n.data as { specStep?: string } | undefined)?.specStep)
 
-  const [pinnedItems, setPinnedItems] = useState<
-    { nodeType: string; title: string }[]
-  >([])
-  const [selectedPinnedType, setSelectedPinnedType] = useState<string | null>(
+  const [selectedPinnedKey, setSelectedPinnedKey] = useState<string | null>(
     null,
   )
-  const [pinnedLoading, setPinnedLoading] = useState(false)
 
-  const handleRun = async () => {
-    if (selectedPinnedType) {
-      // 找到当前工作流中第一个同类型节点作为注入目标
-      const matchNode = nodes.find((n) => n.type === selectedPinnedType)
-      if (!matchNode) {
-        runAll()
-        return
-      }
-      // 从文件系统读取 pin 数据
-      const res = await fetch(
-        `/api/workflow/pin?nodeType=${encodeURIComponent(selectedPinnedType)}`,
-      )
-      const json = await res.json()
-      if (json.status === 'success') {
-        const output = json.data.output
-        // 加载到内存（按 nodeId 隔离，只影响匹配的节点）
-        useNodeStore.getState().loadPinnedNode(matchNode.id, output)
-        // 以该节点为起点，注入 { [nodeId]: output } 执行
-        runFromWithPinned(matchNode.id, { [matchNode.id]: output })
-      } else {
-        runAll()
-      }
+  // 仅显示「已加载到当前工作流」的 PIN（store.pinnedNodes 按节点 id 隔离），
+  // 而非磁盘上所有工作流的 PIN 文件；节点删除后自动不显示
+  const pinnedOptions = nodes
+    .filter((n) => pinnedNodes[n.id])
+    .map((n) => ({
+      value: n.id,
+      label: `${(n.data as any)?.title || n.type || n.id}（${n.type || '未知'}）`,
+    }))
+
+  const handleRun = () => {
+    const output = selectedPinnedKey
+      ? pinnedNodes[selectedPinnedKey]
+      : undefined
+    if (selectedPinnedKey && output) {
+      // 以该节点为起点，注入 { [nodeId]: output } 执行（output 已在内存，无需再读文件）
+      runFromWithPinned(selectedPinnedKey, { [selectedPinnedKey]: output })
     } else {
       runAll()
     }
@@ -59,37 +49,19 @@ export const ExecutionPanel = () => {
       <div className={styles.header}>
         <Select
           style={{ width: '100%' }}
-          placeholder="选择固定节点类型（可选）"
-          value={selectedPinnedType}
-          onChange={setSelectedPinnedType}
+          placeholder="选择固定节点（仅显示已加载到本工作流的 PIN）"
+          value={selectedPinnedKey}
+          onChange={setSelectedPinnedKey}
           allowClear
-          loading={pinnedLoading}
-          onDropdownVisibleChange={async (open) => {
-            if (open) {
-              setPinnedLoading(true)
-              try {
-                const res = await fetch('/api/workflow/pin')
-                const json = await res.json()
-                if (json.status === 'success') {
-                  setPinnedItems(json.data)
-                }
-              } catch {
-                // ignore
-              }
-              setPinnedLoading(false)
-            }
-          }}
-          options={pinnedItems.map((p) => ({
-            value: p.nodeType,
-            label: `${p.title}（${p.nodeType}）`,
-          }))}
+          notFoundContent="当前工作流没有已加载的 PIN（可在节点编辑面板中固定/加载）"
+          options={pinnedOptions}
         />
         {pipelineContext.globalStatus === 'idle' && (
           <Tooltip
             title={
               specDisabled
                 ? 'Spec 模式：请先在节点上用脚印按钮标记至少一个阶段产物'
-                : `运行${selectedPinnedType ? '（用PIN）' : ''}`
+                : `运行${selectedPinnedKey ? '（用PIN）' : ''}`
             }
           >
             <Button
@@ -101,9 +73,12 @@ export const ExecutionPanel = () => {
           </Tooltip>
         )}
         {pipelineContext.globalStatus !== 'idle' && (
-          <Button icon={<RotateCcw size={14} />} onClick={resetExecution}>
-            重置
-          </Button>
+          <Tooltip title="重置">
+            <Button
+              icon={<RotateCcw size={14} />}
+              onClick={resetExecution}
+            ></Button>
+          </Tooltip>
         )}
       </div>
     </div>

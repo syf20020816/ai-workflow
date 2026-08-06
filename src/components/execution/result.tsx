@@ -1,7 +1,7 @@
 import { useNodeStore } from '#/store/node'
 import { NodeTypes } from '#/types'
 import { useEffect, useState } from 'react'
-import { Typography, Tag, Input, Space, Button, Timeline } from 'antd'
+import { Typography, Tag, Input, Space, Button, Timeline, Card, Descriptions } from 'antd'
 import type { LogEntry } from '#/types/engine'
 import { CodeEditor } from '#/components/file-editor/editor'
 
@@ -27,6 +27,24 @@ export const ExecutionResult = () => {
   const [result, setResult] = useState('')
   const [sourceLabel, setSourceLabel] = useState('')
   const [replyText, setReplyText] = useState('')
+  // 执行中/等待输入时每秒刷新，用于实时显示已耗时
+  const [now, setNow] = useState(Date.now())
+
+  // 执行信息：总消耗 token（汇总各节点 output.usage）
+  const totalTokens = Object.values(nodeOutputs).reduce((sum, out) => {
+    const usage = out?.usage
+    if (!usage || typeof usage !== 'object') return sum
+    return sum + (usage.totalTokens || usage.total_tokens || 0)
+  }, 0)
+
+  // 执行时间：结束时间优先，进行中则用当前时间
+  const startedAt = pipelineContext.startedAt
+  const endedAt = pipelineContext.endedAt
+  const durationMs = endedAt
+    ? Math.max(0, endedAt - (startedAt || endedAt))
+    : startedAt
+      ? Math.max(0, now - startedAt)
+      : 0
 
   // 找到处于 waiting 状态的节点
   const waitingNodeEntry = Object.entries(pipelineContext.nodeStatuses).find(
@@ -36,6 +54,15 @@ export const ExecutionResult = () => {
   const waitingOutput = waitingNodeId
     ? pipelineContext.nodeOutputs[waitingNodeId]
     : null
+
+  // 执行中/等待输入时实时刷新耗时显示
+  useEffect(() => {
+    if (globalStatus === 'running' || globalStatus === 'paused') {
+      const t = setInterval(() => setNow(Date.now()), 1000)
+      return () => clearInterval(t)
+    }
+    setNow(Date.now())
+  }, [globalStatus])
 
   const handleResume = () => {
     if (waitingNodeId && replyText.trim()) {
@@ -169,6 +196,27 @@ export const ExecutionResult = () => {
           执行结果
         </Text>
       </div>
+
+      {/* 执行信息 */}
+      {globalStatus !== 'idle' && (
+        <Card size="small" title="执行信息" style={{ marginBottom: 12 }}>
+          <Descriptions size="small" column={1}>
+            <Descriptions.Item label="执行状态">
+              <Tag color={statusColorMap[globalStatus] || 'default'}>
+                {statusLabelMap[globalStatus] || globalStatus}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="执行时间">
+              {startedAt
+                ? `${new Date(startedAt).toLocaleTimeString()} 开始 · 耗时 ${formatDuration(durationMs)}${globalStatus === 'running' ? '（进行中）' : ''}`
+                : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="总消耗 Token">
+              {totalTokens > 0 ? totalTokens.toLocaleString() : '暂无数据'}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
       {!result ? (
         <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>
           <Text type="secondary">
@@ -237,4 +285,15 @@ function formatOutput(output: Record<string, any> | undefined): string {
   }
 
   return JSON.stringify(output, null, 2)
+}
+
+/** 将毫秒耗时格式化为可读文本 */
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }

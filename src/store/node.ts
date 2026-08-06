@@ -532,7 +532,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     // 获取工作流名称
     const workflowName = workflowId.replace(/^workflow_/, '')
     const globalMode = useGlobalStore.getState().globalMode
-    // 断点续跑（P0-5）：上次 paused 则恢复已完成节点，跳过执行
+    // 断点续跑（P0-5）：上次 paused 则恢复已完成节点，跳过执行；
+    // 执行开始时间沿用已记录的（续跑场景不重置计时）
+    const startedAt = get().pipelineContext.startedAt || Date.now()
     const restored = await loadExecState(workflowId)
     const pipelineCtx = await executeWorkflow(
       nodes,
@@ -540,7 +542,12 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       (c) => {
         set({ pipelineContext: { ...c } })
       },
-      { globalMode, workflowId, ...(restored ? { restoreState: restored } : {}) },
+      {
+        globalMode,
+        workflowId,
+        startedAt,
+        ...(restored ? { restoreState: restored } : {}),
+      },
     )
     // 执行结束后保存历史
     await saveExecutionHistory(workflowId, workflowName, pipelineCtx, globalMode)
@@ -550,6 +557,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const workflowName = workflowId.replace(/^workflow_/, '')
     const globalMode = useGlobalStore.getState().globalMode
     // 断点续跑（P0-5）：上次 paused 则恢复已完成节点，保证该节点能看到上游输出
+    const startedAt = get().pipelineContext.startedAt || Date.now()
     const restored = await loadExecState(workflowId)
     const pipelineCtx = await executeWorkflow(
       nodes,
@@ -561,6 +569,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
         startNodeId: nodeId,
         globalMode,
         workflowId,
+        startedAt,
         ...(restored ? { restoreState: restored } : {}),
       },
     )
@@ -570,6 +579,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const { nodes, edges, pipelineContext, workflowId } = get()
     const globalMode = useGlobalStore.getState().globalMode
     // 断点续跑（P0-5）：恢复上次暂停时已完成的节点输出，从 Answer 节点继续
+    const startedAt = pipelineContext.startedAt
     const restored = await loadExecState(workflowId)
     await resumeWorkflow(
       nodeId,
@@ -583,6 +593,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       {
         globalMode,
         workflowId,
+        ...(startedAt ? { startedAt } : {}),
         ...(restored ? { restoreState: restored } : {}),
       },
     )

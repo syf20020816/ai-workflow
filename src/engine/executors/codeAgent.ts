@@ -123,7 +123,8 @@ export const codeAgentExecutor: NodeExecutor = {
         return {
           nodeId: config.nodeId,
           status: 'error',
-          output: {},
+          // 保留中间输出（如截断时的部分分析结果），供执行结果页查看
+          output: result.output || {},
           logs: [...logs, ...(result.logs || []), result.error],
           error: result.error,
         }
