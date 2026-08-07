@@ -8,6 +8,7 @@ import {
   Link,
   XCircle,
   Plus,
+  Info,
 } from 'lucide-react'
 import styles from '../index.module.scss'
 import {
@@ -18,6 +19,7 @@ import {
   Modal,
   Tree,
   Table,
+  Tooltip,
 } from 'antd'
 import type { TableProps } from 'antd'
 import type { ReactNode, Key } from 'react'
@@ -124,7 +126,7 @@ function buildTree(
 
 export interface DynEditKVRow {
   key: string
-  label: string
+  label: React.ReactNode
   value?: string | number | File
   inputType?: 'text' | 'textArea' | 'password' | 'number'
   placeholder?: string
@@ -199,7 +201,7 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
       title: '键',
       dataIndex: 'label',
       key: 'label',
-      width: 80,
+      width: 100,
       render: (text) => <strong style={{ fontSize: 12 }}>{text}</strong>,
     },
     {
@@ -280,7 +282,10 @@ export const DynEditKV = ({ rows, onChange, emptyText }: DynEditKVProps) => {
         bordered
         components={{
           table: (tableProps: any) => (
-            <table {...tableProps} style={{ ...tableProps?.style, tableLayout: 'fixed' }} />
+            <table
+              {...tableProps}
+              style={{ ...tableProps?.style, tableLayout: 'fixed' }}
+            />
           ),
         }}
         styles={{ root: { marginTop: 8 } }}
@@ -337,7 +342,9 @@ export const EditItem = ({
   const prefix = kindMeta?.icon
 
   // 本地 state，避免每次按键触发父组件重渲染导致失焦
-  const [localValue, setLocalValue] = useState<string | number>((value ?? '') as string | number)
+  const [localValue, setLocalValue] = useState<string | number>(
+    (value ?? '') as string | number,
+  )
   const [isFocused, setIsFocused] = useState(false)
 
   // 外部 value 变化时同步到本地（仅当 input 未聚焦时，避免打断打字）
@@ -470,6 +477,30 @@ export const EditItem = ({
         onFocus={handleFocus}
         onBlur={handleBlur}
       />
+    </div>
+  )
+}
+
+export interface DynEditKeyProps {
+  title: string
+  info?: string
+}
+
+export const DynEditKey = ({ title, info }: DynEditKeyProps) => {
+  return (
+    <div className={styles.dyn_edit_key}>
+      {title}
+      {info && (
+        <Tooltip
+          title={
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {info}
+            </Text>
+          }
+        >
+          <Info height={14} width={14}></Info>
+        </Tooltip>
+      )}
     </div>
   )
 }

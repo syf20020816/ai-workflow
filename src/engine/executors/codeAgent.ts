@@ -22,6 +22,7 @@ export const codeAgentExecutor: NodeExecutor = {
     const branch = data.branch || ''
     const instruction = data.instruction || (mode === 'batch' ? '请按任务清单完成本批次代码实现' : '请分析这个项目的结构和功能')
     const maxIterations = data.maxIterations ?? 20
+    const useAppMap = data.useAppMap ?? true
     const modal = data.modal
 
     const logs: string[] = []
@@ -104,6 +105,8 @@ export const codeAgentExecutor: NodeExecutor = {
           branch,
           instruction,
           maxIterations,
+          // 应用地图开关（默认开启：analyze 时检测/生成项目 App-Desc）
+          useAppMap,
           modal: {
             name: modal.name,
             key: modal.key,

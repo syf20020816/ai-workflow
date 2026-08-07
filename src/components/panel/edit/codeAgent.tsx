@@ -3,8 +3,8 @@ import { useModelStore } from '#/store/model'
 import { useRouteStore } from '#/store/route'
 import type { NCodeAgent, NCodeAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Select, Typography } from 'antd'
-import { DynEditKV } from './item'
+import { Select, Space, Switch, Typography } from 'antd'
+import { DynEditKV, DynEditKey } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 
@@ -43,6 +43,31 @@ export const EditCodeAgent = () => {
       label: 'Git 分支',
       value: currentNode.data.branch,
       placeholder: '留空使用当前分支，如：main、develop',
+    },
+    {
+      key: 'useAppMap',
+      label: (
+        <DynEditKey
+          title="应用地图"
+          info={'analyze 时检测项目 App-Desc，没有则自动生成初版'}
+        />
+      ),
+      valueRender: (onChange) => {
+        const enabled = currentNode.data.useAppMap ?? true
+        return (
+          <Space>
+            <Switch
+              checked={enabled}
+              onChange={(checked) => {
+                patchCurrentNode((draft) => {
+                  d(draft).useAppMap = checked
+                })
+                onChange(checked)
+              }}
+            />
+          </Space>
+        )
+      },
     },
     {
       key: 'instruction',
@@ -126,12 +151,18 @@ export const EditCodeAgent = () => {
           style={{ width: '100%' }}
           value={mode}
           options={[
-            { value: 'analyze', label: 'analyze · 代码分析（只读探索，产出技术方案）' },
-            { value: 'batch', label: 'batch · 分批编码（按 tasks.md 批次写代码）' },
+            {
+              value: 'analyze',
+              label: 'analyze · 代码分析（只读探索，产出技术方案）',
+            },
+            {
+              value: 'batch',
+              label: 'batch · 分批编码（按 tasks.md 批次写代码）',
+            },
           ]}
           onChange={(value) => {
             patchCurrentNode((draft) => {
-              d(draft).mode = value as 'analyze' | 'batch'
+              d(draft).mode = value
             })
           }}
         />
@@ -143,13 +174,15 @@ export const EditCodeAgent = () => {
           patchCurrentNode((draft) => {
             const data = d(draft)
             if (key === 'projectPath') {
-              data.projectPath = (value || '') as string
+              data.projectPath = value || ''
             } else if (key === 'branch') {
               data.branch = (value || '') as string
             } else if (key === 'instruction') {
               data.instruction = (value || '') as string
             } else if (key === 'maxIterations') {
               data.maxIterations = typeof value === 'number' ? value : 20
+            } else if (key === 'useAppMap') {
+              data.useAppMap = !!value
             }
           })
         }}

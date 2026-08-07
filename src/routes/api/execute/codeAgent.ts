@@ -98,6 +98,8 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
           maxIterations = 20,
           modal,
           upstreamContext,
+          // analyze 应用地图开关（默认开启）
+          useAppMap = true,
           // batch 模式专用
           mode,
           tasksMarkdown,
@@ -126,6 +128,7 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
             upstreamContext,
             tasksMarkdown,
             specRoot,
+            useAppMap,
           })
         }
 
@@ -176,9 +179,9 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
         const model = provider.chat(modal.modelName || modal.name)
 
         // 从 prompts/codeAgent.md 加载系统提示词
-        const systemPrompt = await loadSystemPrompt(projectPath)
+        const baseSystemPrompt = await loadSystemPrompt(projectPath)
 
-        // 如果指定了分支，先切换 Git 分支
+        // 如果指定了分支，先切换 Git 分支（应用地图扫描基于目标分支代码）
         if (projectPath && branch) {
           try {
             const branchDir = path.isAbsolute(projectPath) ? projectPath : path.resolve(process.cwd(), projectPath)
@@ -192,6 +195,19 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
             logs.push(`切换分支失败: ${err.message}，将继续使用当前分支`)
           }
         }
+
+        // 应用地图（App-Desc，P1-2）：检测项目中的应用地图，有则注入使用；
+        // 没有则在 analyze 的同时扫描仓库结构 + LLM 生成初版写回项目
+        let appMapSection = ''
+        if (useAppMap && projectPath) {
+          const projectRoot = path.isAbsolute(projectPath)
+            ? path.resolve(projectPath)
+            : path.resolve(process.cwd(), projectPath)
+          appMapSection = await ensureAppDesc(model, projectRoot, logs)
+        }
+        const systemPrompt = appMapSection
+          ? `${baseSystemPrompt}\n\n## 应用地图\n${appMapSection}\n\n分析过程中请以应用地图中的模块划分和 zone 约束为准：zone=old 的区域不主动改动，zone=transition 的区域仅在任务明确涉及的范围内修改，不做无关重构。`
+          : baseSystemPrompt
 
         try {
           const result = await generateText({
@@ -354,6 +370,8 @@ type BatchModeInput = {
   upstreamContext?: any
   tasksMarkdown?: string
   specRoot?: string
+  /** 应用地图开关（默认开启：有 app-desc 则注入使用，无则不生成） */
+  useAppMap?: boolean
 }
 
 /** batch 模式：按 tasks.md 批次实现代码，每批打勾 + diff 记录 */
@@ -367,6 +385,7 @@ async function handleBatchMode(input: BatchModeInput) {
     upstreamContext,
     tasksMarkdown,
     specRoot,
+    useAppMap = true,
   } = input
 
   const logs: string[] = []
@@ -418,7 +437,17 @@ async function handleBatchMode(input: BatchModeInput) {
   const model = provider.chat(modal.modelName || modal.name)
 
   // 3. 加载 batch 系统提示词
-  const systemPrompt = await loadBatchSystemPrompt(projectRoot)
+  let systemPrompt = await loadBatchSystemPrompt(projectRoot)
+
+  // 应用地图（P1-2）：Switch 开启且项目已有 app-desc 则注入使用；没有不生成
+  if (useAppMap) {
+    const appMapSection = await readAppDesc(projectRoot, logs)
+    if (appMapSection) {
+      systemPrompt = `${systemPrompt}\n\n${appMapSection}\n\n编码过程中请以应用地图中的模块划分和 zone 约束为准：zone=old 的区域不主动改动，zone=transition 的区域仅在任务明确涉及的范围内修改，不做无关重构。`
+    } else {
+      logs.push('项目无应用地图（app-desc），batch 模式不生成；需要时可先用 analyze 模式生成')
+    }
+  }
 
   // 4. 先切换分支（如指定）
   if (branch) {
@@ -693,4 +722,181 @@ function isTruncatedByStepCap(result: any, maxIterations: number): boolean {
     (last.parts || []).filter((p: any) => p.type === 'tool-call') ||
     []
   return toolCalls.length > 0
+}
+
+// ================= 应用地图（App-Desc，P1-2） =================
+
+/** 扫描项目目录结构为缩进文本树（过滤噪音目录，限制深度与总量） */
+async function scanProjectTree(root: string): Promise<string> {
+  const IGNORED = new Set([
+    'node_modules',
+    '.git',
+    'dist',
+    'build',
+    'coverage',
+    '.output',
+    '.nuxt',
+    '.next',
+    '.turbo',
+    '.cache',
+    'vendor',
+    'target',
+  ])
+  const lines: string[] = []
+  const MAX_LINES = 400
+  const MAX_DEPTH = 4
+
+  async function walk(dir: string, rel: string, depth: number) {
+    if (depth > MAX_DEPTH || lines.length >= MAX_LINES) return
+    let entries
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    const dirs = entries
+      .filter((e) => e.isDirectory() && !IGNORED.has(e.name))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    const files = entries
+      .filter((e) => e.isFile())
+      .sort((a, b) => a.name.localeCompare(b.name))
+    for (const ent of [...dirs, ...files]) {
+      if (lines.length >= MAX_LINES) return
+      const childRel = rel ? `${rel}/${ent.name}` : ent.name
+      if (ent.isDirectory()) {
+        lines.push(`${'  '.repeat(depth)}${ent.name}/`)
+        await walk(path.join(dir, ent.name), childRel, depth + 1)
+      } else {
+        // 文件：只列关键配置与源码（首层文件全列，深层仅常见源码文件）
+        if (
+          depth === 0 ||
+          /\.(ts|tsx|js|jsx|vue|json|md|yml|yaml|css|scss|html|py|java|go|rs|c|h|cpp)$/.test(
+            ent.name,
+          )
+        ) {
+          lines.push(`${'  '.repeat(depth)}${ent.name}`)
+        }
+      }
+    }
+  }
+
+  await walk(root, '', 0)
+  return lines.join('\n')
+}
+
+/** 从 LLM 输出中提取 JSON 文本（兼容 ```json 围栏） */
+function extractJson(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenced) return fenced[1].trim()
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start >= 0 && end > start) return text.slice(start, end + 1)
+  return text.trim()
+}
+
+/** 应用地图生成提示词（产出 JSON，schema 与 roadMap P1-2 对齐） */
+const APP_DESC_SYSTEM_PROMPT = `你是应用架构分析专家。基于给出的项目目录结构与依赖，生成该应用的「应用地图」（App-Desc），用于指导 AI 编码代理理解代码库分区与技术约束。
+只输出一个 JSON 对象，不要输出任何其他文字、解释或 markdown 围栏。JSON 结构如下：
+{
+  "app": "应用/仓库名",
+  "modules": [
+    { "name": "模块名", "path": "相对路径", "zone": "new", "keyFiles": ["相对路径"] }
+  ],
+  "dependencies": ["依赖名"],
+  "law": { "技术约束": "说明" }
+}
+规则：
+- modules 按代码目录/模块粒度拆分，path 为相对项目根目录的路径
+- zone 取值 new（按新规作业）/ transition（过渡）/ old（存量不主动改），默认 new；明显是遗留/低层公共代码的可标 transition
+- keyFiles 填该模块的关键文件（相对路径），1-3 个
+- dependencies 从 package.json 或明显依赖目录归纳，最多列 20 个
+- law 填从配置/代码能看出的硬性技术约束（如框架版本、语法风格限制），没有可省略
+不要臆造；不确定的字段宁缺毋滥。`
+
+/** 生成应用地图初版（一次 LLM 调用，不循环工具） */
+async function generateAppDesc(
+  model: any,
+  root: string,
+): Promise<{ text: string; error?: string }> {
+  const tree = await scanProjectTree(root)
+  let deps = ''
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf-8'))
+    deps = Object.keys(pkg.dependencies || {})
+      .concat(Object.keys(pkg.devDependencies || {}))
+      .slice(0, 40)
+      .join(', ')
+  } catch {
+    // 无 package.json 时跳过依赖说明
+  }
+  try {
+    const result = await generateText({
+      model,
+      system: APP_DESC_SYSTEM_PROMPT,
+      prompt: `## 项目目录结构\n${tree || '（目录为空）'}\n\n## 顶层依赖\n${deps || '（无 package.json 或无法读取）'}\n\n请生成该项目的应用地图 JSON。`,
+    })
+    return { text: result.text }
+  } catch (err: any) {
+    return { text: '', error: err.message }
+  }
+}
+
+/** 读取项目已有的应用地图（app-desc.json / app-desc.yaml），不存在返回空字符串（不生成） */
+async function readAppDesc(root: string, logs: string[]): Promise<string> {
+  for (const file of ['app-desc.json', 'app-desc.yaml']) {
+    const fp = path.join(root, file)
+    try {
+      const content = await fs.readFile(fp, 'utf-8')
+      if (content.trim()) {
+        logs.push(`已加载项目应用地图: ${file}`)
+        return `## 项目应用地图（${file}）\n${content.trim().slice(0, 20000)}`
+      }
+    } catch {
+      // 不存在，继续
+    }
+  }
+  return ''
+}
+
+/**
+ * 确保项目存在应用地图：
+ * - 已有 app-desc.json / app-desc.yaml → 读取并注入（yaml 以原文文本注入，不结构化解析）
+ * - 没有 → 扫描仓库结构 + LLM 生成初版写回 app-desc.json
+ * 返回注入到系统提示词的地图文本；失败返回空字符串（不阻塞 analyze）
+ */
+async function ensureAppDesc(
+  model: any,
+  root: string,
+  logs: string[],
+): Promise<string> {
+  // 1. 已存在：直接读取使用
+  const existing = await readAppDesc(root, logs)
+  if (existing) return existing
+
+  // 2. 不存在：扫描 + LLM 生成初版
+  logs.push('项目未配置应用地图（app-desc），正在生成初版...')
+  const { text, error } = await generateAppDesc(model, root)
+  if (error || !text.trim()) {
+    logs.push(`应用地图生成失败（已跳过，不影响本次分析）: ${error || '空输出'}`)
+    return ''
+  }
+
+  const json = extractJson(text)
+  try {
+    const parsed = JSON.parse(json)
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.modules)) {
+      throw new Error('缺少 modules 数组')
+    }
+  } catch (err: any) {
+    logs.push(`应用地图 JSON 校验失败（已跳过，可手动创建 app-desc.json）: ${err.message}`)
+    return ''
+  }
+
+  try {
+    await fs.writeFile(path.join(root, 'app-desc.json'), json, 'utf-8')
+    logs.push('应用地图初版已写入项目: app-desc.json（请人工确认后微调 zone/模块划分）')
+  } catch (err: any) {
+    logs.push(`应用地图写回项目失败（已跳过）: ${err.message}`)
+  }
+  return `## 项目应用地图（app-desc.json，初版）\n${json}`
 }

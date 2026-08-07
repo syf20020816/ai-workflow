@@ -203,6 +203,8 @@ export type NCodeAgentData = NNode & {
   instruction?: string
   /** 最大迭代次数（防止死循环） */
   maxIterations?: number
+  /** 应用地图（App-Desc）：analyze 时检测项目中的应用地图，有则使用，没有则自动生成初版（默认开启） */
+  useAppMap?: boolean
   /** 模型配置 */
   modal?: {
     /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */

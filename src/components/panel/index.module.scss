@@ -53,6 +53,13 @@
       left: 0;
       width: 100%;
     }
+    &_main {
+      min-height: 0;
+      overflow: auto;
+      height: calc(100% - 112px);
+      margin-bottom: 42px;
+      scrollbar-width: thin;
+    }
   }
 }
 
@@ -96,7 +103,6 @@
     display: flex;
     align-items: center;
     justify-content: center !important;
-   
   }
 
   &_title {
@@ -133,4 +139,10 @@
   &_ok {
     color: #52c41a;
   }
+}
+
+.dyn_edit_key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }

@@ -85,8 +85,8 @@ export const EditPanel = (props: PanelProps) => {
           {currentNode && (
             <>
               <EditHeader />
-              <main style={{ flex: 1, overflow: 'auto' }}>
-                <Divider style={{ margin: '12px 0' }} />
+              <Divider style={{ margin: '12px 0' }} />
+              <main className={styles.editor_main}>
                 {currentNode.type === NodeTypes.USER_INPUT && <EditUserInput />}
                 {currentNode.type === NodeTypes.AGENT && <EditAgent />}
                 {currentNode.type === NodeTypes.ANSWER && <EditAnswer />}
@@ -177,14 +177,20 @@ export const EditPanel = (props: PanelProps) => {
                         message.warning('请选择一个固定节点')
                         return
                       }
-                      const pin = pinnedList.find((p) => p.nodeId === selectedPin)
+                      const pin = pinnedList.find(
+                        (p) => p.nodeId === selectedPin,
+                      )
                       if (!pin) {
                         message.error('固定节点不存在')
                         return
                       }
-                      const params = new URLSearchParams({ nodeType: pin.nodeType })
+                      const params = new URLSearchParams({
+                        nodeType: pin.nodeType,
+                      })
                       params.set('nodeId', pin.nodeId)
-                      const res = await fetch(`/api/workflow/pin?${params.toString()}`)
+                      const res = await fetch(
+                        `/api/workflow/pin?${params.toString()}`,
+                      )
                       const json = await res.json()
                       if (json.status === 'success') {
                         loadPinnedNode(currentNode.id, json.data.output)
@@ -211,7 +217,9 @@ export const EditPanel = (props: PanelProps) => {
                         size="small"
                         style={{ marginTop: 8, padding: 0 }}
                         onClick={async () => {
-                          const pin = pinnedList.find((p) => p.nodeId === selectedPin)
+                          const pin = pinnedList.find(
+                            (p) => p.nodeId === selectedPin,
+                          )
                           if (!pin) return
                           await deletePinnedFile(pin.nodeType, pin.nodeId)
                           message.success(`已删除固定文件: ${pin.title}`)
@@ -256,7 +264,7 @@ export const EditPanel = (props: PanelProps) => {
     {
       key: 'history',
       label: '执行历史',
-      children: <ExecutionHistory size='small' workflowId={workflowId} />,
+      children: <ExecutionHistory size="small" workflowId={workflowId} />,
     },
   ]
 
@@ -301,8 +309,10 @@ const EditHeader = () => {
   const currentNode: AppNode = useNodeStore((state) => state.currentNode)
   const setCurrentNode = useNodeStore((state) => state.setCurrentNode)
   const IconComponent = useMemo(() => {
-    if (!currentNode) return null;
-  return  NodeIcons.get(currentNode.type) || NodeIcons.get(NodeTypes.USER_INPUT)
+    if (!currentNode) return null
+    return (
+      NodeIcons.get(currentNode.type) || NodeIcons.get(NodeTypes.USER_INPUT)
+    )
   }, [currentNode])
   if (!currentNode) {
     return null
@@ -311,7 +321,9 @@ const EditHeader = () => {
   return (
     <header className={styles.header}>
       <div className={styles.header_title}>
-        {IconComponent && <IconComponent height={24} width={24}></IconComponent>}
+        {IconComponent && (
+          <IconComponent height={24} width={24}></IconComponent>
+        )}
         <Input
           value={currentNode.data.title}
           className={styles.header_title_input}
