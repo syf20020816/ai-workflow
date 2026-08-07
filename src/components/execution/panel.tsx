@@ -33,12 +33,11 @@ export const ExecutionPanel = () => {
     }))
 
   const handleRun = () => {
-    const output = selectedPinnedKey
-      ? pinnedNodes[selectedPinnedKey]
-      : undefined
-    if (selectedPinnedKey && output) {
-      // 以该节点为起点，注入 { [nodeId]: output } 执行（output 已在内存，无需再读文件）
-      runFromWithPinned(selectedPinnedKey, { [selectedPinnedKey]: output })
+    const pin = selectedPinnedKey ? pinnedNodes[selectedPinnedKey] : undefined
+    if (selectedPinnedKey && pin?.output) {
+      // 以该节点为起点，注入 { [nodeId]: output } 执行（output 已在内存，无需再读文件；
+      // PIN 自带的累积上下文由 store.runFromWithPinned 一并注入）
+      runFromWithPinned(selectedPinnedKey, { [selectedPinnedKey]: pin.output })
     } else {
       runAll()
     }

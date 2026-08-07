@@ -43,14 +43,14 @@ export const EditAgent = () => {
 
   const selectedModelId = currentNode.data.modal?.name || undefined
 
-  // 查找当前 AgentNode 是否已有连线 BMadNode
+  // 查找当前 AgentNode 是否已连线 BMadNode（BMad 为上游，agent 为下游）
   const connectedBmadEdge = edges.find(
     (e) =>
-      e.source === currentNode.id &&
-      nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+      e.target === currentNode.id &&
+      nodes.find((n) => n.id === e.source)?.type === NodeTypes.BMAD_AGENT,
   )
   const connectedBmadNode = connectedBmadEdge
-    ? nodes.find((n) => n.id === connectedBmadEdge.target)
+    ? nodes.find((n) => n.id === connectedBmadEdge.source)
     : null
   const connectedBmadData = connectedBmadNode?.data as any
   const connectedAgentId = connectedBmadData?.agentId || undefined

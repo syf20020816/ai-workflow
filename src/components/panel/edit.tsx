@@ -33,6 +33,7 @@ import { EditKnowledgeRetrieval } from './edit/knowledgeRetrieval'
 import { EditKnowledgeStore } from './edit/knowledgeStore'
 import { EditKeywordAgent } from './edit/keywordAgent'
 import { EditTaskPlanner } from './edit/taskPlanner'
+import { EditSelfCheck } from './edit/selfCheck'
 import { EditLarkWikiTraversal } from './edit/larkWikiTraversal'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
@@ -60,21 +61,48 @@ export const EditPanel = (props: PanelProps) => {
   const [activeKey, setActiveKey] = useState<ActiveKey>('editor')
   const [loadOpen, setLoadOpen] = useState(false)
   const [pinnedList, setPinnedList] = useState<
-    { nodeType: string; nodeId: string; title: string; savedAt: string }[]
+    {
+      nodeType: string
+      nodeId: string
+      title: string
+      savedAt: string
+      workflowId: string
+    }[]
   >([])
   const [selectedPin, setSelectedPin] = useState<string | null>(null)
 
-  // 固定选项：value 用 nodeId 唯一标识；同一 nodeType 有多份时在 label 上追加短 nodeId 区分
+  // PIN 选项唯一 key（跨工作流可能存在相同 nodeId，需带工作流区分）
+  const pinKey = (p: { workflowId: string; nodeId: string }) =>
+    `${p.workflowId || 'legacy'}::${p.nodeId}`
+
+  // 过滤当前节点类型 + 排序：当前工作流的 PIN 排前面，其余排后面（均按保存时间倒序）
+  const filterSortedPins = (list: typeof pinnedList) =>
+    list
+      .filter((p) => p.nodeType === currentNode?.type)
+      .sort((a, b) => {
+        const aCur = a.workflowId === workflowId ? 0 : 1
+        const bCur = b.workflowId === workflowId ? 0 : 1
+        if (aCur !== bCur) return aCur - bCur
+        return (b.savedAt || '').localeCompare(a.savedAt || '')
+      })
+
+  // 固定选项：value 用「工作流::nodeId」唯一标识；label 标注所属工作流
   const pinOptions = useMemo(() => {
     const counts = pinnedList.reduce<Record<string, number>>((acc, p) => {
       acc[p.nodeType] = (acc[p.nodeType] || 0) + 1
       return acc
     }, {})
-    return pinnedList.map((p) => ({
-      value: p.nodeId,
-      label: `${p.title}（${p.nodeType}${counts[p.nodeType] > 1 ? ' · ' + p.nodeId.slice(0, 8) : ''}）`,
-    }))
-  }, [pinnedList])
+    return pinnedList.map((p) => {
+      const isCurrent = p.workflowId === workflowId
+      const owner = isCurrent ? '当前工作流' : p.workflowId || '旧数据'
+      return {
+        value: pinKey(p),
+        label: `[${owner}] ${p.title}（${p.nodeType}${
+          counts[p.nodeType] > 1 ? ' · ' + p.nodeId.slice(0, 8) : ''
+        }）`,
+      }
+    })
+  }, [pinnedList, workflowId])
 
   const items: TabsProps['items'] = [
     {
@@ -120,6 +148,9 @@ export const EditPanel = (props: PanelProps) => {
                 {currentNode.type === NodeTypes.TASK_PLANNER && (
                   <EditTaskPlanner />
                 )}
+                {currentNode.type === NodeTypes.SELF_CHECK && (
+                  <EditSelfCheck />
+                )}
                 {currentNode.type === NodeTypes.LARK_WIKI_TRAVERSAL && (
                   <EditLarkWikiTraversal />
                 )}
@@ -134,11 +165,8 @@ export const EditPanel = (props: PanelProps) => {
                         const res = await fetch('/api/workflow/pin')
                         const json = await res.json()
                         if (json.status === 'success' && json.data.length > 0) {
-                          // 只展示与当前节点类型相同的固定数据
-                          const sameType = json.data.filter(
-                            (p: { nodeType: string }) =>
-                              p.nodeType === currentNode.type,
-                          )
+                          // 只展示与当前节点类型相同的固定数据（当前工作流优先排序）
+                          const sameType = filterSortedPins(json.data)
                           if (sameType.length > 0) {
                             setPinnedList(sameType)
                             setSelectedPin(null)
@@ -178,7 +206,7 @@ export const EditPanel = (props: PanelProps) => {
                         return
                       }
                       const pin = pinnedList.find(
-                        (p) => p.nodeId === selectedPin,
+                        (p) => pinKey(p) === selectedPin,
                       )
                       if (!pin) {
                         message.error('固定节点不存在')
@@ -188,12 +216,13 @@ export const EditPanel = (props: PanelProps) => {
                         nodeType: pin.nodeType,
                       })
                       params.set('nodeId', pin.nodeId)
+                      if (pin.workflowId) params.set('workflowId', pin.workflowId)
                       const res = await fetch(
                         `/api/workflow/pin?${params.toString()}`,
                       )
                       const json = await res.json()
                       if (json.status === 'success') {
-                        loadPinnedNode(currentNode.id, json.data.output)
+                        loadPinnedNode(currentNode.id, json.data)
                         message.success(
                           `已加载固定节点: ${json.data.title || pin.nodeType}`,
                         )
@@ -218,19 +247,20 @@ export const EditPanel = (props: PanelProps) => {
                         style={{ marginTop: 8, padding: 0 }}
                         onClick={async () => {
                           const pin = pinnedList.find(
-                            (p) => p.nodeId === selectedPin,
+                            (p) => pinKey(p) === selectedPin,
                           )
                           if (!pin) return
-                          await deletePinnedFile(pin.nodeType, pin.nodeId)
+                          await deletePinnedFile(
+                            pin.nodeType,
+                            pin.nodeId,
+                            pin.workflowId,
+                          )
                           message.success(`已删除固定文件: ${pin.title}`)
                           // 刷新列表
                           const res = await fetch('/api/workflow/pin')
                           const json = await res.json()
                           if (json.status === 'success') {
-                            const sameType = json.data.filter(
-                              (p: { nodeType: string }) =>
-                                p.nodeType === currentNode.type,
-                            )
+                            const sameType = filterSortedPins(json.data)
                             setPinnedList(sameType)
                             if (sameType.length === 0) {
                               setLoadOpen(false)

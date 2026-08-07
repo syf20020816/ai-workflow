@@ -23,6 +23,7 @@ import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiExecuteTaskPlannerRouteImport } from './routes/api/execute/taskPlanner'
 import { Route as ApiExecuteSpecFolderRouteImport } from './routes/api/execute/specFolder'
+import { Route as ApiExecuteSelfCheckRouteImport } from './routes/api/execute/selfCheck'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
 import { Route as ApiExecuteLarkWikiTraversalRouteImport } from './routes/api/execute/larkWikiTraversal'
@@ -107,6 +108,11 @@ const ApiExecuteTaskPlannerRoute = ApiExecuteTaskPlannerRouteImport.update({
 const ApiExecuteSpecFolderRoute = ApiExecuteSpecFolderRouteImport.update({
   id: '/api/execute/specFolder',
   path: '/api/execute/specFolder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecuteSelfCheckRoute = ApiExecuteSelfCheckRouteImport.update({
+  id: '/api/execute/selfCheck',
+  path: '/api/execute/selfCheck',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteQdrantRoute = ApiExecuteQdrantRouteImport.update({
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
+  '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/selfCheck'
     | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/selfCheck'
     | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/qdrant'
+    | '/api/execute/selfCheck'
     | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
@@ -398,6 +410,7 @@ export interface RootRouteChildren {
   ApiExecuteLarkWikiTraversalRoute: typeof ApiExecuteLarkWikiTraversalRoute
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
+  ApiExecuteSelfCheckRoute: typeof ApiExecuteSelfCheckRoute
   ApiExecuteSpecFolderRoute: typeof ApiExecuteSpecFolderRoute
   ApiExecuteTaskPlannerRoute: typeof ApiExecuteTaskPlannerRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/api/execute/specFolder'
       fullPath: '/api/execute/specFolder'
       preLoaderRoute: typeof ApiExecuteSpecFolderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execute/selfCheck': {
+      id: '/api/execute/selfCheck'
+      path: '/api/execute/selfCheck'
+      fullPath: '/api/execute/selfCheck'
+      preLoaderRoute: typeof ApiExecuteSelfCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/qdrant': {
@@ -650,6 +670,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteLarkWikiTraversalRoute: ApiExecuteLarkWikiTraversalRoute,
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
+  ApiExecuteSelfCheckRoute: ApiExecuteSelfCheckRoute,
   ApiExecuteSpecFolderRoute: ApiExecuteSpecFolderRoute,
   ApiExecuteTaskPlannerRoute: ApiExecuteTaskPlannerRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,

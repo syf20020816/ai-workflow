@@ -35,6 +35,10 @@ export function extractAccumulated(
       if (typeof output.response === 'string') acc.response = output.response
       break
 
+    case NodeTypes.SELF_CHECK:
+      if (typeof output.response === 'string') acc.response = output.response
+      break
+
     case NodeTypes.KNOWLEDGE_RETRIEVAL:
       if (typeof output.retrievalContent === 'string') {
         acc.retrievalContent = output.retrievalContent

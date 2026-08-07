@@ -19,6 +19,8 @@ import {
   resumeWorkflow,
 } from '#/engine/workflow'
 import { useGlobalStore } from './global'
+import { getAncestorIds } from '#/engine/topological'
+import { extractAccumulated } from '#/engine/accumulate'
 
 /** 保存执行结果到后端 */
 async function saveExecutionHistory(
@@ -159,8 +161,18 @@ export interface UseNodeStoreProps {
   workflowId: string
   /** 设置工作流 ID */
   setWorkflowId: (id: string) => void
-  /** 已 PIN 的输出：{ [nodeId]: output } (内存缓存，按节点隔离) */
-  pinnedNodes: Partial<Record<string, Record<string, any>>>
+  /** 已 PIN 的数据：{ [nodeId]: { output, context, workflowId } } (内存缓存，按节点隔离) */
+  pinnedNodes: Partial<
+    Record<
+      string,
+      {
+        output: Record<string, any>
+        /** 该节点执行时看到的累积上下文（上游祖先输出），从中间 PIN 运行时恢复用 */
+        context?: { upstreams: any[] }
+        workflowId?: string
+      }
+    >
+  >
   /** 保存当前节点的输出为固定节点（写入文件并加载到内存缓存） */
   pinNode: (nodeId: string, title: string) => Promise<void>
   /** 从文件加载固定节点数据到内存缓存（按 nodeId 隔离，只影响当前节点） */
@@ -168,7 +180,11 @@ export interface UseNodeStoreProps {
   /** 取消固定：仅从内存缓存移除，不删除文件（节点不再注入该输出） */
   unpinNode: (nodeId: string) => void
   /** 删除固定节点文件（持久化删除，不可恢复；nodeId 存在时只删该节点的文件，否则删除该类型所有文件） */
-  deletePinnedFile: (nodeType: string, nodeId?: string) => Promise<void>
+  deletePinnedFile: (
+    nodeType: string,
+    nodeId?: string,
+    workflowId?: string,
+  ) => Promise<void>
   /** 列出所有已固定的节点（读取文件系统，每个文件一条记录） */
   getPinnedNodeList: () => Promise<
     { nodeType: string; nodeId: string; title: string; savedAt: string }[]
@@ -337,17 +353,17 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
         }
       : undefined
 
-    // 检查当前 AgentNode 是否已经有连线的 BMadNode
+    // 检查当前 AgentNode 是否已经有连线的 BMadNode（BMad 为上游，agent 为下游）
     const existingEdge = get().edges.find(
       (e) =>
-        e.source === current.id &&
-        get().nodes.find((n) => n.id === e.target)?.type ===
+        e.target === current.id &&
+        get().nodes.find((n) => n.id === e.source)?.type ===
           NodeTypes.BMAD_AGENT,
     )
 
     if (existingEdge) {
       // 已有连线 BMadNode → 更新其数据
-      const existingNode = get().nodes.find((n) => n.id === existingEdge.target)
+      const existingNode = get().nodes.find((n) => n.id === existingEdge.source)
       if (existingNode) {
         const updatedNodes = get().nodes.map((n) =>
           n.id === existingNode.id
@@ -386,9 +402,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       return
     }
 
-    // 没有已有连线 → 创建新的 BMadNode
+    // 没有已有连线 → 创建新的 BMadNode（放在 AgentNode 左侧，作为上游）
     const id = uuidv4()
-    const x = nodeEntry.position.x + 200
+    const x = nodeEntry.position.x - 220
     const y = nodeEntry.position.y
 
     const bmadNode = {
@@ -413,9 +429,9 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       edges: [
         ...get().edges,
         {
-          id: `${current.id}-${id}`,
-          source: current.id,
-          target: id,
+          id: `${id}-${current.id}`,
+          source: id,
+          target: current.id,
           type: 'nodeEdge',
         },
       ],
@@ -429,17 +445,17 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
 
     const existingEdge = get().edges.find(
       (e) =>
-        e.source === current.id &&
-        get().nodes.find((n) => n.id === e.target)?.type ===
+        e.target === current.id &&
+        get().nodes.find((n) => n.id === e.source)?.type ===
           NodeTypes.BMAD_AGENT,
     )
 
     if (!existingEdge) return
 
     set({
-      nodes: get().nodes.filter((n) => n.id !== existingEdge.target),
+      nodes: get().nodes.filter((n) => n.id !== existingEdge.source),
       edges: get().edges.filter(
-        (e) => e.id !== existingEdge.id && e.source !== existingEdge.target,
+        (e) => e.id !== existingEdge.id && e.target !== existingEdge.source,
       ),
     })
   },
@@ -452,7 +468,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     set({ workflowId: id })
   },
   pinNode: async (nodeId: string, title: string) => {
-    const { pipelineContext } = get()
+    const { pipelineContext, nodes, edges, workflowId } = get()
     const output = pipelineContext.nodeOutputs[nodeId]
     if (!output) return
 
@@ -461,19 +477,50 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const nodeType = node?.type
     if (!nodeType) return
 
-    // 保存到文件（文件名 nodeType_nodeId.json，同类型会覆盖）
+    // 从 exec 运行记录（pipelineContext.nodeOutputs）提取该节点执行时看到的累积上下文，
+    // 供后续从该 PIN 部分运行时恢复上游产物（与引擎 getAncestorIds + extractAccumulated 逻辑一致）
+    const upstreams: any[] = []
+    const ancestorIds = getAncestorIds(nodeId, edges)
+    for (const ancId of ancestorIds) {
+      const ancOutput = pipelineContext.nodeOutputs[ancId]
+      const ancNode = nodes.find((n) => n.id === ancId)
+      if (!ancOutput || !ancNode) continue
+      upstreams.push({
+        nodeId: ancId,
+        nodeType: ancNode.type || '',
+        title: (ancNode.data as { title?: string } | undefined)?.title || ancNode.type || '',
+        ...extractAccumulated(ancNode.type || '', ancOutput),
+      })
+    }
+    const context = upstreams.length > 0 ? { upstreams } : undefined
+
+    // 保存到文件（workflows/<workflowId>/ 目录隔离，避免不同工作流相同 nodeId 互相覆盖）
     await fetch('/api/workflow/pin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nodeType, nodeId, title, output }),
+      body: JSON.stringify({ nodeType, nodeId, title, output, workflowId, context }),
     })
 
     // 更新内存缓存（按 nodeId 隔离，只影响当前节点）
-    set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: output } })
+    set({
+      pinnedNodes: {
+        ...get().pinnedNodes,
+        [nodeId]: { output, context, workflowId },
+      },
+    })
   },
   loadPinnedNode: (nodeId: string, data: Record<string, any>) => {
-    // 按 nodeId 隔离，只影响当前节点
-    set({ pinnedNodes: { ...get().pinnedNodes, [nodeId]: data } })
+    // data 为完整 PIN 记录（含 output / context / workflowId），按 nodeId 隔离
+    set({
+      pinnedNodes: {
+        ...get().pinnedNodes,
+        [nodeId]: {
+          output: data.output,
+          context: data.context,
+          workflowId: data.workflowId,
+        },
+      },
+    })
   },
   unpinNode: (nodeId: string) => {
     // 仅从内存缓存移除，不删除文件，节点不再注入该输出
@@ -481,10 +528,12 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     delete updated[nodeId]
     set({ pinnedNodes: updated })
   },
-  deletePinnedFile: async (nodeType: string, nodeId?: string) => {
-    // 持久化删除文件（带 nodeId 只删该节点的文件，否则删除该类型所有文件）
+  deletePinnedFile: async (nodeType: string, nodeId?: string, workflowId?: string) => {
+    // 持久化删除文件（带 nodeId 只删该节点的文件，否则删除该类型所有文件；
+    // 带 workflowId 只删该工作流下的文件，避免误删其他工作流同名 nodeId 的 PIN）
     const params = new URLSearchParams({ nodeType })
     if (nodeId) params.set('nodeId', nodeId)
+    if (workflowId) params.set('workflowId', workflowId)
     await fetch(`/api/workflow/pin?${params.toString()}`, {
       method: 'DELETE',
     })
@@ -511,6 +560,19 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const { nodes, edges, workflowId } = get()
     const workflowName = workflowId.replace(/^workflow_/, '')
     const globalMode = useGlobalStore.getState().globalMode
+
+    // 若该 PIN 保存时带了累积上下文（该节点运行过），把上游祖先输出一并注入，
+    // 保证下游节点能恢复完整的上下文累积（例如原始需求 + 最终交付物的比对）
+    const pin = get().pinnedNodes[startNodeId]
+    const upstreams = pin?.context?.upstreams || []
+    if (upstreams.length > 0) {
+      for (const up of upstreams) {
+        if (up?.nodeId && !(up.nodeId in pinnedOverrides)) {
+          pinnedOverrides[up.nodeId] = up
+        }
+      }
+    }
+
     const pipelineCtx = await executeWorkflow(
       nodes,
       edges,

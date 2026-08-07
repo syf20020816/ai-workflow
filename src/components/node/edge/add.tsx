@@ -174,7 +174,7 @@ export const AddNodeBtn = ({
     },
     {
       key: 'process',
-      label: '处理节点',
+      label: '智能体节点',
       type: 'group',
       children: [
         {
@@ -206,6 +206,14 @@ export const AddNodeBtn = ({
           key: NodeTypes.TASK_PLANNER,
           disabled: isDisabledNode(kind, NodeTypes.TASK_PLANNER),
           onClick: () => addNode(NodeBuilder.taskPlanner),
+        },
+        {
+          label: (
+            <NodeHeader kind={NodeTypes.SELF_CHECK} title="自检Agent节点" />
+          ),
+          key: NodeTypes.SELF_CHECK,
+          disabled: isDisabledNode(kind, NodeTypes.SELF_CHECK),
+          onClick: () => addNode(NodeBuilder.selfCheck),
         },
       ],
     },

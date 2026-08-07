@@ -258,4 +258,16 @@ export class NodeBuilder {
       },
     }
   }
+
+  static selfCheck(pos: Position): AppNode {
+    return {
+      ...NodeBuilder.basicProps(pos.x, pos.y),
+      type: NodeTypes.SELF_CHECK,
+      data: {
+        title: '自检Agent节点',
+        projectPath: '',
+        instruction: '',
+      },
+    }
+  }
 }

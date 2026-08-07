@@ -22,6 +22,7 @@ export const NodeTypes = {
   LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
   KEYWORD_AGENT: 'keywordAgent',
   TASK_PLANNER: 'taskPlanner',
+  SELF_CHECK: 'selfCheck',
 } as const
 
 export type NodeType = (typeof NodeTypes)[keyof typeof NodeTypes]
@@ -378,9 +379,38 @@ export type NTaskPlannerData = NNode & {
 
 export type NTaskPlanner = Node<NTaskPlannerData, typeof NodeTypes.TASK_PLANNER>
 
+export type NSelfCheckData = NNode & {
+  /** 模型配置 */
+  modal?: {
+    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
+    id?: string
+    name?: string
+    key?: string
+    url?: string
+    token?: { min: number; max: number }
+    alias?: string
+  }
+  /** 项目路径（用于读取 git diff 前后对比；缺省时依赖 Spec 产物目录） */
+  projectPath?: string
+  /** 自检指令（可选，追加到系统提示词之后） */
+  instruction?: string
+  /** 视角（BMad 角色）：直接注入该角色的 SKILL 作为评审身份，BMad 自带视角，无需手写 */
+  role?: string
+  /** 视角角色的 SKILL 描述（选中 BMad 角色时自动写入） */
+  roleDesc?: string
+  /** 执行输出 - 总体结论（PASS / CONDITIONAL_PASS / FAIL） */
+  overallResult?: string
+  /** 执行输出 - 报告目录（check_reports/ 绝对路径） */
+  checkDir?: string
+  /** 执行输出 - 评审报告全文 */
+  response?: string
+}
+
+export type NSelfCheck = Node<NSelfCheckData, typeof NodeTypes.SELF_CHECK>
+
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
-  | NLarkWikiTraversal | NKeywordAgent | NTaskPlanner
+  | NLarkWikiTraversal | NKeywordAgent | NTaskPlanner | NSelfCheck
 > | null

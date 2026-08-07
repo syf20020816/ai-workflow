@@ -18,14 +18,14 @@ export const AgentNode = (props: NodeProps<NAgent>) => {
   const nodes = useNodeStore((state) => state.nodes)
   const agents = useBmadAgentStore((state) => state.agents)
 
-  // 查找是否有关联的 BMadNode
+  // 查找是否有关联的 BMadNode（BMad 为上游，agent 为下游）
   const connectedBmadEdge = edges.find(
     (e) =>
-      e.source === props.id &&
-      nodes.find((n) => n.id === e.target)?.type === NodeTypes.BMAD_AGENT,
+      e.target === props.id &&
+      nodes.find((n) => n.id === e.source)?.type === NodeTypes.BMAD_AGENT,
   )
   const connectedBmadNode = connectedBmadEdge
-    ? nodes.find((n) => n.id === connectedBmadEdge.target)
+    ? nodes.find((n) => n.id === connectedBmadEdge.source)
     : null
   const connectedBmadData = connectedBmadNode?.data as any
 

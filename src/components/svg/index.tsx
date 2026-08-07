@@ -18,6 +18,7 @@ import {
   DatabaseArrowUp,
   KeyRound,
   ListTodo,
+  ShieldCheck,
 } from 'lucide-react'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -311,6 +312,11 @@ Icon.TaskPlanner = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <ListTodo {...rest} color="#13c2c2" />,
   })
 
+Icon.SelfCheck = ({ ...rest }: SVGProps<SVGSVGElement>) =>
+  Icon({
+    children: <ShieldCheck {...rest} color="#722ed1" />,
+  })
+
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.USER_INPUT, Icon.UserInput],
   [NodeTypes.AGENT, Icon.Agent],
@@ -332,4 +338,5 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.LARK_WIKI_TRAVERSAL, Icon.LarkWikiTraversal],
   [NodeTypes.KEYWORD_AGENT, Icon.KeywordAgent],
   [NodeTypes.TASK_PLANNER, Icon.TaskPlanner],
+  [NodeTypes.SELF_CHECK, Icon.SelfCheck],
 ])
