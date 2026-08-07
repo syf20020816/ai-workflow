@@ -33,6 +33,7 @@ import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
 import { GroupPanel } from './panel/tools/group'
 import { StepLinePanel } from './panel/tools/stepLine'
+import { SenderPanel } from './panel/tools/sender'
 
 export const NODE_TYPES = {
   userInput: UserInputNode,
@@ -137,6 +138,7 @@ export function Flow() {
             NODE_COLORS.userInput
           }
         />
+        <SenderPanel position="bottom-center" style={{left: '40%'}}></SenderPanel>
         <StepLinePanel position="center-left"></StepLinePanel>
         <GroupPanel position="top-center"></GroupPanel>
         <Controls position="bottom-left"></Controls>

@@ -11,6 +11,7 @@ import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 import { EditButton } from '#/components/button'
+import { ModelSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -29,15 +30,11 @@ export const EditAgent = () => {
     (state) => state.addBmadAgentForCurrent,
   )
   const removeConnectedBmad = useNodeStore((state) => state.removeConnectedBmad)
-
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
   const agents = useBmadAgentStore((state) => state.agents)
   const fetchAgents = useBmadAgentStore((state) => state.fetchAgents)
   const switchTo = useRouteStore((state) => state.switchTo)
 
   useEffect(() => {
-    fetchModels()
     fetchAgents()
   }, [])
 
@@ -67,16 +64,10 @@ export const EditAgent = () => {
       key: 'model',
       label: '选择模型',
       valueRender: (onChange) => (
-        <Select
+        <ModelSelect
           style={{ width: '100%' }}
-          placeholder="选择模型..."
           value={selectedModelId}
-          notFoundContent="暂无模型，请先添加"
-          options={models.map((m) => ({
-            label: `${m.name} (${m.modelName})`,
-            value: m.name,
-          }))}
-          onChange={(value) => {
+          onChange={(value, models) => {
             const model = models.find((m) => m.name === value)
             if (!model) return
             patchCurrentNode((draft) => {

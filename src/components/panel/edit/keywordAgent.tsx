@@ -3,8 +3,7 @@ import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
 import type { NKeywordAgent, NKeywordAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Space, Divider } from 'antd'
-import { RobotOutlined } from '@ant-design/icons'
+import { Typography, Select, Divider } from 'antd'
 import { DynEditKV } from './item'
 import { CodeEditor } from '#/components/file-editor/editor'
 
@@ -62,34 +61,34 @@ export const EditKeywordAgent = () => {
       key: 'model',
       label: 'AI 模型',
       valueRender: (onChange: (v: any) => void) => (
-         <Select
-            style={{ flex: 1, width: '100%' }}
-            // size="small"
-            placeholder="选择模型"
-            value={selectedModelId}
-            notFoundContent="暂无模型，请先在「规则与模型」中添加"
-            options={models.map((m) => ({
-              label: `${m.name} (${m.modelName})`,
-              value: m.name,
-            }))}
-            onChange={(modelName) => {
-              const model = models.find((m) => m.name === modelName)
-              if (model) {
-                onChange({
-                  id: model.id,
-                  name: model.modelName,
-                  key: model.apiKey || '',
-                  url: model.url || '',
-                  token: model.token || { min: 100, max: 4096 },
-                  alias: model.name,
-                })
-              } else {
-                onChange(undefined)
-              }
-            }}
-            allowClear
-            onClear={() => onChange(undefined)}
-          />
+        <Select
+          style={{ flex: 1, width: '100%' }}
+          // size="small"
+          placeholder="选择模型"
+          value={selectedModelId}
+          notFoundContent="暂无模型，请先在「规则与模型」中添加"
+          options={models.map((m) => ({
+            label: `${m.name} (${m.modelName})`,
+            value: m.name,
+          }))}
+          onChange={(modelName) => {
+            const model = models.find((m) => m.name === modelName)
+            if (model) {
+              onChange({
+                id: model.id,
+                name: model.modelName,
+                key: model.apiKey || '',
+                url: model.url || '',
+                token: model.token || { min: 100, max: 4096 },
+                alias: model.name,
+              })
+            } else {
+              onChange(undefined)
+            }
+          }}
+          allowClear
+          onClear={() => onChange(undefined)}
+        />
       ),
     },
   ]
