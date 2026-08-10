@@ -24,11 +24,19 @@ import type { Model } from '#/types/model'
 import { ModalKinds } from '#/types/model'
 import { FileScan, RefreshCw, Upload } from 'lucide-react'
 import { EditButton } from '../button'
+import { CodeEditor } from '../file-editor/editor'
 
 const { Text } = Typography
 
 /** 版本选择框的默认项：表示加载主文件（工作流当前状态），而非某个历史版本快照 */
 const LATEST_VERSION_KEY = '__latest__'
+
+const ModuleTooltip = `模块说明：
+- bmm：全流程标准软件开发生命周期（SDLC）工作流，定义了研发团队的角色与分工（需求分析（PRD）、软件架构、Sprint 故事拆解、代码开发）
+- bmb：元开发工具箱（元智能体），用于扩展框架，自定义新的 Agent、工作流和专属模块（打造企业专属的 AI Agent、设计特定的业务指令流）
+- tea：企业级测试与质量门禁扩展包，专注于风险驱动的测试策略与自动化质量审计（测试用例设计、ATDD、CI/CD 自动化流水线集成）
+- core：负责基础引擎、运行时配置和多 Agent 的底层调度机制，是框架安装的必选项（头脑风暴）
+`
 
 /** 工作流表格 */
 const WorkflowTab = ({ loading }: { loading: boolean }) => {
@@ -212,7 +220,7 @@ const WorkflowTab = ({ loading }: { loading: boolean }) => {
             onChange={(v) => {
               setSelectedVersion((prev) => ({
                 ...prev,
-                [r.id]: v as string,
+                [r.id]: v,
               }))
             }}
             options={[
@@ -499,6 +507,11 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
   const [importDir, setImportDir] = useState(false)
   const [importing, setImporting] = useState(false)
 
+  // 自定义 BMad 角色
+  const [bmadModalOpen, setBmadModalOpen] = useState(false)
+  const [bmadSaving, setBmadSaving] = useState(false)
+  const [bmadForm] = Form.useForm()
+
   useEffect(() => {
     fetchAgents()
     fetchSkills()
@@ -610,6 +623,17 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
     <>
       <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
         <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            bmadForm.resetFields()
+            bmadForm.setFieldsValue({ module: 'bmm' })
+            setBmadModalOpen(true)
+          }}
+        >
+          自定义 BMad 角色
+        </Button>
+        <Button
           icon={<Upload height={16} />}
           onClick={() => {
             setImportDir(false)
@@ -695,6 +719,105 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
           value={importPath}
           onChange={(e) => setImportPath(e.target.value)}
         />
+      </Modal>
+      <Modal
+        title="自定义 BMad 角色"
+        open={bmadModalOpen}
+        onCancel={() => setBmadModalOpen(false)}
+        onOk={async () => {
+          try {
+            const v = await bmadForm.validateFields()
+            setBmadSaving(true)
+            const res = await fetch('/api/bmad/agents', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(v),
+            })
+            const data = await res.json()
+            if (data.success) {
+              message.success(`角色 "${v.title}" 已添加`)
+              fetchAgents()
+              setBmadModalOpen(false)
+            } else {
+              message.error(data.error || '添加失败')
+            }
+          } catch {
+            /* validation */
+          } finally {
+            setBmadSaving(false)
+          }
+        }}
+        confirmLoading={bmadSaving}
+        okText="添加"
+        width={520}
+      >
+        <Form form={bmadForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item
+            name="id"
+            label="角色 ID"
+            rules={[{ required: true, message: '请输入角色 ID' }]}
+            extra="字母、数字与连字符，例如 bmad-agent-custom-pm"
+          >
+            <Input placeholder="bmad-agent-custom-pm" />
+          </Form.Item>
+          <Space style={{ display: 'flex' }} align="baseline">
+            <Form.Item
+              name="icon"
+              label="图标"
+              style={{ flex: 1 }}
+              tooltip="显示在节点标签上的 emoji，可选"
+            >
+              <Input placeholder="🧑‍💼" />
+            </Form.Item>
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[{ required: true, message: '请输入名称' }]}
+              style={{ flex: 1 }}
+            >
+              <Input placeholder="例如: Alex" />
+            </Form.Item>
+          </Space>
+          <Form.Item
+            name="title"
+            label="标题"
+            rules={[{ required: true, message: '请输入标题' }]}
+          >
+            <Input placeholder="例如: Custom Product Manager" />
+          </Form.Item>
+          <Form.Item
+            name="module"
+            label="模块"
+            style={{ flex: 1 }}
+            tooltip={<CodeEditor value={ModuleTooltip} readOnly />}
+          >
+            <Select
+              style={{ width: '100%' }}
+              options={[
+                { label: 'bmm', value: 'bmm' },
+                { label: 'bmb', value: 'bmb' },
+                { label: 'tea', value: 'tea' },
+                { label: 'core', value: 'core' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            name="team"
+            label="团队"
+            style={{ flex: 1 }}
+            tooltip="例如 software-development，可选"
+          >
+            <Input placeholder="software-development" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="描述"
+            rules={[{ required: true, message: '请输入描述' }]}
+            extra="该描述将作为角色指令注入下游智能体的系统提示词"
+          >
+            <Input.TextArea rows={3} placeholder="描述该角色的职责与风格" />
+          </Form.Item>
+        </Form>
       </Modal>
     </>
   )

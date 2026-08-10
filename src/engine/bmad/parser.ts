@@ -54,9 +54,15 @@ export type BmadPhaseId = (typeof BMAD_PHASES)[number]['id']
 export function parseBmadAgents(tomlContent: string): BmadAgent[] {
   const agents: BmadAgent[] = []
 
+  // 过滤注释行（避免注释中的 [agents.xxx] 示例被误解析）
+  const cleanContent = tomlContent
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('#'))
+    .join('\n')
+
   const sectionRegex = /\[agents\.([^\]]+)\]\s*\n([\s\S]*?)(?=\n\[|\s*$)/g
   let match: RegExpExecArray | null
-  while ((match = sectionRegex.exec(tomlContent)) !== null) {
+  while ((match = sectionRegex.exec(cleanContent)) !== null) {
     const id = match[1]
     const body = match[2]
 

@@ -24,7 +24,7 @@ export const EditSkill = () => {
   useEffect(() => {
     fetchSkills()
   }, [])
-
+  console.error("render skill", skills);
   const skillId = currentNode.data.skillId || ''
 
   const rows: DynEditKVRow[] = [

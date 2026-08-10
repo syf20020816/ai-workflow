@@ -114,6 +114,7 @@ export const EditAgent = () => {
 
             // 自动创建或更新 BMadAgentNode
             addBmadAgentForCurrent({
+              id: agent.id,
               title: agent.title || agent.name,
               name: agent.name,
               description: agent.description,

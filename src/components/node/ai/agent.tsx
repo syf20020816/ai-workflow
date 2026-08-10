@@ -31,7 +31,7 @@ export const AgentNode = (props: NodeProps<NAgent>) => {
 
   // 查找 BMad agent 配置
   const agentConfig = connectedBmadData?.agentId
-    ? agents.find((a) => a.name === connectedBmadData.agentId)
+    ? agents.find((a) => a.id === connectedBmadData.agentId)
     : null
 
   return (

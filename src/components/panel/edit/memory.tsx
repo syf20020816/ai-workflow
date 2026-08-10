@@ -1,9 +1,10 @@
 import { useNodeStore } from '#/store/node'
 import type { NMemory, NMemoryData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography } from 'antd'
+import { Select, Typography } from 'antd'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
+import { useEffect, useState } from 'react'
 
 const { Text } = Typography
 
@@ -17,12 +18,43 @@ export const EditMemory = () => {
   ) as NodeProps<NMemory>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
+  const [memoryFiles, setMemoryFiles] = useState<string[]>([])
+  const [loadingFiles, setLoadingFiles] = useState(false)
+
+  // 加载 memory/ 目录下的记忆文件
+  useEffect(() => {
+    const load = async () => {
+      setLoadingFiles(true)
+      try {
+        const res = await fetch('/api/editor/list')
+        const data = await res.json()
+        if (data.status === 'success') {
+          const group = data.data.find((g: any) => g.title.startsWith('记忆'))
+          setMemoryFiles((group?.files || []).map((f: any) => f.name))
+        }
+      } catch { /* 静默 */ }
+      setLoadingFiles(false)
+    }
+    load()
+  }, [])
+
   const rows: DynEditKVRow[] = [
     {
       key: 'memoryPath',
-      label: '记忆文件路径',
-      value: currentNode.data.memoryPath,
-      placeholder: '如: memory/memory.md',
+      label: '记忆文件',
+      valueRender: (onChange) => (
+        <Select
+          style={{ width: '100%' }}
+          loading={loadingFiles}
+          placeholder="选择记忆文件"
+          value={currentNode.data.memoryPath || 'memory/memory.md'}
+          options={memoryFiles.map((f) => ({
+            label: f,
+            value: `memory/${f}`,
+          }))}
+          onChange={(val) => onChange(val)}
+        />
+      ),
     },
   ]
 

@@ -80,7 +80,7 @@ export const NODE_COLORS = {
   larkWikiTraversal: '#1677ff',
   keywordAgent: '#985debff',
   taskPlanner: '#13c2c2',
-  selfCheck: '#722ed1',
+  selfCheck: '#985debff',
 }
 
 const EDGE_TYPES = {

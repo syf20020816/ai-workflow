@@ -314,7 +314,7 @@ Icon.TaskPlanner = ({ ...rest }: SVGProps<SVGSVGElement>) =>
 
 Icon.SelfCheck = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
-    children: <ShieldCheck {...rest} color="#722ed1" />,
+    children: <ShieldCheck {...rest} color="#985debff" />,
   })
 
 export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([

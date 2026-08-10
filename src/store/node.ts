@@ -133,6 +133,7 @@ export interface UseNodeStoreProps {
   addUnConnectNode: (node: Exclude<AppNode, null>) => void
   /** 为当前 AgentNode 创建一个 BMadAgentNode 子节点并连接 */
   addBmadAgentForCurrent: (agent: {
+    id: string
     title: string
     name: string
     description: string
@@ -372,7 +373,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
                 data: {
                   title: agent.title,
                   role: agent.title,
-                  agentId: agent.name,
+                  agentId: agent.id,
                   roleDescription: agent.description,
                   modal: bmadModal, // 继承模型配置
                 },
@@ -418,7 +419,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       data: {
         title: agent.title,
         role: agent.title,
-        agentId: agent.name,
+        agentId: agent.id,
         roleDescription: agent.description,
         modal: bmadModal, // 从 AgentNode 继承模型配置
       },
