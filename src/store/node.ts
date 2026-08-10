@@ -137,6 +137,7 @@ export interface UseNodeStoreProps {
     title: string
     name: string
     description: string
+    skillContent?: string
   }) => void
   /** 删除当前 AgentNode 连线的 BMadNode */
   removeConnectedBmad: () => void
@@ -374,7 +375,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
                   title: agent.title,
                   role: agent.title,
                   agentId: agent.id,
-                  roleDescription: agent.description,
+                  roleDescription: agent.skillContent || agent.description,
                   modal: bmadModal, // 继承模型配置
                 },
               }
@@ -420,7 +421,7 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
         title: agent.title,
         role: agent.title,
         agentId: agent.id,
-        roleDescription: agent.description,
+        roleDescription: agent.skillContent || agent.description,
         modal: bmadModal, // 从 AgentNode 继承模型配置
       },
     } as unknown as Node

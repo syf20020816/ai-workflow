@@ -43,10 +43,11 @@ export const EditBMADAgent = () => {
             onChange(val)
             if (val) {
               const agent = agents.find((a) => a.title === val)
-              if (agent?.description) {
+              const skill = agent?.skillContent || agent?.description
+              if (skill) {
                 patchCurrentNode((draft) => {
                   const data = d(draft)
-                  data.roleDescription = agent.description
+                  data.roleDescription = skill
                 })
               }
             }

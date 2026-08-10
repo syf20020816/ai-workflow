@@ -76,7 +76,7 @@ export const EditSelfCheck = () => {
             patchCurrentNode((draft) => {
               const data = d(draft)
               data.role = val || undefined
-              data.roleDesc = agent?.description || undefined
+              data.roleDesc = agent?.skillContent || agent?.description || undefined
             })
             onChange(val)
           }}

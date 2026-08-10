@@ -7,11 +7,59 @@ import { parseBmadAgents } from '#/engine/bmad/parser'
 const BMAD_ROOT = path.resolve(process.cwd(), '.bmad')
 const CONFIG_PATH = path.join(BMAD_ROOT, '_bmad', 'config.toml')
 
+/** 角色指令目录：.bmad/agents/<agentId>/SKILL.md */
+const SKILL_DIR = path.join(BMAD_ROOT, 'agents')
+
 /** 转义 TOML 字符串值中的引号与反斜杠 */
 function escapeToml(value: unknown): string {
   return String(typeof value === 'string' ? value : '')
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
+}
+
+/** 读取角色的完整指令（SKILL.md），文件不存在时返回 undefined */
+function readSkillContent(agentId: string): string | undefined {
+  if (!/^[a-zA-Z0-9-]+$/.test(agentId)) return undefined
+  const skillPath = path.join(SKILL_DIR, agentId, 'SKILL.md')
+  try {
+    return fs.readFileSync(skillPath, 'utf-8')
+  } catch {
+    return undefined
+  }
+}
+
+/** 为新角色生成初始 SKILL.md 模板（可后续在平台编辑） */
+function buildInitialSkill(agent: {
+  id: string
+  name: string
+  title: string
+  icon?: string
+  description: string
+}): string {
+  return `---
+name: ${agent.id}
+description: ${agent.description}
+---
+
+# ${agent.icon ? agent.icon + ' ' : ''}${agent.name} — ${agent.title}
+
+> 本文件为角色指令，可在此直接编辑。内容将作为该角色的系统指令注入下游智能体。
+
+## 角色定位
+
+你是 ${agent.name}，${agent.title}。
+
+## 描述
+
+${agent.description}
+
+## 任务约束
+
+作为本工作流中的 ${agent.title} 角色，你需要：
+1. 基于输入（需求、上游上下文）明确目标与范围
+2. 输出结构化结论，每个结论给出依据
+3. 对不确定的信息明确标注，不臆造事实
+`
 }
 
 export const Route = createFileRoute('/api/bmad/agents')({
@@ -20,7 +68,11 @@ export const Route = createFileRoute('/api/bmad/agents')({
       GET: async () => {
         try {
           const baseContent = fs.readFileSync(CONFIG_PATH, 'utf-8')
-          return Response.json(parseBmadAgents(baseContent))
+          const agents = parseBmadAgents(baseContent).map((a) => ({
+            ...a,
+            skillContent: readSkillContent(a.id),
+          }))
+          return Response.json(agents)
         } catch (err: any) {
           return Response.json(
             { error: 'Failed to read BMad config', detail: err.message },
@@ -81,6 +133,17 @@ export const Route = createFileRoute('/api/bmad/agents')({
               : existing + '\n' + section + '\n'
 
         fs.writeFileSync(CONFIG_PATH, next, 'utf-8')
+
+        // 生成初始角色指令文件
+        try {
+          const skillDir = path.join(SKILL_DIR, id)
+          fs.mkdirSync(skillDir, { recursive: true })
+          fs.writeFileSync(
+            path.join(skillDir, 'SKILL.md'),
+            buildInitialSkill({ id, name, title, icon, description }),
+            'utf-8',
+          )
+        } catch { /* 指令文件生成失败不影响角色创建 */ }
 
         return Response.json({ success: true, id })
       },

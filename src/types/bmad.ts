@@ -16,4 +16,6 @@ export interface BmadAgent {
   icon: string
   /** 角色描述 */
   description: string
+  /** 角色完整指令（.bmad/agents/<id>/SKILL.md 内容，不存在则为 undefined） */
+  skillContent?: string
 }

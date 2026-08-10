@@ -494,6 +494,7 @@ const ModelTab = ({ loading }: { loading: boolean }) => {
 
 /** 技能表格 */
 const SkillTab = ({ loading }: { loading: boolean }) => {
+  const openInEditor = useRouteStore((s) => s.openInEditor)
   const bmadAgents = useBmadAgentStore((s) => s.agents)
   const bmadLoading = useBmadAgentStore((s) => s.loading)
   const fetchAgents = useBmadAgentStore((s) => s.fetchAgents)
@@ -594,6 +595,23 @@ const SkillTab = ({ loading }: { loading: boolean }) => {
       key: 'action',
       width: 120,
       render: () => <Tag style={{ fontSize: 9 }}>BMad</Tag>,
+    },
+    {
+      title: '指令',
+      key: 'skill',
+      width: 90,
+      render: (_: any, r: any) =>
+        r.skillContent ? (
+          <EditButton
+            title="查看/编辑角色指令"
+            kind="edit"
+            onClick={() => openInEditor(`.bmad/agents/${r.id}/SKILL.md`)}
+          ></EditButton>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            无
+          </Text>
+        ),
     },
   ]
 

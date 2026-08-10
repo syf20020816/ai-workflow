@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { ReactFlow, Background, MiniMap } from '@xyflow/react'
 import { Controls } from './controls'
 
@@ -88,22 +88,22 @@ const EDGE_TYPES = {
 }
 
 export function Flow() {
-  const {
-    nodes,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    removeConnectedBmad,
-    setCurrentNode,
-  } = useNodeStore()
+  const nodes = useNodeStore((s) => s.nodes)
+  const edges = useNodeStore((s) => s.edges)
+  const onNodesChange = useNodeStore((s) => s.onNodesChange)
+  const onEdgesChange = useNodeStore((s) => s.onEdgesChange)
+  const onConnect = useNodeStore((s) => s.onConnect)
+  const removeConnectedBmad = useNodeStore((s) => s.removeConnectedBmad)
+  const setCurrentNode = useNodeStore((s) => s.setCurrentNode)
 
   // 监听 BMad 断开事件
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (detail?.nodeId) {
-        const bmadNode = nodes.find((n) => n.id === detail.nodeId)
+        const bmadNode = useNodeStore
+          .getState()
+          .nodes.find((n) => n.id === detail.nodeId)
         if (bmadNode) {
           setCurrentNode(bmadNode as any)
           removeConnectedBmad()
@@ -112,7 +112,25 @@ export function Flow() {
     }
     window.addEventListener('bmad:disconnect', handler)
     return () => window.removeEventListener('bmad:disconnect', handler)
-  }, [nodes, removeConnectedBmad, setCurrentNode])
+  }, [removeConnectedBmad, setCurrentNode])
+
+  // 面板元素引用固定：避免拖拽节点时（nodes 每帧变化导致 Flow 重渲染）
+  // 把编辑面板等 React Flow children 全部跟着重渲染，造成页面卡顿。
+  // useMemo 使元素引用不变，React 会直接跳过这些子树的重渲染；
+  // 面板内部各自订阅 store，状态变化时仍会正常更新。
+  const panels = useMemo(
+    () => (
+      <>
+        <SenderPanel position="bottom-center" style={{ left: '40%' }}></SenderPanel>
+        <StepLinePanel position="center-left"></StepLinePanel>
+        <GroupPanel position="top-center"></GroupPanel>
+        <Controls position="bottom-left"></Controls>
+        <ToolsPanel position="top-left"></ToolsPanel>
+        <EditPanel position="top-right"></EditPanel>
+      </>
+    ),
+    [],
+  )
 
   return (
     <AddNodeBtn trigger={['contextMenu']}>
@@ -138,12 +156,7 @@ export function Flow() {
             NODE_COLORS.userInput
           }
         />
-        <SenderPanel position="bottom-center" style={{left: '40%'}}></SenderPanel>
-        <StepLinePanel position="center-left"></StepLinePanel>
-        <GroupPanel position="top-center"></GroupPanel>
-        <Controls position="bottom-left"></Controls>
-        <ToolsPanel position="top-left"></ToolsPanel>
-        <EditPanel position="top-right"></EditPanel>
+        {panels}
       </ReactFlow>
     </AddNodeBtn>
   )

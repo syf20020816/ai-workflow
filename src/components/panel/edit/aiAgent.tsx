@@ -118,6 +118,7 @@ export const EditAgent = () => {
               title: agent.title || agent.name,
               name: agent.name,
               description: agent.description,
+              skillContent: agent.skillContent,
             })
             onChange(agentId)
           }}
