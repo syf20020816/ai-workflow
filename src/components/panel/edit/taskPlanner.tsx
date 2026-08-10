@@ -1,11 +1,10 @@
-import { useEffect } from 'react'
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
 import type { NTaskPlanner, NTaskPlannerData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Divider, Input } from 'antd'
+import { Typography, Divider, Input } from 'antd'
 import { DynEditKV } from './item'
 import { EditButton } from '#/components/button'
+import { ModelSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -19,31 +18,20 @@ export const EditTaskPlanner = () => {
   ) as NodeProps<NTaskPlanner>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
-
   const selectedModelId = currentNode.data.modal?.name || undefined
-
-  useEffect(() => {
-    fetchModels()
-  }, [fetchModels])
 
   const rows = [
     {
       key: 'model',
       label: 'AI 模型',
       valueRender: (onChange: (v: any) => void) => (
-        <Select
+        <ModelSelect
           style={{ flex: 1, width: '100%' }}
           placeholder="选择模型"
-          value={selectedModelId}
           notFoundContent="暂无模型，请先在「规则与模型」中添加"
-          options={models.map((m) => ({
-            label: `${m.name} (${m.modelName})`,
-            value: m.name,
-          }))}
-          onChange={(modelName) => {
-            const model = models.find((m) => m.name === modelName)
+          value={selectedModelId}
+          onChange={(value, models) => {
+            const model = models.find((m) => m.name === value)
             if (model) {
               onChange({
                 id: model.id,

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
 import type { NKnowledgeRetrieval, NKnowledgeRetrievalData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { Typography, Select, Space, Button, Input, Tooltip, Tag, Divider } from 'antd'
 import { PlusOutlined, DeleteOutlined, FilterOutlined, RobotOutlined } from '@ant-design/icons'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
+import { ModelSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -20,16 +20,8 @@ export const EditKnowledgeRetrieval = () => {
   ) as NodeProps<NKnowledgeRetrieval>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
-
   const [collections, setCollections] = useState<string[]>([])
   const [loadingCollections, setLoadingCollections] = useState(false)
-
-  // 加载模型列表
-  useEffect(() => {
-    fetchModels()
-  }, [fetchModels])
 
   // 加载集合列表
   useEffect(() => {
@@ -174,18 +166,14 @@ export const EditKnowledgeRetrieval = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
         <Space align="center" style={{ width: '100%' }}>
           <RobotOutlined style={{ color: '#888', fontSize: 12 }} />
-          <Select
+          <ModelSelect
             style={{ flex: 1 }}
             size="small"
             placeholder="选择模型（可选）"
-            value={selectedModelId}
             notFoundContent="暂无模型，请先在「规则与模型」中添加"
-            options={models.map((m) => ({
-              label: `${m.name} (${m.modelName})`,
-              value: m.name,
-            }))}
-            onChange={(modelName) => {
-              const model = models.find((m) => m.name === modelName)
+            value={selectedModelId}
+            onChange={(value, models) => {
+              const model = models.find((m) => m.name === value)
               if (model) {
                 patchCurrentNode((draft) => {
                   const data = d(draft)

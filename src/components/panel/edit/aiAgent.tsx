@@ -1,5 +1,4 @@
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
 import { useBmadAgentStore } from '#/store/bmad'
 import { useRouteStore } from '#/store/route'
 import { NodeTypes } from '#/types'

@@ -1,12 +1,11 @@
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
 import { useRouteStore } from '#/store/route'
 import type { NCodeAgent, NCodeAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { Select, Space, Switch, Typography } from 'antd'
 import { DynEditKV, DynEditKey } from './item'
 import type { DynEditKVRow } from './item'
-import { useEffect } from 'react'
+import { ModelSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -20,13 +19,7 @@ export const EditCodeAgent = () => {
   ) as NodeProps<NCodeAgent>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
   const switchTo = useRouteStore((state) => state.switchTo)
-
-  useEffect(() => {
-    fetchModels()
-  }, [])
 
   const selectedModelId = currentNode.data.modal?.name || undefined
   const mode = currentNode.data.mode ?? 'analyze'
@@ -92,16 +85,10 @@ export const EditCodeAgent = () => {
       key: 'model',
       label: '选择模型',
       valueRender: (onChange) => (
-        <Select
+        <ModelSelect
           style={{ width: '100%' }}
-          placeholder="选择模型..."
           value={selectedModelId}
-          notFoundContent="暂无模型，请先添加"
-          options={models.map((m) => ({
-            label: `${m.name} (${m.modelName})`,
-            value: m.name,
-          }))}
-          onChange={(value) => {
+          onChange={(value, models) => {
             const model = models.find((m) => m.name === value)
             if (!model) return
             patchCurrentNode((draft) => {

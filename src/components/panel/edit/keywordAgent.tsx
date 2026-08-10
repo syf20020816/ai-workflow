@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
 import type { NKeywordAgent, NKeywordAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Divider } from 'antd'
+import { Typography, Divider } from 'antd'
 import { DynEditKV } from './item'
 import { CodeEditor } from '#/components/file-editor/editor'
+import { ModelSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -19,9 +19,6 @@ export const EditKeywordAgent = () => {
   ) as NodeProps<NKeywordAgent>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
-
   const selectedModelId = currentNode.data.modal?.name || undefined
   const formatValue = currentNode.data.format || '{\n  "keywords": string[]\n}'
   const [promptContent, setPromptContent] = useState('')
@@ -30,10 +27,6 @@ export const EditKeywordAgent = () => {
   const [localFormat, setLocalFormat] = useState(formatValue)
   const formatRef = useRef(formatValue)
   formatRef.current = formatValue
-
-  useEffect(() => {
-    fetchModels()
-  }, [fetchModels])
 
   // 加载 prompt 文件
   useEffect(() => {
@@ -61,18 +54,13 @@ export const EditKeywordAgent = () => {
       key: 'model',
       label: 'AI 模型',
       valueRender: (onChange: (v: any) => void) => (
-        <Select
+        <ModelSelect
           style={{ flex: 1, width: '100%' }}
-          // size="small"
           placeholder="选择模型"
-          value={selectedModelId}
           notFoundContent="暂无模型，请先在「规则与模型」中添加"
-          options={models.map((m) => ({
-            label: `${m.name} (${m.modelName})`,
-            value: m.name,
-          }))}
-          onChange={(modelName) => {
-            const model = models.find((m) => m.name === modelName)
+          value={selectedModelId}
+          onChange={(value, models) => {
+            const model = models.find((m) => m.name === value)
             if (model) {
               onChange({
                 id: model.id,

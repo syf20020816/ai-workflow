@@ -36,7 +36,7 @@ export const EditBMADAgent = () => {
           allowClear
           value={currentNode.data.role || undefined}
           options={agents.map((a) => ({
-            label: `${a.icon || '🤖'} ${a.title} (${a.name})`,
+            label: `${a.title} (${a.name})`,
             value: a.title,
           }))}
           onChange={(val) => {
@@ -80,14 +80,26 @@ export const EditBMADAgent = () => {
           patchCurrentNode((draft) => {
             const data = d(draft)
             if (key === 'role') data.role = (value || '') as string
-            else if (key === 'roleDescription') data.roleDescription = (value || '') as string
-            else if (key === 'systemPrompt') data.systemPrompt = (value || '') as string
+            else if (key === 'roleDescription')
+              data.roleDescription = (value || '') as string
+            else if (key === 'systemPrompt')
+              data.systemPrompt = (value || '') as string
           })
         }}
       />
-      <div style={{ fontSize: 11, color: '#888', marginTop: 12, padding: '8px 12px', background: 'var(--xy-node-selected)', borderRadius: 4 }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: '#888',
+          marginTop: 12,
+          padding: '8px 12px',
+          background: 'var(--xy-node-selected)',
+          borderRadius: 4,
+        }}
+      >
         <Text type="secondary">
-          BMad 节点不会调用 AI，而是将角色指令通过「系统提示词」注入下游的智能体节点。
+          BMad 节点不会调用
+          AI，而是将角色指令通过「系统提示词」注入下游的智能体节点。
           请在下游的智能体节点中选择模型。
         </Text>
       </div>
