@@ -42,9 +42,7 @@ export const BmadAgentNode = (props: NodeProps<NBMadAgent>) => {
                 {props.data.role || '未知角色'}
               </Tag>
               {agentConfig?.name && (
-                <Tag color="geekblue">
-                  {agentConfig.name}
-                </Tag>
+                <Tag color="geekblue">{agentConfig.name}</Tag>
               )}
             </div>
             {/* 断开 BMad 连接按钮 */}
@@ -67,36 +65,6 @@ export const BmadAgentNode = (props: NodeProps<NBMadAgent>) => {
               />
             </Tooltip>
           </div>
-
-          {/* 角色描述 */}
-          {props.data.roleDescription && (
-            <div className={styles.row}>
-              <Tooltip title={props.data.roleDescription}>
-                <Text
-                  type="secondary"
-                  style={{
-                    fontSize: 9,
-                    lineHeight: 1.3,
-                    display: 'block',
-                    maxWidth: 200,
-                  }}
-                >
-                  {props.data.roleDescription.length > 48
-                    ? props.data.roleDescription.slice(0, 48) + '...'
-                    : props.data.roleDescription}
-                </Text>
-              </Tooltip>
-            </div>
-          )}
-
-          {/* agent ID 显示 */}
-          {/* {props.data.agentId && (
-            <div className={styles.row}>
-              <Text type="secondary" style={{ fontSize: 9, fontFamily: 'monospace' }}>
-                {props.data.agentId}
-              </Text>
-            </div>
-          )} */}
         </div>
       )}
     </UNode>

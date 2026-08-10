@@ -11,8 +11,18 @@ import { Execution } from '#/components/execution'
 import { FileEditor } from '#/components/file-editor'
 import { Logo } from '#/components/logo'
 import { useRouteStore } from '#/store/route'
-import { Cable, FileCode, Bot, Database, PanelLeftClose, PanelLeftOpen, ListChecks } from 'lucide-react'
+import {
+  Cable,
+  FileCode,
+  Bot,
+  Database,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ListChecks,
+  Building2,
+} from 'lucide-react'
 import { useState } from 'react'
+import { RoleWork } from '#/components/role-work'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -36,6 +46,7 @@ function App() {
     { label: '知识库', key: 'knowledge', icon: <Database size={16} /> },
     { label: '执行结果', key: 'execution', icon: <ListChecks size={16} /> },
     { label: '编辑器', key: 'editor', icon: <FileCode size={16} /> },
+    { label: '多角色工作', key: 'role_work', icon: <Building2 size={16} /> },
   ]
 
   const menuItems = collapsed
@@ -77,7 +88,11 @@ function App() {
             className={styles.trigger}
             onClick={() => setCollapsed(!collapsed)}
           >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            {collapsed ? (
+              <PanelLeftOpen size={16} />
+            ) : (
+              <PanelLeftClose size={16} />
+            )}
           </div>
         </Sider>
         <Content style={{ overflow: 'auto' }}>
@@ -92,6 +107,7 @@ function App() {
           {activeKey === 'knowledge' && <KnowledgeManager />}
           {activeKey === 'execution' && <Execution />}
           {activeKey === 'editor' && <FileEditor />}
+          {activeKey === 'role_work' && <RoleWork />}
         </Content>
       </Layout>
     </ConfigProvider>

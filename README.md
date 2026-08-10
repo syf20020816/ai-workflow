@@ -89,6 +89,61 @@
 - **NodeBuilder** 工厂模式构建节点，自动生成 UUID 和位置偏移
 - **路由树自动生成** — TanStack Router 文件路由，`tsr generate` 自动更新
 
+### 10. BMad集成与角色使用
+
+**策略：只取「多角色」，自建编排，不跑 BMad CLI**
+
+BMad CLI（`npx bmad-method install` 部署的完整框架）定位是 AI IDE 内的交互式多 Agent 协同：Core 后台调度、BMM 定义全流程角色、TEA 提供测试门禁、BMB 用于扩展新 Agent。它把整个 SDLC 固化成一套交互式会话流程（激活 → 人格 → 菜单技能派发）。
+
+本项目用可视化 DAG 引擎**自编编排**，需要的只是 BMad Method 的**多角色 persona 能力**。因此不把 BMad CLI 作为运行时，只抽取角色定义与角色指令，接入自己的节点体系。
+
+**角色资产与目录结构**
+
+| 路径 | 内容 | 用途 |
+|------|------|------|
+| `.bmad/_bmad/config.toml` | 角色注册表（7 个：analyst / pm / ux-designer / architect / dev + tech-writer / tea） | 角色库数据源，`/api/bmad/agents` 解析 |
+| `.bmad/agents/<id>/SKILL.md` | 清洗后的角色 persona 指令（自包含、无运行时协议） | **注入用**，规则页可直接编辑 |
+| `.bmad/agents/<id>/customize.toml` | 官方 persona 源（role / identity / communication_style / principles） | 源参考，清洗时提炼 |
+| `.bmad/plan/` | 官方 plan 技能（PRD / spec / architecture / ux 等）备份 | 暂不接入执行，保留作方法论参考 |
+
+**为什么要「清洗」**
+
+官方角色的 SKILL.md 是**运行时协议壳**：包含 `uv run .../resolve_customization.py`、`_bmad/custom/*.toml` 覆盖合并、`config.yaml` 加载、`{agent.menu}` 交互式菜单等，全部依赖 BMad 安装产物。本项目没有对应脚本/配置，直接注入会引导模型"执行不存在的脚本、展示菜单"。清洗 = 保留 description / Overview + customize.toml 的 persona 字段 + 任务约束，**删除全部运行时协议**。清洗后每个角色的指令完全自包含，可在平台直接编辑。
+
+**注入链路**
+
+```
+config.toml → /api/bmad/agents（解析角色 + 附 skillContent = SKILL.md 全文）
+  → 节点选择角色 → roleDescription = skillContent || description
+  → bmadExecutor 输出 instructions → 下游智能体以 systemPrompt（优先级 20）注入
+```
+
+**节点应用**
+
+- **BMad 角色节点** — 纯 persona 注入，不调用 AI，把角色指令传给下游智能体
+- **智能体节点** — 下拉选择角色（或连线 BMad 节点），自动同步角色指令 + 模型配置
+- **自检节点** — 选择评审视角角色，独立会话以该角色身份评审（一个节点一个角色，多视角 = 多个自检节点）
+- **规则页** — 角色库表格 + 「自定义 BMad 角色」（自动生成初始指令文件）+ 「指令」列直达编辑器
+
+**对比 BMad CLI：取舍分析**
+
+| 维度 | 本项目（persona 注入 + 自建编排） | BMad CLI（完整框架） |
+|------|---------------------------------|----------------------|
+| 编排方式 | 可视化 DAG 自由编排，可组合知识库 / Lark / 记忆 / 条件 / 循环等自有节点 | 内置固定 SDLC 流程（PRD→UX→架构→故事→开发→评审→测试），交互式会话驱动 |
+| 运行时依赖 | 无：只读 `.bmad/` 下配置与指令，不需要 install 产物 / python 脚本 / config.yaml | 需 install 部署 Core / BMM / TEA / BMB，依赖 uv / python 脚本 |
+| 角色能力 | 提炼 persona（身份 / 沟通风格 / 行为准则 / 任务约束），注入为 system prompt | 完整交互式 Agent（激活步骤 / 持久事实 / 菜单技能派发 / 多 Agent 协同） |
+| 流程方法深度 | 目前只注入角色人格；plan 流程模板仅保留未接入 | 完整方法论（PRD Discovery/Finalize、架构 spine、Reviewer Gate、测试策略、CI 门禁） |
+| 可调试性 | 单节点执行 / PIN / 日志 / 上下文预算可控，所见即所得 | CLI 交互黑盒，流程不可拆分调试 |
+| 可扩展性 | 自定义角色可视化创建 + 指令内编辑，与模型管理（多供应商）集成 | BMB 元开发可搓新 Agent / 工作流，但仍在框架内 |
+| 维护成本 | 官方更新需手动同步 `.bmad/` 并重新清洗 | 每次 install 自动拉最新，但受框架约束 |
+| 适用场景 | 把「角色 / 多视角」嵌入自研工作流编排，轻量、本地、可调试 | 直接采用 BMad Method 完整流程，接受固定编排 |
+
+**结论**
+
+核心取舍是**「只要多角色，不要框架」**。BMad Method 最可复用的资产是多年沉淀的角色方法论（分析师 / 产品 / 架构 / 开发 / 测试的职责与准则）；CLI 的价值在于把流程固化为会话。本项目诉求是"自编工作流去执行"，角色提供的是视角与约束（含多角色评审），因此 persona 注入是最小契合面。代价是放弃官方流程模板的方法论深度与自动更新——后续可按需把 `.bmad/plan/` 中的核心流程（如 PRD 方法论）提炼进角色指令或节点模板。
+
+> 注：`/api/execute/bmad` 为早期「CLI 映射」方案的遗留路由（status / skills / map-workflow / execute-skill），当前主链路不使用，仅保留兼容。
+
 ---
 
 ## 技术栈
@@ -115,7 +170,7 @@ src/
 │       ├── index.ts          # 执行器注册表
 │       ├── userInput.ts
 │       ├── agent.ts          # AI 智能体调用
-│       ├── bmad.ts           # BMad CLI
+│       ├── bmad.ts          # BMad 角色（persona 注入，不调用 AI/CLI）
 │       ├── lark.ts           # Lark 文档
 │       ├── larkTemplate.ts   # Lark 模板
 │       ├── larkWikiTraversal.ts  # Lark Wiki 遍历
@@ -184,7 +239,7 @@ src/
 │       │   ├── keywordAgent.ts   # 关键词提取
 │       │   ├── lark.ts           # Lark CLI
 │       │   ├── larkWikiTraversal.ts  # Lark Wiki 遍历
-│       │   ├── bmad.ts           # BMad CLI
+│       │   ├── bmad.ts           # BMad（遗留 CLI 路由，已不主用）
 │       │   ├── specFolder.ts     # Spec 产物读写（含路径穿越防护）
 │       │   ├── qdrant.ts / embed.ts / doc-process.ts   # 知识库（检索/向量化/文档处理）
 │       │   ├── fileWrite.ts      # 文件写入（路径限定，防 AI 越界）
@@ -221,7 +276,7 @@ npm run build
 
 ```bash
 # Lark CLI 需在宿主机独立运行（lark-cli auth login）
-# BMad 需在宿主机独立运行（npx bmad-method install 后可用）
+# BMad 无需安装 CLI —— 仅使用 .bmad/ 下的角色配置与指令（见「10. BMad集成与角色使用」）
 ```
 
 ---
