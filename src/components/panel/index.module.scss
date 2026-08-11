@@ -151,4 +151,77 @@
   width: 40vw;
   min-width: 300px;
   max-width: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatHistory {
+  background-color: var(--xy-node-background-color);
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--xy-edge-stroke-default);
+  border-bottom: none;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chatHistoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--xy-edge-stroke-default);
+  flex-shrink: 0;
+}
+
+.chatHistoryTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xy-edge-stroke-selected);
+}
+
+.chatList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+}
+
+.chatMsg {
+  display: flex;
+  flex-direction: column;
+}
+
+.chatMsgUser {
+  align-items: flex-end;
+}
+
+.chatMsgAi {
+  align-items: flex-start;
+}
+
+.chatBubble {
+  max-width: 85%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chatBubbleUser {
+  background-color: #e6f4ff;
+  color: #003a8c;
+  border-bottom-right-radius: 2px;
+}
+
+.chatBubbleAi {
+  background-color: #f5f5f5;
+  color: #333;
+  border-bottom-left-radius: 2px;
 }
