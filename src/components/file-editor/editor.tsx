@@ -165,6 +165,17 @@ interface MdPreviewProps {
   onNavigate?: (path: string) => void
 }
 
+/** 将文档内的相对路径解析为相对项目根目录的路径（归一化 ./ ../） */
+function resolveRelPath(base: string, rel: string): string {
+  const stack = base ? base.split('/') : []
+  for (const seg of rel.split('/')) {
+    if (seg === '.' || seg === '') continue
+    if (seg === '..') stack.pop()
+    else stack.push(seg)
+  }
+  return stack.join('/')
+}
+
 /**
  * Markdown 预览组件
  * 读取 workspace 内（通常为 docs/ 下）的 markdown 文件并渲染为 HTML
@@ -174,6 +185,7 @@ export const MdPreview = ({ path, onNavigate }: MdPreviewProps) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
 
   // 读取文件内容
   useEffect(() => {
@@ -202,18 +214,27 @@ export const MdPreview = ({ path, onNavigate }: MdPreviewProps) => {
     }
   }, [path])
 
-  // marked 编译 + DOMPurify 消毒
+  // marked 编译：相对图片重写为 /api/docs/asset 资源地址；再 DOMPurify 消毒
   const html = useMemo(() => {
     if (!content) return ''
-    const raw = marked.parse(content, { async: false, gfm: true })
+    const renderer = new marked.Renderer()
+    renderer.image = ({ href, title, text }) => {
+      let src = href
+      if (src && !/^(https?:|data:)/.test(src)) {
+        src = `/api/docs/asset?path=${encodeURIComponent(resolveRelPath(dir, src))}`
+      }
+      let out = `<img src="${src}" alt="${text}"`
+      if (title) out += ` title="${title}"`
+      return `${out} />`
+    }
+    const raw = marked.parse(content, { async: false, gfm: true, renderer })
     return DOMPurify.sanitize(raw)
-  }, [content])
+  }, [content, dir])
 
   // 拦截相对链接：在同目录下解析目标文档并触发跳转
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
 
     const handleClick = (e: MouseEvent) => {
       const anchor = (e.target as HTMLElement).closest('a')
@@ -221,12 +242,11 @@ export const MdPreview = ({ path, onNavigate }: MdPreviewProps) => {
       const href = anchor.getAttribute('href')
       if (!href || /^(https?:|mailto:|#)/.test(href)) return
       e.preventDefault()
-      const resolved = dir ? `${dir}/${href}` : href
-      onNavigate?.(resolved)
+      onNavigate?.(resolveRelPath(dir, href))
     }
     container.addEventListener('click', handleClick)
     return () => container.removeEventListener('click', handleClick)
-  }, [path, onNavigate, html])
+  }, [path, dir, onNavigate, html])
 
   return (
     <div ref={containerRef} className={styles.mdPreview}>

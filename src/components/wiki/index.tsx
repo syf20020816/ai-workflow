@@ -128,6 +128,7 @@ export const Wiki = () => {
   const [tree, setTree] = useState<DocNode[]>([])
   const [loading, setLoading] = useState(true)
   const [activePath, setActivePath] = useState<string>('')
+  const [reloadTick, setReloadTick] = useState(0)
 
   const findFirstFile = (nodes: DocNode[]): string | null => {
     for (const node of nodes) {
@@ -156,6 +157,12 @@ export const Wiki = () => {
     }
   }
 
+  // 重新加载：刷新目录树并强制重挂载右侧预览，重新读取当前文档内容
+  const handleReload = () => {
+    fetchList()
+    setReloadTick((t) => t + 1)
+  }
+
   useEffect(() => {
     fetchList()
   }, [])
@@ -181,7 +188,7 @@ export const Wiki = () => {
         )}
         <Button
           icon={<ReloadOutlined />}
-          onClick={fetchList}
+          onClick={handleReload}
           loading={loading}
         />
       </div>
@@ -212,7 +219,11 @@ export const Wiki = () => {
         {/* 右侧 Markdown 预览 */}
         <div className={styles.previewContainer}>
           {activePath ? (
-            <MdPreview path={activePath} onNavigate={handleNavigate} />
+            <MdPreview
+              key={reloadTick}
+              path={activePath}
+              onNavigate={handleNavigate}
+            />
           ) : (
             <div className={styles.previewPlaceholder}>
               <FileOutlined className={styles.placeholderIcon} />

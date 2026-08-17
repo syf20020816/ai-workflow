@@ -38,6 +38,7 @@ import { Route as ApiEditorListRouteImport } from './routes/api/editor/list'
 import { Route as ApiEditorFsRouteImport } from './routes/api/editor/fs'
 import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
 import { Route as ApiDocsListRouteImport } from './routes/api/docs/list'
+import { Route as ApiDocsAssetRouteImport } from './routes/api/docs/asset'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
 const IndexRoute = IndexRouteImport.update({
@@ -186,6 +187,11 @@ const ApiDocsListRoute = ApiDocsListRouteImport.update({
   path: '/api/docs/list',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocsAssetRoute = ApiDocsAssetRouteImport.update({
+  id: '/api/docs/asset',
+  path: '/api/docs/asset',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
   id: '/api/bmad/agents',
   path: '/api/bmad/agents',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/asset': typeof ApiDocsAssetRoute
   '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/asset': typeof ApiDocsAssetRoute
   '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
@@ -265,6 +273,7 @@ export interface FileRoutesById {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/asset': typeof ApiDocsAssetRoute
   '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
@@ -299,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/asset'
     | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/asset'
     | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/asset'
     | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
@@ -396,6 +408,7 @@ export interface RootRouteChildren {
   ApiSkillRoute: typeof ApiSkillRouteWithChildren
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
+  ApiDocsAssetRoute: typeof ApiDocsAssetRoute
   ApiDocsListRoute: typeof ApiDocsListRoute
   ApiEditorContentRoute: typeof ApiEditorContentRoute
   ApiEditorFsRoute: typeof ApiEditorFsRoute
@@ -624,6 +637,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDocsListRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/docs/asset': {
+      id: '/api/docs/asset'
+      path: '/api/docs/asset'
+      fullPath: '/api/docs/asset'
+      preLoaderRoute: typeof ApiDocsAssetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bmad/agents': {
       id: '/api/bmad/agents'
       path: '/api/bmad/agents'
@@ -656,6 +676,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSkillRoute: ApiSkillRouteWithChildren,
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
+  ApiDocsAssetRoute: ApiDocsAssetRoute,
   ApiDocsListRoute: ApiDocsListRoute,
   ApiEditorContentRoute: ApiEditorContentRoute,
   ApiEditorFsRoute: ApiEditorFsRoute,

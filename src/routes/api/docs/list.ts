@@ -12,7 +12,7 @@ interface DocNode {
   children?: DocNode[]
 }
 
-/** 递归读取目录，目录优先排序，返回树结构 */
+/** 递归读取目录，只保留 .md 文件，剔除不含 .md 的子目录，目录优先排序 */
 async function readTree(dirPath: string, relativeDir: string): Promise<DocNode[]> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true })
 
@@ -21,13 +21,14 @@ async function readTree(dirPath: string, relativeDir: string): Promise<DocNode[]
     const relPath = path.join(relativeDir, entry.name)
     if (entry.isDirectory()) {
       const children = await readTree(path.join(dirPath, entry.name), relPath)
+      if (children.length === 0) continue
       nodes.push({
         name: entry.name,
         path: relPath.split(path.sep).join('/'),
         type: 'directory',
         children,
       })
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
       nodes.push({
         name: entry.name,
         path: relPath.split(path.sep).join('/'),
