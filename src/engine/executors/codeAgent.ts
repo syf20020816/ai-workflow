@@ -1,5 +1,4 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { readSpecArtifact } from '#/services/specFolder'
 import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /**
@@ -11,11 +10,11 @@ import { buildBudgetedContext } from '#/services/upstreamContext'
  * 两种模式（节点 data.mode）：
  * - analyze（默认）：只读探索分析，产出技术方案文档
  * - batch：按 tasks.md 批次实现代码（写文件工具 + 打勾进度 + diff 记录）
- *   tasks.md 来源优先级：Spec 目录 tasks.md（最权威，含上次打勾进度）> 上游 taskPlanner 节点 response > 平铺 input
+ *   tasks.md 来源优先级：上游 taskPlanner 节点 response > 平铺 input
  */
 export const codeAgentExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
-    const { config, input, globalContext } = ctx
+    const { config, input } = ctx
     const data = config.data
     const mode = data.mode ?? 'analyze'
     const projectPath = data.projectPath || ''
@@ -44,35 +43,22 @@ export const codeAgentExecutor: NodeExecutor = {
 
     // batch 模式：收集 tasks.md 输入
     let tasksMarkdown = ''
-    const specRoot: string | undefined = globalContext.specRoot as string | undefined
     if (mode === 'batch') {
-      // 1a. 优先读 Spec 目录 tasks.md（含上次打勾进度，天然支持续跑）
-      if (specRoot) {
-        const fromSpec = await readSpecArtifact(specRoot, 'tasks.md')
-        // 跳过占位模板（文件被创建但尚未被上游写入真实内容）
-        if (fromSpec && fromSpec.trim().length > 50 && !/^#\s*tasks\.md\b/m.test(fromSpec)) {
-          tasksMarkdown = fromSpec
-          logs.push('已从 Spec 目录读取 tasks.md（含已打勾进度）')
+      // 1a. 从上游祖先链找任务拆解（TASK_PLANNER）节点的 response
+      const upstreams: any[] = (input as any).upstreams || []
+      for (const up of upstreams) {
+        if (
+          (up.nodeType === 'taskPlanner' || up.nodeType === 'TASK_PLANNER') &&
+          typeof up.response === 'string' &&
+          up.response.trim().length > 0
+        ) {
+          tasksMarkdown = up.response
+          logs.push(`已从上游「${up.title || '任务拆解'}」获取 tasks.md`)
+          break
         }
       }
 
-      // 1b. 从上游祖先链找任务拆解（TASK_PLANNER）节点的 response
-      if (!tasksMarkdown) {
-        const upstreams: any[] = (input as any).upstreams || []
-        for (const up of upstreams) {
-          if (
-            (up.nodeType === 'taskPlanner' || up.nodeType === 'TASK_PLANNER') &&
-            typeof up.response === 'string' &&
-            up.response.trim().length > 0
-          ) {
-            tasksMarkdown = up.response
-            logs.push(`已从上游「${up.title || '任务拆解'}」获取 tasks.md`)
-            break
-          }
-        }
-      }
-
-      // 1c. 平铺 input 兜底
+      // 1b. 平铺 input 兜底
       if (!tasksMarkdown) {
         const flat = (input as any).response || (input as any).content || (input as any).result || ''
         if (typeof flat === 'string' && flat.trim().length > 0) {
@@ -86,7 +72,7 @@ export const codeAgentExecutor: NodeExecutor = {
           nodeId: config.nodeId,
           status: 'error',
           output: {},
-          logs: [...logs, 'batch 模式未获取到 tasks.md：请连接「任务拆解」节点，或在 Spec 模式先产出 tasks.md'],
+          logs: [...logs, 'batch 模式未获取到 tasks.md：请连接「任务拆解」节点'],
           error: '缺少 tasks.md 输入',
         }
       }
@@ -114,7 +100,7 @@ export const codeAgentExecutor: NodeExecutor = {
             token: modal.token,
           },
           // batch 模式专用
-          ...(mode === 'batch' ? { tasksMarkdown, specRoot: specRoot || undefined } : {}),
+          ...(mode === 'batch' ? { tasksMarkdown } : {}),
           // 传递上游节点（如 Agent 节点）的上下文（已裁剪）
           upstreamContext: budgetedContext,
         }),

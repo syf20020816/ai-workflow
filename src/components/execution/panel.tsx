@@ -14,7 +14,7 @@ export const ExecutionPanel = () => {
   const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
   const globalMode = useGlobalStore((state) => state.globalMode)
 
-  // Spec 模式：执行范围内必须至少有一个节点标记了阶段产物，否则禁止运行
+  // Spec 模式：执行范围内必须至少有一个节点被标记了阶段，否则禁止运行
   const specDisabled =
     globalMode === 'spec' &&
     !nodes.some((n) => (n.data as { specStep?: string } | undefined)?.specStep)
@@ -59,7 +59,7 @@ export const ExecutionPanel = () => {
           <Tooltip
             title={
               specDisabled
-                ? 'Spec 模式：请先在节点上用脚印按钮标记至少一个阶段产物'
+                ? 'Spec 模式：请先在节点上用脚印按钮标记至少一个阶段'
                 : `运行${selectedPinnedKey ? '（用PIN）' : ''}`
             }
           >

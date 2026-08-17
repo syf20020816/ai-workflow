@@ -1,6 +1,18 @@
-# AI Workflow — 轻量级 AI 工作流可视化编排工具
+# AI Workflow — AI 工作流可视化编排工具
 
-基于 [BMad Method](https://bmadcodes.com/) + Lark CLI 构建的轻量化 AI 工作流引擎，提供可视化节点编排能力，适合需要快速搭建 AI Agent 工作流的场景，避免 Dify 等重型平台的复杂性。
+基于 [BMad Method](https://bmadcodes.com/) + Lark CLI 构建的轻量化 AI 工作流编排工具，提供可视化节点编排能力，适合需要快速搭建 AI Agent 工作流的场景，避免 Dify 等重型平台的复杂性。
+
+---
+
+## 平台定位：编排 → 验证 → 导出
+
+本项目是一个**设计时（Design-time）编排平台**，不是最终工作流的运行时：
+
+1. **编排** — 用可视化 DAG 画布组合 21 种节点（需求分析 / 概设 / 任务拆解 / 编码 / 自检 / 知识库 / Lark 文档…），并在 Spec 模式下用脚印按钮**标记**每个节点的输出属于哪个工作流阶段（功能规格 / 技术方案 / 任务清单 / 自检报告…）。
+2. **验证** — 平台内置的轻量 Agent 仅用于**验证编排是否正确**（单节点调试 / PIN 固定 / 断点续跑 / 输出检查），不追求复杂 Agent 能力——复杂 Agent 交给专业的 Codex / Claude Code 等工具。
+3. **导出** — 编排与验证通过后，把工作流导出为 `workflow.yml`（类 speckit 格式），用户放入自己的 **Codex / Trae / Claude Code** 中执行。
+
+**Spec 分工（边界清晰）**：平台**不生产 specs/ 目录**——那是 openspec / speckit 等专业 spec 框架的职责。平台只做**阶段标记**（`specStep`），让用户在编排时无需手动输入 `/spec` 指令，导出后的 `workflow.yml` 携带标记，spec 框架据此自动生成 `specs/` 目录。
 
 ---
 
@@ -20,8 +32,8 @@
 | **智能体节点** | `agent` | 调用 AI 模型进行分析和生成，接收上游所有输入 + 全链路累积上下文 |
 | **BMad 角色节点** | `bmadAgent` | 赋予智能体特定角色指令（分析师/架构师/SM 等），内容同步到智能体（BMad 在上游、Agent 在下游，方向已修正） |
 | **代码处理节点** | `codeAgent` | AI 自主探索/修改本地代码仓库（工具调用循环），支持 `analyze`（只读分析）/ `batch`（按 tasks.md 分批写代码）双模式 |
-| **任务拆解节点** | `taskPlanner` | 把 plan/spec 拆解为可独立执行的 batch 任务清单（「文件/前置/验收」三要素结构化校验），产出 tasks.md |
-| **自检 Agent 节点** | `selfCheck` | 独立会话评审：配置 BMad 角色注入评审身份，材料按 Spec 产物 / git diff / 上游累积产物自动降级，输出 PASS / CONDITIONAL_PASS / FAIL |
+| **任务拆解节点** | `taskPlanner` | 把上游概设输出的 plan 拆解为可独立执行的 batch 任务清单（「文件/前置/验收」三要素结构化校验），产出 tasks.md |
+| **自检 Agent 节点** | `selfCheck` | 独立会话评审：配置 BMad 角色注入评审身份，材料按 git diff / 上游累积产物自动降级，输出 PASS / CONDITIONAL_PASS / FAIL |
 | **关键词智能体节点** | `keywordAgent` | 从输入中提取关键词列表，供下游使用 |
 | **知识库检索节点** | `knowledgeRetrieval` | 基于 embedding 从 Qdrant 向量库检索相关内容 |
 | **知识库存储节点** | `knowledgeStore` | 文档入库：embedding 分块写入 Qdrant 向量库 |
@@ -52,7 +64,7 @@
 - **执行状态 Checkpoint（断点续跑）** — 每层执行完成后把 `PipelineContext` 写盘到 `.pin/exec_state_<workflowId>.json`；上次暂停（如 Answer 节点等待输入）恢复运行时，自动跳过已完成节点从断点继续
 - **21 种节点执行器** — 每种节点类型均有独立执行逻辑
 - **智能体节点真实 AI API 调用** — 兼容 OpenAI/Anthropic/Ollama 格式（含火山方舟）
-- **CodeAgent 双模式** — `analyze`（只读分析）/ `batch`（按 tasks.md 分批写代码，tasks.md 打勾续跑 + 批次 diff 落 `session/`）；批处理截断检测（达到迭代上限仍未完成 → analyze 报错、batch 不打勾不记 diff，保留中间输出）
+- **CodeAgent 双模式** — `analyze`（只读分析）/ `batch`（按 tasks.md 分批写代码，tasks.md 打勾续跑 + 批次 diff 随输出累积给下游）；批处理截断检测（达到迭代上限仍未完成 → analyze 报错、batch 不打勾不记 diff，保留中间输出）
 - **Lark 节点 CLI 调用** — 通过 `lark-cli` 子进程执行读/写/创建操作
 - **Answer 节点暂停/恢复** — 等待用户输入后继续执行
 - **孤立节点过滤** — 无连线参与的节点不执行
@@ -211,7 +223,6 @@ src/
 ├── services/                # 共享服务（前后端共用）
 │   ├── ai.ts                # AI 调用封装（callAI，返回 text + token 用量）
 │   ├── upstreamContext.ts   # 上游累积上下文构建（优先级排序 + 预算截断）
-│   ├── specFolder.ts        # Spec 产物读写（spec.md / plan.md / tasks.md）
 │   ├── taskManager.ts       # tasks.md 解析 / 打勾 / 取批次（前后端共用纯函数）
 │   ├── modal.ts             # 模型配置 strip/hydrate（敏感参数不落盘，仅存 { id, alias }）
 │   └── embedding.ts         # 向量化（getEmbeddings）
@@ -235,12 +246,11 @@ src/
 │       │   ├── agent.ts          # AI 调用
 │       │   ├── codeAgent.ts      # CodeAgent（analyze/batch + App-Desc）
 │       │   ├── taskPlanner.ts    # 任务拆解
-│       │   ├── selfCheck.ts      # 自检 Agent（材料按 Spec/git/上游 自动降级）
+│       │   ├── selfCheck.ts      # 自检 Agent（材料按 git diff / 上游累积 自动降级）
 │       │   ├── keywordAgent.ts   # 关键词提取
 │       │   ├── lark.ts           # Lark CLI
 │       │   ├── larkWikiTraversal.ts  # Lark Wiki 遍历
 │       │   ├── bmad.ts           # BMad（遗留 CLI 路由，已不主用）
-│       │   ├── specFolder.ts     # Spec 产物读写（含路径穿越防护）
 │       │   ├── qdrant.ts / embed.ts / doc-process.ts   # 知识库（检索/向量化/文档处理）
 │       │   ├── fileWrite.ts      # 文件写入（路径限定，防 AI 越界）
 │       │   └── models.ts         # 模型执行入口
@@ -286,7 +296,7 @@ npm run build
 ### CodeAgent 节点
 AI 自主探索本地代码仓库的节点，使用 Vercel AI SDK 的 `generateText` + Tool Calling，支持双模式：
 - **analyze 模式（默认）** — 只读探索 + 分析，工具 `listDirectory` / `readFile` / `runGitLog`，产出技术方案文档
-- **batch 模式** — 按 tasks.md 批次执行代码生成，工具新增 `writeFile` / `editFile` / `gitDiff`（**路径强制限定在项目根目录内**，防 AI 越界写文件）；每批完成后 tasks.md 打勾（`- [ ]` → `- [x]`，重跑自动跳过已完成批次）+ 批次 diff 记录到 `specRoot/session/batch-<N>.md`
+- **batch 模式** — 按 tasks.md 批次执行代码生成，工具新增 `writeFile` / `editFile` / `gitDiff`（**路径强制限定在项目根目录内**，防 AI 越界写文件）；每批完成后 tasks.md 打勾（`- [ ]` → `- [x]`，重跑自动跳过已完成批次），打勾后的 tasks.md 与批次 diff 随输出累积给下游节点（平台不落盘任何产物文件）
 - **配置**：项目路径、Git 分支、分析指令、最大迭代次数、模型选择、模式切换（analyze/batch）、应用地图 Switch
 - **应用地图（App-Desc）**：analyze 时检测项目根目录 `app-desc.json`——有则注入（含 new/transition/old zone 约束），没有则扫描仓库生成初版写回项目；batch 只读注入，没有则跳过不生成
 - **批处理截断检测** — 达到最大迭代次数仍在工具调用时判定未完成：analyze 报错提示、batch 不打勾不记 diff，并保留中间输出（`response` 为空串）
@@ -296,20 +306,20 @@ AI 自主探索本地代码仓库的节点，使用 Vercel AI SDK 的 `generateT
 独立会话 · 独立上下文 · 不共享编码 Agent 记忆（防"自己给自己打分"的确认偏差）：
 - **身份注入** — 编辑面板「视角 (BMad)」从 BMad 角色库选择一个角色，直接注入该角色 SKILL 作为评审系统提示词；**一个节点一个角色**，多视角检验 = 创建多个自检节点各配一个角色
 - **材料自动降级**（见 `/api/execute/selfCheck` 的 `collectMaterials`）：
-  1. **Spec 模式** → Spec 产物（spec.md / plan.md / tasks.md）
-  2. **常规 + 上游为 codeAgent** → git diff（ground truth，不回退到 agent 自述；缺项目路径时报错引导配置）
-  3. **常规 + 其他上游** → 全部上游祖先节点的累积产物（原始需求 + 最终交付物，由模型逐条比对打分）
+  1. **上游为 codeAgent（编码场景）** → git diff（ground truth，不回退到 agent 自述；缺项目路径时报错引导配置）
+  2. **其他上游（文档类场景）** → 全部上游祖先节点的累积产物（原始需求 + 最终交付物，由模型逐条比对打分）
+  3. **节点指令** — 始终追加到评审材料末尾
 - **结论** — 报告写 `check_reports/check_summary.md`；节点显示 PASS / CONDITIONAL_PASS / FAIL 标签 + 视角角色
 
 ### 任务拆解节点（taskPlanner）
-把 plan.md / 上游概设输出拆解为可独立执行的 batch 任务清单：
+把上游概设节点输出的 plan（技术方案）拆解为可独立执行的 batch 任务清单：
 - **Schema** — `## Batch N` + `- [ ] T-NN`，每个任务绑定「文件 / 前置 / 验收」三要素（结构化校验，缺失返回 422）
 - **输出** — tasks.md 全文 + batchCount / taskCount / warnings，供 codeAgent batch 模式按批次消费
 
-### Spec 模式（端到端交付）
-- 节点通过脚印按钮（StepMarkNode）手动标记输出归属阶段产物（spec/plan/tasks/report/…），画布左侧 StepLinePanel 汇总步骤并提示缺失必选项
-- 引擎执行时按标记把节点输出写入 `specs/<需求名>_<时间戳>/` 对应产物文件；`session/conversation-log.md` 全量黑匣子始终记录
-- 执行前检测执行范围内至少一个节点标记了阶段产物，否则中止
+### Spec 标记模式（只标记，不产文件）
+- 节点通过脚印按钮（StepMarkNode）手动标记输出属于哪个工作流阶段（spec/plan/tasks/report/…），画布左侧 StepLinePanel 汇总已标记步骤并提示缺失的必选项（spec/plan/tasks）
+- 标记随工作流持久化，**平台不产出任何 spec 文件**——导出 `workflow.yml` 后由 openspec / speckit 等 spec 框架生成 `specs/` 目录
+- 执行前检测执行范围内至少一个节点被标记，否则中止（保证编排携带阶段信息）
 
 ### 条件分支（if）
 支持两种判断模式：
@@ -375,9 +385,10 @@ AI 自主探索本地代码仓库的节点，使用 Vercel AI SDK 的 `generateT
 
 ## 设计哲学
 
-本项目聚焦于 **轻量、本地、可调试** 的工作流编排：
+本项目聚焦于 **编排 → 验证 → 导出** 的轻量工作流工具：
 
-- **不构建通用平台**，只解决"BMad+飞书文档+代码分析"的特定场景
-- **编辑器即运行时**，所见即所得，支持单节点调试
+- **不自建复杂 Agent 运行时** — 平台内置的简单 Agent 只用于编排验证；最终执行交给用户自己的 Codex / Trae / Claude Code
+- **不重复造 Spec 框架** — 阶段标记（specStep）由平台负责，specs/ 目录由 openspec / speckit 等专业框架生成，边界清晰
+- **编辑器即验证台** — 所见即所得，支持单节点调试、PIN 固定、断点续跑
 - **PIN 机制** 满足迭代调试场景，避免重复消耗 Token
 - **文件路由 + API 路由一体化**，前后端同仓库，零部署复杂度

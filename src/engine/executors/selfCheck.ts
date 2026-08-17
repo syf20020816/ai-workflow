@@ -5,24 +5,20 @@ import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/
  *
  * 核心原则：独立会话 · 独立上下文 —— 不继承上游编码 Agent 的记忆（防止确认偏差）。
  * 评审材料按可用性自动降级（详见 API collectMaterials）：
- *   1. Spec 产物（spec.md / plan.md / tasks.md）—— Spec 模式
- *   2. 项目 git diff —— 常规模式放在 codeAgent 之后的编码检测
- *   3. 上游累积产物 —— 常规模式接其他节点（AIAgent / 飞书文档等）的文档类场景
+ *   1. 项目 git diff —— 放在 codeAgent 之后的编码检测（ground truth）
+ *   2. 上游累积产物 —— 接其他节点（AIAgent / 飞书文档等）的文档类场景
  */
 export const selfCheckExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
-    const { config, globalContext, input } = ctx
+    const { config, input } = ctx
     const data = config.data
     const modal = data.modal
-    // Spec 产物目录（评审材料来源之一）
-    const specRoot = globalContext.specRoot as string | undefined
     // 上游累积上下文（原始需求 / 最终交付物等，按场景作为兜底评审材料）
     const upstreams: any[] = (input as any).upstreams || []
 
     const logs: string[] = []
     logs.push(`SelfCheck 自检 Agent 开始执行（独立会话评审）`)
-    logs.push(`项目路径: ${data.projectPath || '未设置（依赖 Spec 产物/上游）'}`)
-    logs.push(`Spec 产物目录: ${specRoot || '无'}`)
+    logs.push(`项目路径: ${data.projectPath || '未设置（依赖上游产物）'}`)
     logs.push(`上游节点数: ${upstreams.length}`)
     logs.push(`评审视角角色: ${data.role || '默认（无角色）'}`)
 
@@ -47,7 +43,6 @@ export const selfCheckExecutor: NodeExecutor = {
             url: modal.url,
             token: modal.token,
           },
-          specRoot: specRoot || undefined,
           projectPath: data.projectPath || '',
           instruction: data.instruction || '',
           role: data.role,

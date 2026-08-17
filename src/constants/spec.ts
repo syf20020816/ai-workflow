@@ -1,27 +1,23 @@
 /**
- * Spec 阶段产物定义（Spec 模式专用）
+ * Spec 阶段标记定义（Spec 模式专用）
  *
- * 使用者通过节点上的脚印按钮（StepMarkNode）手动标记该节点输出属于哪个阶段产物，
- * 引擎在 Spec 模式下按标记把节点输出写入对应文件，避免按节点类型/标题自动推测的不可靠性。
+ * 使用者通过节点上的脚印按钮（StepMarkNode）手动标记该节点输出属于工作流的哪个阶段，
+ * 平台本身不产出任何 spec 文件 —— 编排完成后导出 workflow.yml，交由 openspec / speckit
+ * 等专业 spec 框架在用户自己的 Codex / Trae 工具中生成 specs/ 目录。
  */
 
 export const SPEC_STEPS = [
-  { key: 'spec', label: '功能规格', file: 'spec.md', required: true },
-  { key: 'plan', label: '技术方案', file: 'plan.md', required: true },
-  { key: 'tasks', label: '分批次任务清单', file: 'tasks.md', required: true },
-  { key: 'report', label: '自检报告', file: 'check_reports/check_summary.md', required: false },
-  { key: 'research', label: '调研分析', file: 'research.md', required: false },
-  { key: 'data-model', label: '数据模型', file: 'data-model.md', required: false },
-  { key: 'contracts', label: '接口契约', file: 'contracts/api.md', required: false },
-  { key: 'adr', label: '架构决策记录', file: 'adr/ADR.md', required: false },
+  { key: 'spec', label: '功能规格', required: true },
+  { key: 'plan', label: '技术方案', required: true },
+  { key: 'tasks', label: '分批次任务清单', required: true },
+  { key: 'report', label: '自检报告', required: false },
+  { key: 'research', label: '调研分析', required: false },
+  { key: 'data-model', label: '数据模型', required: false },
+  { key: 'contracts', label: '接口契约', required: false },
+  { key: 'adr', label: '架构决策记录', required: false },
 ] as const
 
 export type SpecStepKey = (typeof SPEC_STEPS)[number]['key']
-
-/** 阶段产物 key → 产物文件（相对 spec 目录） */
-export const SPEC_STEP_FILE: Record<SpecStepKey, string> = Object.fromEntries(
-  SPEC_STEPS.map((s) => [s.key, s.file]),
-) as Record<SpecStepKey, string>
 
 /** 从 key 取步骤定义 */
 export function getSpecStep(key: string | undefined | null) {

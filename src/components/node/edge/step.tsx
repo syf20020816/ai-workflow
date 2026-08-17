@@ -8,8 +8,9 @@ import { Button } from 'antd'
 import styles from '../index.module.scss'
 
 /**
- * 阶段标记按钮，用于在 Spec 模式下标记当前节点的输出属于哪个阶段产物。
- * 使用者在节点上手动标记，引擎执行时按标记把输出写入对应产物文件（不靠自动推测）。
+ * 阶段标记按钮，用于在 Spec 模式下标记当前节点的输出属于工作流的哪个阶段。
+ * 平台本身不产出 spec 文件，标记仅用于编排验证与导出 workflow.yml 时携带阶段信息，
+ * 最终由 openspec / speckit 等 spec 框架生成 specs/ 目录。
  *
  * 注意：这里刻意不用 antd 的 Tooltip/Dropdown——它们的 hover/对齐触发器（onMouseEnter ->
  * setMousePos）在节点被 React Flow 拖动、每帧重渲染时会与 setNodes 叠加成

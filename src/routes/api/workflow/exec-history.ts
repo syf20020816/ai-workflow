@@ -17,7 +17,7 @@ interface ExecHistoryItem {
   status: 'completed' | 'error' | 'paused'
   /** 执行模式：常规 / Spec */
   globalMode?: 'normal' | 'spec'
-  /** Spec 模式产出目录（绝对路径），常规模式无此字段 */
+  /** 遗留字段：早期 Spec 模式落盘目录（新记录不再产出，仅兼容旧记录读取） */
   specDir?: string
   nodeCount: number
   nodeResults: Array<{

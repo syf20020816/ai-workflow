@@ -8,8 +8,9 @@ import styles from '../index.module.scss'
 import { PanelLeftClose, PanelRightClose } from 'lucide-react'
 
 /**
- * Spec 阶段产物总览面板（Spec 模式下显示在画布左侧）。
- * 汇总当前工作流中所有节点已标记的阶段产物，必选项以 * 标注，并提示缺失的必选项。
+ * Spec 阶段标记总览面板（Spec 模式下显示在画布左侧）。
+ * 汇总当前工作流中所有节点已标记的阶段，必选项以 * 标注，并提示缺失的必选项。
+ * 标记仅用于编排验证，不产出任何 spec 文件。
  */
 export const StepLinePanel = (props: PanelProps) => {
   const globalMode = useGlobalStore((state) => state.globalMode)
@@ -29,12 +30,6 @@ export const StepLinePanel = (props: PanelProps) => {
   }
 
   const markedList = SPEC_STEPS.filter((s) => marked.has(s.key))
-  const missingRequired = SPEC_STEPS.filter(
-    (s) => s.required && !marked.has(s.key),
-  )
-
-  if (!isOpen) {
-  }
 
   return (
     <Panel {...props}>
@@ -50,7 +45,7 @@ export const StepLinePanel = (props: PanelProps) => {
         >
           {isOpen ? (
             <>
-              Spec 阶段产物{' '}
+              Spec 阶段标记{' '}
               <PanelLeftClose
                 style={{ cursor: 'pointer' }}
                 height={16}

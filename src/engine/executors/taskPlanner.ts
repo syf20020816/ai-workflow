@@ -1,18 +1,16 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { readSpecArtifact } from '#/services/specFolder'
 
 /**
  * 任务拆解节点执行器
  *
  * 把「概设 / 二次分析」节点产出的 plan（技术方案）拆解为可独立执行的 batch 任务清单。
- * - plan 内容获取优先级：Spec 目录 plan.md（最准确）> 上游 ancestors 中概设节点的 response > 平铺 input 文本
+ * - plan 内容获取：上游 ancestors 中概设节点的 response > 平铺 input 文本
  * - 调用 /api/execute/taskPlanner（服务端读 prompt + 调 LLM + 结构化校验）
- * - 产出完整 tasks.md 文本放 output.response / tasksMarkdown；引擎在 Spec 模式下
- *   会把该节点标记为 tasks 阶段产物的输出写入 spec 目录 tasks.md
+ * - 产出完整 tasks.md 文本放 output.response / tasksMarkdown，供下游 codeAgent batch 模式消费
  */
 export const taskPlannerExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
-    const { config, input, globalContext } = ctx
+    const { config, input } = ctx
     const data = config.data
     const modal = data.modal
     const instruction = data.instruction || ''
@@ -31,37 +29,24 @@ export const taskPlannerExecutor: NodeExecutor = {
     }
 
     // 1. 获取 plan（技术方案）内容
-    const specRoot: string | undefined = globalContext.specRoot as string | undefined
     let planContent = ''
 
-    // 1a. 优先读 Spec 目录 plan.md（上游已把 plan 落盘时的最准确来源）
-    if (specRoot) {
-      const fromSpec = await readSpecArtifact(specRoot, 'plan.md')
-      // 跳过占位模板（文件被创建但尚未被上游写入真实内容）
-      if (fromSpec && fromSpec.trim().length > 50 && !/^#\s*plan\.md\b/m.test(fromSpec)) {
-        planContent = fromSpec
-        logs.push('已从 Spec 目录读取 plan.md')
+    // 1a. 从上游祖先链找概设节点的输出（response / tasksMarkdown / content）
+    const upstreams: any[] = (input as any).upstreams || []
+    for (const up of upstreams) {
+      const text =
+        (typeof up.response === 'string' ? up.response : '') ||
+        (typeof up.content === 'string' ? up.content : '') ||
+        (typeof up.result === 'string' ? up.result : '') ||
+        ''
+      if (text.trim().length > 0) {
+        planContent = text
+        logs.push(`已从上游「${up.title || up.nodeType}」获取技术方案`)
+        break
       }
     }
 
-    // 1b. 从上游祖先链找概设节点的输出（response / tasksMarkdown / content）
-    if (!planContent) {
-      const upstreams: any[] = (input as any).upstreams || []
-      for (const up of upstreams) {
-        const text =
-          (typeof up.response === 'string' ? up.response : '') ||
-          (typeof up.content === 'string' ? up.content : '') ||
-          (typeof up.result === 'string' ? up.result : '') ||
-          ''
-        if (text.trim().length > 0) {
-          planContent = text
-          logs.push(`已从上游「${up.title || up.nodeType}」获取技术方案`)
-          break
-        }
-      }
-    }
-
-    // 1c. 平铺 input 兜底
+    // 1b. 平铺 input 兜底
     if (!planContent) {
       planContent =
         (input as any).response ||

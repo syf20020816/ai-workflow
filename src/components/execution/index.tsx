@@ -2,20 +2,17 @@
  * 执行结果页
  *
  * 左侧：执行历史列表（可按 Spec / 常规 筛选）
- * 右侧：选中记录的「执行日志」「节点输出」「文件结果」
+ * 右侧：选中记录的「执行日志」「节点输出」
  *   - 节点输出：优先展示 output.response 文本，其余元数据字段折叠查看
- *   - 文件结果：Spec 模式记录展示 spec 目录树（后端 /api/execute/specFolder 读写）
  */
 
 import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 import {
   Button,
   Collapse,
   Empty,
   Modal,
   Segmented,
-  Spin,
   Tabs,
   Tag,
   Timeline,
@@ -27,10 +24,6 @@ import {
   DeleteOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
-  FileOutlined,
-  FolderOutlined,
-  DownOutlined,
-  RightOutlined,
 } from '@ant-design/icons'
 import { CodeEditor } from '#/components/file-editor/editor'
 import type { LogEntry } from '#/types/engine'
@@ -53,7 +46,6 @@ interface ExecRecord {
   timestamp: string
   status: 'completed' | 'error' | 'paused'
   globalMode?: 'normal' | 'spec'
-  specDir?: string
   nodeCount: number
   nodeResults: ExecNodeResult[]
   logs: LogEntry[]
@@ -89,114 +81,12 @@ function extractText(output: Record<string, any>): {
   return { text: JSON.stringify(output, null, 2), extra: null }
 }
 
-// ---- Spec 目录树（相对路径列表 → 目录结构） ----
-interface SpecTreeNode {
-  name: string
-  path: string
-  isDir: boolean
-  children?: SpecTreeNode[]
-}
-
-function buildSpecTree(files: string[]): SpecTreeNode[] {
-  type Dir = {
-    __path: string
-    __children: Record<string, Dir | { __file: string }>
-  }
-  const root: Dir = { __path: '', __children: {} }
-  for (const f of files) {
-    const parts = f.split('/')
-    let cur = root
-    for (let i = 0; i < parts.length - 1; i++) {
-      const seg = parts[i]
-      if (!(seg in cur.__children)) {
-        cur.__children[seg] = {
-          __path: parts.slice(0, i + 1).join('/'),
-          __children: {},
-        }
-      }
-      cur = cur.__children[seg] as Dir
-    }
-    const name = parts[parts.length - 1]
-    if (!(name in cur.__children)) cur.__children[name] = { __file: f }
-  }
-  function build(obj: Dir | { __file: string }): SpecTreeNode[] {
-    if ('__file' in obj) return []
-    const out: SpecTreeNode[] = []
-    for (const [name, val] of Object.entries(obj.__children)) {
-      if ('__children' in val) {
-        out.push({ name, path: val.__path, isDir: true, children: build(val) })
-      } else {
-        out.push({ name, path: val.__file, isDir: false })
-      }
-    }
-    out.sort((a, b) =>
-      a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1,
-    )
-    return out
-  }
-  return build(root)
-}
-
-const SpecTreeRow = ({
-  node,
-  depth,
-  selected,
-  onSelect,
-}: {
-  node: SpecTreeNode
-  depth: number
-  selected: string | null
-  onSelect: (path: string) => void
-}) => {
-  const [open, setOpen] = useState(true)
-  return (
-    <div>
-      <div
-        onClick={() => {
-          if (node.isDir) setOpen((v) => !v)
-          else onSelect(node.path)
-        }}
-        className={`${styles.tree_row} ${selected === node.path ? styles.tree_selected : ''}`}
-        style={{ '--row-depth': depth } as CSSProperties}
-      >
-        <span className={styles.tree_arrow}>
-          {node.isDir ? open ? <DownOutlined /> : <RightOutlined /> : null}
-        </span>
-        {node.isDir ? (
-          <FolderOutlined className={styles.tree_icon_folder} />
-        ) : (
-          <FileOutlined className={styles.tree_icon_file} />
-        )}
-        <span className={styles.tree_name}>{node.name}</span>
-      </div>
-      {node.isDir &&
-        open &&
-        node.children?.map((c) => (
-          <SpecTreeRow
-            key={c.path}
-            node={c}
-            depth={depth + 1}
-            selected={selected}
-            onSelect={onSelect}
-          />
-        ))}
-    </div>
-  )
-}
-
 export const Execution = () => {
   const [records, setRecords] = useState<ExecRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<'all' | 'spec' | 'normal'>('all')
   const [selected, setSelected] = useState<ExecRecord | null>(null)
   const [rawNodeIds, setRawNodeIds] = useState<Set<string>>(new Set())
-
-  // Spec 文件结果
-  const [specTree, setSpecTree] = useState<SpecTreeNode[]>([])
-  const [specLoading, setSpecLoading] = useState(false)
-  const [activeSpecFile, setActiveSpecFile] = useState<string | null>(null)
-  const [specContent, setSpecContent] = useState('')
-  const [specContentLoading, setSpecContentLoading] = useState(false)
 
   const loadRecords = async () => {
     setLoading(true)
@@ -234,63 +124,10 @@ export const Execution = () => {
           ...full,
           filename: record.filename,
           globalMode: full.globalMode ?? record.globalMode,
-          specDir: full.specDir ?? record.specDir,
         })
       }
     } catch {
       // 列表数据已够用
-    }
-  }
-
-  // 加载 Spec 目录文件树
-  useEffect(() => {
-    if (selected?.globalMode === 'spec' && selected.specDir) {
-      setSpecLoading(true)
-      setSpecTree([])
-      setActiveSpecFile(null)
-      setSpecContent('')
-      fetch('/api/execute/specFolder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list', specRoot: selected.specDir }),
-      })
-        .then((r) => r.json())
-        .then((j) => {
-          if (j.status === 'success' && Array.isArray(j.files)) {
-            setSpecTree(buildSpecTree(j.files))
-          }
-        })
-        .catch(() => {})
-        .finally(() => setSpecLoading(false))
-    } else {
-      setSpecTree([])
-      setActiveSpecFile(null)
-      setSpecContent('')
-    }
-  }, [selected?.filename])
-
-  const handleSpecFile = async (rel: string) => {
-    if (!selected?.specDir) return
-    setActiveSpecFile(rel)
-    setSpecContentLoading(true)
-    try {
-      const res = await fetch('/api/execute/specFolder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'read',
-          specRoot: selected.specDir,
-          filename: rel,
-        }),
-      })
-      const j = await res.json()
-      setSpecContent(
-        j.status === 'success' ? j.content : '# 读取失败或文件不存在',
-      )
-    } catch {
-      setSpecContent('# 读取失败')
-    } finally {
-      setSpecContentLoading(false)
     }
   }
 
@@ -447,44 +284,9 @@ export const Execution = () => {
     <Empty description="无节点输出" />
   )
 
-  const filesTab =
-    selected?.globalMode === 'spec' && selected.specDir ? (
-      <Spin spinning={specLoading}>
-        <div className={styles.files_body}>
-          <div className={styles.files_tree}>
-            {specTree.length ? (
-              specTree.map((t) => (
-                <SpecTreeRow
-                  key={t.path}
-                  node={t}
-                  depth={0}
-                  selected={activeSpecFile}
-                  onSelect={handleSpecFile}
-                />
-              ))
-            ) : (
-              <Empty description="无文件" />
-            )}
-          </div>
-          <div className={styles.files_content}>
-            {activeSpecFile ? (
-              <Spin spinning={specContentLoading}>
-                <Text type="secondary" className={styles.file_path}>
-                  {activeSpecFile}
-                </Text>
-                <div className={styles.editor_box}>
-                  <CodeEditor value={specContent} readOnly />
-                </div>
-              </Spin>
-            ) : (
-              <Empty description="从左侧选择产物文件查看" />
-            )}
-          </div>
-        </div>
-      </Spin>
-    ) : (
-      <Empty description="该执行无文件产物（仅 Spec 模式落盘）" />
-    )
+  const filesTab = (
+    <Empty description="编排阶段不产出文件（最终工作流导出为 workflow.yml 交给 Codex/Trae 等工具执行）" />
+  )
 
   const tabItems = [
     { key: 'logs', label: '执行日志', children: logTab },

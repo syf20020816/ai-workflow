@@ -6,7 +6,7 @@ import path from 'node:path'
  * 执行状态 Checkpoint API（P0-5 断点续跑）
  *
  * 引擎每层执行完成后把 PipelineContext 中的关键状态（nodeOutputs / nodeStatuses /
- * globalStatus / specRoot）序列化到 .pin/exec_state_<workflowId>.json；
+ * globalStatus / globalMode）序列化到 .pin/exec_state_<workflowId>.json；
  * 再次启动工作流时若检测到 globalStatus === 'paused'，则恢复已完成节点、跳过执行，从断点继续。
  */
 

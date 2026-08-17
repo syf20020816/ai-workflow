@@ -32,7 +32,7 @@ export type NNode = {
   title: string
   /** 节点描述 */
   description?: string
-  /** Spec 阶段产物标记（Spec 模式专用）：该节点输出属于哪个阶段产物，由使用者手动标记 */
+  /** Spec 阶段标记（Spec 模式专用）：该节点输出属于工作流的哪个阶段，由使用者手动标记 */
   specStep?: SpecStepKey
 }
 
@@ -390,7 +390,7 @@ export type NSelfCheckData = NNode & {
     token?: { min: number; max: number }
     alias?: string
   }
-  /** 项目路径（用于读取 git diff 前后对比；缺省时依赖 Spec 产物目录） */
+  /** 项目路径（用于读取 git diff 前后对比） */
   projectPath?: string
   /** 自检指令（可选，追加到系统提示词之后） */
   instruction?: string

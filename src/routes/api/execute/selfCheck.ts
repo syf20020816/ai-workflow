@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { callAI } from '#/services/ai'
-import { readSpecArtifact } from '#/services/specFolder'
 import { buildUpstreamBlocks, blocksToText } from '#/services/upstreamContext'
 import { NodeTypes } from '#/types'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
@@ -15,10 +14,9 @@ import { execSync } from 'node:child_process'
  * 一个自检节点 = 一个角色；多视角检验 = 创建多个自检节点。
  *
  * 评审材料按可用性自动降级：
- *   1. Spec 产物（spec.md / plan.md / tasks.md）—— Spec 模式
- *   2. 项目 git diff —— 常规模式放在 codeAgent 之后的编码检测（ground truth）
- *   3. 上游累积产物 —— 常规模式接其他节点（AIAgent / 飞书文档等）的文档类场景
- * 产出：评审报告（写 check_reports/check_summary.md），overall 结论（PASS/CONDITIONAL_PASS/FAIL）。
+ *   1. 项目 git diff —— 放在 codeAgent 之后的编码检测（ground truth）
+ *   2. 上游累积产物 —— 接其他节点（AIAgent / 飞书文档等）的文档类场景
+ * 产出：评审报告（有项目路径时写入 <项目>/check_reports/check_summary.md），overall 结论（PASS/CONDITIONAL_PASS/FAIL）。
  */
 
 /** 无角色时的默认评审身份描述 */
@@ -35,9 +33,8 @@ async function readFileSafe(fp: string): Promise<string> {
   }
 }
 
-/** 收集待检材料：Spec 产物 → git diff → 上游累积产物（按可用性自动降级） */
+/** 收集待检材料：git diff → 上游累积产物（按可用性自动降级） */
 async function collectMaterials(input: {
-  specRoot?: string
   projectPath?: string
   instruction?: string
   upstreams?: any[]
@@ -47,18 +44,7 @@ async function collectMaterials(input: {
   const sections: string[] = []
   const upstreams = input.upstreams || []
 
-  // 1. Spec 产物（spec.md / plan.md / tasks.md）—— Spec 模式优先
-  if (input.specRoot) {
-    for (const file of ['spec.md', 'plan.md', 'tasks.md']) {
-      const content = await readSpecArtifact(input.specRoot, file)
-      if (content && content.trim().length > 0) {
-        sections.push(`## 产物文档：${file}\n${content.trim()}`)
-        logs.push(`已读取 Spec 产物: ${file}`)
-      }
-    }
-  }
-
-  // 2. 项目 git diff（未提交改动，前后对比）—— 编码场景 ground truth
+  // 1. 项目 git diff（未提交改动，前后对比）—— 编码场景 ground truth
   let projectRoot = ''
   if (input.projectPath) {
     projectRoot = path.isAbsolute(input.projectPath)
@@ -89,8 +75,8 @@ async function collectMaterials(input: {
     }
   }
 
-  // 3. 上游累积产物 —— 文档类场景兜底。
-  //    仅当既无 Spec 产物、又无 git diff 时才读取；上游为 codeAgent 时不回退到其自述（与独立性原则冲突）
+  // 2. 上游累积产物 —— 文档类场景兜底。
+  //    仅当无 git diff 时才读取；上游为 codeAgent 时不回退到其自述（与独立性原则冲突）
   const hasUpstreamCodeAgent = upstreams.some(
     (u) => u?.nodeType === NodeTypes.CODE_AGENT,
   )
@@ -103,17 +89,17 @@ async function collectMaterials(input: {
     }
   }
 
-  // 4. 节点指令
+  // 3. 节点指令
   if (input.instruction && input.instruction.trim()) {
     sections.push(`## 评审补充指令\n${input.instruction.trim()}`)
   }
 
-  // 5. 无材料时给出可操作的报错引导
+  // 4. 无材料时给出可操作的报错引导
   if (sections.length === 0) {
     if (hasUpstreamCodeAgent) {
       logs.push('检测到上游为代码处理（codeAgent）节点，但未读取到 git diff：请在自检节点配置「项目路径」')
     } else {
-      logs.push('未收集到任何待检材料（无 Spec 产物、无项目路径、无上游产物、无指令）')
+      logs.push('未收集到任何待检材料（无项目路径、无上游产物、无指令）')
     }
   }
 
@@ -125,7 +111,7 @@ export const Route = createFileRoute('/api/execute/selfCheck')({
     handlers: {
       POST: async (ctx: any) => {
         const body = await ctx.request.json()
-        const { modal, specRoot, projectPath, instruction, role, roleDesc, upstreams } = body
+        const { modal, projectPath, instruction, role, roleDesc, upstreams } = body
 
         if (!modal?.url || !modal?.name) {
           return Response.json(
@@ -144,7 +130,6 @@ export const Route = createFileRoute('/api/execute/selfCheck')({
 
         // 1. 收集待检材料
         const { text: materials, logs: materialLogs } = await collectMaterials({
-          specRoot,
           projectPath,
           instruction,
           upstreams,
@@ -195,9 +180,9 @@ export const Route = createFileRoute('/api/execute/selfCheck')({
           })
         }
 
-        // 3. 写盘（check_reports/ 目录：优先 specRoot，其次项目根）
+        // 3. 写盘（配置了项目路径时写入 <项目>/check_reports/）
         let checkDir = ''
-        const baseDir = specRoot || projectPath || ''
+        const baseDir = projectPath || ''
         if (baseDir) {
           const root = path.isAbsolute(baseDir) ? baseDir : path.resolve(process.cwd(), baseDir)
           try {

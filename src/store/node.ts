@@ -65,7 +65,6 @@ async function saveExecutionHistory(
                 ? 'paused'
                 : 'completed',
         globalMode,
-        specDir: ctx.specRoot,
         nodeCount: nodeResults.length,
         nodeResults,
         logs: ctx.logs,
@@ -82,7 +81,6 @@ async function loadExecState(
 ): Promise<{
   nodeOutputs: Record<string, Record<string, any>>
   nodeStatuses: Record<string, any>
-  specRoot?: string
 } | null> {
   try {
     const res = await fetch(
@@ -93,7 +91,6 @@ async function loadExecState(
       return {
         nodeOutputs: json.state.nodeOutputs || {},
         nodeStatuses: json.state.nodeStatuses || {},
-        ...(json.state.specRoot ? { specRoot: json.state.specRoot } : {}),
       }
     }
   } catch {

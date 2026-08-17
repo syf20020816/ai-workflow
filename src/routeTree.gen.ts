@@ -22,7 +22,6 @@ import { Route as ApiWorkflowExecHistoryRouteImport } from './routes/api/workflo
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
 import { Route as ApiExecuteTaskPlannerRouteImport } from './routes/api/execute/taskPlanner'
-import { Route as ApiExecuteSpecFolderRouteImport } from './routes/api/execute/specFolder'
 import { Route as ApiExecuteSelfCheckRouteImport } from './routes/api/execute/selfCheck'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
@@ -103,11 +102,6 @@ const ApiSkillContentRoute = ApiSkillContentRouteImport.update({
 const ApiExecuteTaskPlannerRoute = ApiExecuteTaskPlannerRouteImport.update({
   id: '/api/execute/taskPlanner',
   path: '/api/execute/taskPlanner',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiExecuteSpecFolderRoute = ApiExecuteSpecFolderRouteImport.update({
-  id: '/api/execute/specFolder',
-  path: '/api/execute/specFolder',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteSelfCheckRoute = ApiExecuteSelfCheckRouteImport.update({
@@ -215,7 +209,6 @@ export interface FileRoutesByFullPath {
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
-  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -247,7 +240,6 @@ export interface FileRoutesByTo {
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
-  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -280,7 +272,6 @@ export interface FileRoutesById {
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
-  '/api/execute/specFolder': typeof ApiExecuteSpecFolderRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
@@ -314,7 +305,6 @@ export interface FileRouteTypes {
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
-    | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -346,7 +336,6 @@ export interface FileRouteTypes {
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
-    | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -378,7 +367,6 @@ export interface FileRouteTypes {
     | '/api/execute/models'
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
-    | '/api/execute/specFolder'
     | '/api/execute/taskPlanner'
     | '/api/skill/content'
     | '/api/skill/import'
@@ -411,7 +399,6 @@ export interface RootRouteChildren {
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
   ApiExecuteSelfCheckRoute: typeof ApiExecuteSelfCheckRoute
-  ApiExecuteSpecFolderRoute: typeof ApiExecuteSpecFolderRoute
   ApiExecuteTaskPlannerRoute: typeof ApiExecuteTaskPlannerRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
   ApiWorkflowExecStateRoute: typeof ApiWorkflowExecStateRoute
@@ -510,13 +497,6 @@ declare module '@tanstack/react-router' {
       path: '/api/execute/taskPlanner'
       fullPath: '/api/execute/taskPlanner'
       preLoaderRoute: typeof ApiExecuteTaskPlannerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/execute/specFolder': {
-      id: '/api/execute/specFolder'
-      path: '/api/execute/specFolder'
-      fullPath: '/api/execute/specFolder'
-      preLoaderRoute: typeof ApiExecuteSpecFolderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/execute/selfCheck': {
@@ -671,7 +651,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
   ApiExecuteSelfCheckRoute: ApiExecuteSelfCheckRoute,
-  ApiExecuteSpecFolderRoute: ApiExecuteSpecFolderRoute,
   ApiExecuteTaskPlannerRoute: ApiExecuteTaskPlannerRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,
   ApiWorkflowExecStateRoute: ApiWorkflowExecStateRoute,

@@ -21,7 +21,7 @@ import {
  * 两种模式（节点 data.mode）：
  * - analyze（默认）：只读探索分析，系统提示词 prompts/codeAgent.md
  * - batch：按 tasks.md 批次实现代码，系统提示词 prompts/codeBatch.md，
- *   每批完成后 tasks.md 打勾（进度持久化）、git diff 记录到 specRoot/session/
+ *   每批完成后 tasks.md 打勾（进度持久化，随输出累积给下游）
  */
 
 const PROMPTS_DIR = path.resolve(process.cwd(), 'prompts')
@@ -103,7 +103,6 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
           // batch 模式专用
           mode,
           tasksMarkdown,
-          specRoot,
         } = body
 
         const logs: string[] = []
@@ -127,7 +126,6 @@ export const Route = createFileRoute('/api/execute/codeAgent')({
             modal,
             upstreamContext,
             tasksMarkdown,
-            specRoot,
             useAppMap,
           })
         }
@@ -369,7 +367,6 @@ type BatchModeInput = {
   modal?: any
   upstreamContext?: any
   tasksMarkdown?: string
-  specRoot?: string
   /** 应用地图开关（默认开启：有 app-desc 则注入使用，无则不生成） */
   useAppMap?: boolean
 }
@@ -384,7 +381,6 @@ async function handleBatchMode(input: BatchModeInput) {
     modal,
     upstreamContext,
     tasksMarkdown,
-    specRoot,
     useAppMap = true,
   } = input
 
@@ -404,7 +400,7 @@ async function handleBatchMode(input: BatchModeInput) {
     return Response.json({
       status: 'error',
       output: {},
-      logs: [...logs, 'batch 模式缺少 tasks.md 输入，请连接「任务拆解」节点或确保 Spec 目录存在 tasks.md'],
+      logs: [...logs, 'batch 模式缺少 tasks.md 输入，请连接「任务拆解」节点'],
       error: '缺少 tasks.md 输入',
     })
   }
@@ -636,22 +632,6 @@ async function handleBatchMode(input: BatchModeInput) {
       diffRecords.push({ batchIndex: batch.index, diff: diffText })
       batchLogs.push({ batchIndex: batch.index, text: result.text })
       logs.push(`Batch ${batch.index} 完成（${(result as any).steps?.length || 1} 轮工具调用）`)
-
-      // diff 落盘到 Spec 目录 session/（可选）
-      if (specRoot) {
-        try {
-          const sessionDir = path.join(specRoot, 'session')
-          await fs.mkdir(sessionDir, { recursive: true })
-          await fs.writeFile(
-            path.join(sessionDir, `batch-${batch.index}.md`),
-            `# Batch ${batch.index} 代码改动\n\n${diffText}\n\n## 执行汇报\n\n${result.text}`,
-            'utf-8',
-          )
-          logs.push(`Batch ${batch.index} diff 已记录到 session/batch-${batch.index}.md`)
-        } catch (err: any) {
-          logs.push(`diff 记录失败（已忽略）: ${err.message}`)
-        }
-      }
     } catch (err: any) {
       logs.push(`Batch ${batch.index} 执行失败: ${err.message}`)
       logs.push('已停止后续批次（已完成批次的任务打勾已持久化，可修复后重跑续跑）')
@@ -659,16 +639,6 @@ async function handleBatchMode(input: BatchModeInput) {
     }
 
     fromIndex = batch.index
-  }
-
-  // 7. 打勾后的 tasks.md 写回 Spec 目录（进度持久化，供续跑）
-  if (specRoot) {
-    try {
-      await fs.writeFile(path.join(specRoot, 'tasks.md'), currentMd, 'utf-8')
-      logs.push('tasks.md 进度已写回 Spec 目录')
-    } catch (err: any) {
-      logs.push(`tasks.md 写回失败（已忽略）: ${err.message}`)
-    }
   }
 
   const summary =
@@ -687,7 +657,7 @@ async function handleBatchMode(input: BatchModeInput) {
       mode: 'batch',
       completedBatches,
       totalBatches: batches.length,
-      // 打勾后的 tasks.md 全文（executor 可写回 Spec 目录或累积给下游）
+      // 打勾后的 tasks.md 全文（随输出累积给下游节点或导出）
       tasksMarkdown: currentMd,
       diffRecords,
       model: modal.name,
