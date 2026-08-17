@@ -37,6 +37,7 @@ import { Route as ApiExecuteAgentRouteImport } from './routes/api/execute/agent'
 import { Route as ApiEditorListRouteImport } from './routes/api/editor/list'
 import { Route as ApiEditorFsRouteImport } from './routes/api/editor/fs'
 import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
+import { Route as ApiDocsListRouteImport } from './routes/api/docs/list'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
 
 const IndexRoute = IndexRouteImport.update({
@@ -180,6 +181,11 @@ const ApiEditorContentRoute = ApiEditorContentRouteImport.update({
   path: '/api/editor/content',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocsListRoute = ApiDocsListRouteImport.update({
+  id: '/api/docs/list',
+  path: '/api/docs/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
   id: '/api/bmad/agents',
   path: '/api/bmad/agents',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
+  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
+    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   ApiSkillRoute: typeof ApiSkillRouteWithChildren
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
+  ApiDocsListRoute: typeof ApiDocsListRoute
   ApiEditorContentRoute: typeof ApiEditorContentRoute
   ApiEditorFsRoute: typeof ApiEditorFsRoute
   ApiEditorListRoute: typeof ApiEditorListRoute
@@ -604,6 +617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEditorContentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/docs/list': {
+      id: '/api/docs/list'
+      path: '/api/docs/list'
+      fullPath: '/api/docs/list'
+      preLoaderRoute: typeof ApiDocsListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bmad/agents': {
       id: '/api/bmad/agents'
       path: '/api/bmad/agents'
@@ -636,6 +656,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSkillRoute: ApiSkillRouteWithChildren,
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
+  ApiDocsListRoute: ApiDocsListRoute,
   ApiEditorContentRoute: ApiEditorContentRoute,
   ApiEditorFsRoute: ApiEditorFsRoute,
   ApiEditorListRoute: ApiEditorListRoute,

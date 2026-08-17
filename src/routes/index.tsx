@@ -11,6 +11,7 @@ import { Execution } from '#/components/execution'
 import { FileEditor } from '#/components/file-editor'
 import { Logo } from '#/components/logo'
 import { useRouteStore } from '#/store/route'
+import { Wiki } from '#/components/wiki'
 import {
   Cable,
   FileCode,
@@ -19,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ListChecks,
+  BookSearch,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -44,6 +46,7 @@ function App() {
     { label: '知识库', key: 'knowledge', icon: <Database size={16} /> },
     { label: '执行结果', key: 'execution', icon: <ListChecks size={16} /> },
     { label: '编辑器', key: 'editor', icon: <FileCode size={16} /> },
+    { label: '文档', key: 'wiki', icon: <BookSearch size={16} /> },
   ]
 
   const menuItems = collapsed
@@ -104,6 +107,7 @@ function App() {
           {activeKey === 'knowledge' && <KnowledgeManager />}
           {activeKey === 'execution' && <Execution />}
           {activeKey === 'editor' && <FileEditor />}
+          {activeKey === 'wiki' && <Wiki />}
         </Content>
       </Layout>
     </ConfigProvider>

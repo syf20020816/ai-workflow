@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { json } from '@codemirror/lang-json'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { Copy } from 'lucide-react'
-import { message } from 'antd'
+import { message, Spin } from 'antd'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import styles from './editor.module.scss'
 
 const languageMap: Record<string, any> = {
@@ -151,6 +153,92 @@ export const CodeEditor = ({
         <Copy size={14} />
         {copied && <span className={styles.copyTip}>已复制</span>}
       </button>
+    </div>
+  )
+}
+
+
+interface MdPreviewProps {
+  /** 相对项目根目录的 markdown 文件路径，如 docs/overview.md */
+  path: string
+  /** 点击文档内相对链接时回调，用于文档间跳转 */
+  onNavigate?: (path: string) => void
+}
+
+/**
+ * Markdown 预览组件
+ * 读取 workspace 内（通常为 docs/ 下）的 markdown 文件并渲染为 HTML
+ */
+export const MdPreview = ({ path, onNavigate }: MdPreviewProps) => {
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // 读取文件内容
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    setContent('')
+    fetch(`/api/editor/content?path=${encodeURIComponent(path)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data.status === 'success') {
+          setContent(data.data.content || '')
+        } else {
+          setError(data.error || '读取失败')
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err.message || '读取失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [path])
+
+  // marked 编译 + DOMPurify 消毒
+  const html = useMemo(() => {
+    if (!content) return ''
+    const raw = marked.parse(content, { async: false, gfm: true })
+    return DOMPurify.sanitize(raw)
+  }, [content])
+
+  // 拦截相对链接：在同目录下解析目标文档并触发跳转
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
+
+    const handleClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a')
+      if (!anchor) return
+      const href = anchor.getAttribute('href')
+      if (!href || /^(https?:|mailto:|#)/.test(href)) return
+      e.preventDefault()
+      const resolved = dir ? `${dir}/${href}` : href
+      onNavigate?.(resolved)
+    }
+    container.addEventListener('click', handleClick)
+    return () => container.removeEventListener('click', handleClick)
+  }, [path, onNavigate, html])
+
+  return (
+    <div ref={containerRef} className={styles.mdPreview}>
+      {loading ? (
+        <div className={styles.mdLoading}>
+          <Spin size="small" />
+        </div>
+      ) : error ? (
+        <div className={styles.mdError}>{error}</div>
+      ) : (
+        <div className={styles.mdBody} dangerouslySetInnerHTML={{ __html: html }} />
+      )}
     </div>
   )
 }
