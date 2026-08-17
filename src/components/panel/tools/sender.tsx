@@ -9,6 +9,7 @@ import { useModelStore } from '#/store/model'
 import { buildWorkflow, applyWorkflow } from '#/services/flowBuilder'
 import type { ChatMessage } from '#/services/flowBuilder'
 import { DeleteOutlined } from '@ant-design/icons'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 export const SenderPanel = (props: PanelProps) => {
   const [loading, setLoading] = useState(false)
@@ -18,6 +19,7 @@ export const SenderPanel = (props: PanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const models = useModelStore((state) => state.models)
   const fetchModels = useModelStore((state) => state.fetchModels)
+  const [collapse, setCollapse] = useState(true)
 
   // 首次加载模型列表，并自动选中第一个
   useEffect(() => {
@@ -63,7 +65,7 @@ export const SenderPanel = (props: PanelProps) => {
       const aiMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `${explanation}\n\n✅ 已生成 ${workflow.nodes.length} 个节点，${workflow.edges.length} 条连接，已应用到画布。`,
+        content: `${explanation}\n\n已生成 ${workflow.nodes.length} 个节点，${workflow.edges.length} 条连接，已应用到画布。`,
         ts: Date.now(),
       }
       setMessages((prev) => [...prev, aiMsg])
@@ -85,9 +87,23 @@ export const SenderPanel = (props: PanelProps) => {
     setMessages([])
   }
 
+  if (collapse)
+    return (
+      <Panel {...props}>
+        <div className={styles.senderPanel}>
+          <div className={styles.collapse} onClick={() => setCollapse(false)}>
+            <ChevronUp size={16} />
+          </div>
+        </div>
+      </Panel>
+    )
+
   return (
     <Panel {...props}>
       <div className={styles.senderPanel}>
+        <div className={styles.collapse} onClick={() => setCollapse(true)}>
+          <ChevronDown size={16} />
+        </div>
         {messages.length > 0 && (
           <div className={styles.chatHistory} ref={scrollRef}>
             <div className={styles.chatHistoryHeader}>
@@ -106,9 +122,7 @@ export const SenderPanel = (props: PanelProps) => {
                 <div
                   key={msg.id}
                   className={`${styles.chatMsg} ${
-                    msg.role === 'user'
-                      ? styles.chatMsgUser
-                      : styles.chatMsgAi
+                    msg.role === 'user' ? styles.chatMsgUser : styles.chatMsgAi
                   }`}
                 >
                   <div

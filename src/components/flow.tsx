@@ -145,6 +145,7 @@ export function Flow() {
         nodeTypes={NODE_TYPES}
         edgeTypes={EDGE_TYPES}
         deleteKeyCode="Delete"
+        proOptions={{ hideAttribution: true }}
       >
         <Background />
         <MiniMap
