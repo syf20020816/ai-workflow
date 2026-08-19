@@ -13,6 +13,7 @@ import {
   Upload,
   message,
   Typography,
+  Radio,
 } from 'antd'
 import {
   UploadOutlined,
@@ -21,6 +22,14 @@ import {
 } from '@ant-design/icons'
 import { BrushCleaning,  Download, Save, Upload as UploadIcon } from 'lucide-react'
 import type { RcFile } from 'antd/es/upload'
+import {
+  SPEC_TARGETS,
+  buildSpecKitWorkflow,
+  buildOpenSpecSchema,
+  parseSpecKitWorkflow,
+  parseOpenSpecSchema,
+} from '#/services/specMap'
+import type { SpecTarget } from '#/services/specMap'
 import styles from '../index.module.scss'
 
 
@@ -56,11 +65,25 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   const [importJson, setImportJson] = useState('')
   const [importError, setImportError] = useState('')
   const [exportJson, setExportJson] = useState('')
+  const [importTarget, setImportTarget] = useState<SpecTarget>('picop')
+  const [exportTarget, setExportTarget] = useState<SpecTarget>('picop')
 
   const buildExportJson = () => {
     // 导出时剥离 modal 敏感字段，只保留模型 ID 引用
     const data: WorkflowData = { nodes: stripNodesModals(nodes), edges }
     return JSON.stringify(data, null, 2)
+  }
+
+  /** 按目标平台生成导出文本 */
+  const buildExportText = (target: SpecTarget): string => {
+    switch (target) {
+      case 'speckit':
+        return buildSpecKitWorkflow(nodes, edges)
+      case 'openspec':
+        return buildOpenSpecSchema(nodes, edges)
+      default:
+        return buildExportJson()
+    }
   }
 
   const doImport = async (jsonStr: string) => {
@@ -100,24 +123,61 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     }
   }
 
+  /** 按目标平台导入（Picop 沿用原 JSON 逻辑，其余解析后重建节点） */
+  const doImportTarget = async (text: string, target: SpecTarget) => {
+    if (target === 'picop') {
+      await doImport(text)
+      return
+    }
+    try {
+      const parsed =
+        target === 'speckit'
+          ? parseSpecKitWorkflow(text)
+          : parseOpenSpecSchema(text)
+      if (!parsed.nodes.length) {
+        setImportError('未能解析出节点，请确认内容是否为所选平台格式')
+        return
+      }
+      setImportError('')
+      let models = useModelStore.getState().models
+      if (models.length === 0) {
+        await useModelStore.getState().fetchModels()
+        models = useModelStore.getState().models
+      }
+      setNodes(hydrateNodesModals(parsed.nodes, models))
+      setEdges(parsed.edges)
+      setWorkflowId(parsed.name || `imported_${Date.now()}`)
+      message.success(
+        `已导入 ${parsed.nodes.length} 个节点, ${parsed.edges.length} 条连线`,
+      )
+      setImportOpen(false)
+      setImportJson('')
+    } catch (err: any) {
+      setImportError(`解析失败: ${err.message}`)
+    }
+  }
+
   const handleFile = (file: RcFile) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
       setImportJson(text)
-      doImport(text)
+      doImportTarget(text, importTarget)
     }
     reader.readAsText(file)
     return false
   }
 
   const handleExportDownload = () => {
-    const json = exportJson || buildExportJson()
-    const blob = new Blob([json], { type: 'application/json' })
+    const text = exportJson || buildExportText(exportTarget)
+    const ext = SPEC_TARGETS.find((t) => t.key === exportTarget)?.ext || 'json'
+    const mime =
+      ext === 'yml' ? 'application/yaml' : 'application/json'
+    const blob = new Blob([text], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `workflow-${Date.now()}.json`
+    a.download = `workflow-${Date.now()}.${ext}`
     a.click()
     URL.revokeObjectURL(url)
     message.success('工作流已下载')
@@ -177,7 +237,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   }
 
   const openExport = () => {
-    setExportJson(buildExportJson())
+    setExportJson(buildExportText(exportTarget))
     setExportOpen(true)
   }
 
@@ -234,15 +294,37 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           setImportError('')
         }}
         footer={null}
-        width={520}
+        width={560}
       >
         <div style={{ marginBottom: 12 }}>
-          <Text strong>方式一：粘贴 JSON</Text>
+          <Text strong>选择来源平台</Text>
+        </div>
+        <Radio.Group
+          value={importTarget}
+          onChange={(e) => setImportTarget(e.target.value as SpecTarget)}
+          optionType="button"
+          buttonStyle="solid"
+          options={SPEC_TARGETS.map((t) => ({ label: t.label, value: t.key }))}
+          style={{ marginBottom: 12 }}
+        />
+        <div style={{ marginBottom: 12 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {
+              SPEC_TARGETS.find((t) => t.key === importTarget)?.description
+            }
+          </Text>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Text strong>方式一：粘贴内容</Text>
         </div>
         <TextArea
           rows={8}
           placeholder={
-            '在此粘贴工作流 JSON...\n格式: { "nodes": [...], "edges": [...] }'
+            importTarget === 'picop'
+              ? '在此粘贴工作流 JSON...\n格式: { "nodes": [...], "edges": [...] }'
+              : importTarget === 'speckit'
+                ? '在此粘贴 workflow.yml...\nschema_version / workflow / steps'
+                : '在此粘贴 schema.yaml...\nname / artifacts / apply'
           }
           value={importJson}
           onChange={(e) => {
@@ -261,25 +343,29 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         <Button
           type="primary"
           style={{ marginTop: 8 }}
-          onClick={() => doImport(importJson)}
+          onClick={() => doImportTarget(importJson, importTarget)}
           disabled={!importJson.trim()}
         >
           导入
         </Button>
 
         <div style={{ margin: '16px 0 8px' }}>
-          <Text strong>方式二：上传 JSON 文件</Text>
+          <Text strong>方式二：上传文件</Text>
         </div>
         <Upload.Dragger
-          accept=".json"
+          accept={importTarget === 'picop' ? '.json' : '.yml,.yaml,.json'}
           showUploadList={false}
           beforeUpload={handleFile}
         >
           <p className="ant-upload-drag-icon">
             <UploadOutlined />
           </p>
-          <p className="ant-upload-text">点击或拖拽 JSON 文件到此区域</p>
-          <p className="ant-upload-hint">支持 .json 格式的工作流文件</p>
+          <p className="ant-upload-text">点击或拖拽文件到此区域</p>
+          <p className="ant-upload-hint">
+            {importTarget === 'picop'
+              ? '支持 .json 格式的工作流文件'
+              : '支持 .yml / .yaml 格式的文件'}
+          </p>
         </Upload.Dragger>
       </Modal>
 
@@ -289,8 +375,23 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         open={exportOpen}
         onCancel={() => setExportOpen(false)}
         footer={null}
-        width={520}
+        width={560}
       >
+        <div style={{ marginBottom: 12 }}>
+          <Text strong>选择目标平台</Text>
+        </div>
+        <Radio.Group
+          value={exportTarget}
+          onChange={(e) => {
+            const target = e.target.value as SpecTarget
+            setExportTarget(target)
+            setExportJson(buildExportText(target))
+          }}
+          optionType="button"
+          buttonStyle="solid"
+          options={SPEC_TARGETS.map((t) => ({ label: t.label, value: t.key }))}
+          style={{ marginBottom: 12 }}
+        />
         <div
           style={{
             marginBottom: 8,
@@ -299,7 +400,12 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
             alignItems: 'center',
           }}
         >
-          <Text strong>工作流 JSON</Text>
+          <Text strong>
+            {
+              SPEC_TARGETS.find((t) => t.key === exportTarget)?.label
+            }{' '}
+            内容
+          </Text>
           <Button
             size="small"
             icon={<CopyOutlined />}
@@ -321,7 +427,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           onClick={handleExportDownload}
           block
         >
-          下载为 JSON 文件
+          下载为 {exportTarget === 'picop' ? 'JSON' : 'YAML'} 文件
         </Button>
       </Modal>
 
