@@ -4,22 +4,12 @@
  * 设计说明（对应 workflow.build.md）：
  * - 本平台（Picop）的工作流 JSON 是 React Flow 画布数据，外部框架无法执行；
  *   导出时必须翻译为对方可执行的结构，导入时反向翻译回画布节点。
- * - 所有映射统一收口在本文件的 Map 中，后续增改平台 / 节点映射只改这里。
- *
- * 支持的目标结构：
- * - SpecKit：workflow.yml（命令步骤流水线，11 种 step，见 workflow.build.md §2）
- * - OpenSpec：schema.yaml（artifacts 依赖图 + 模板，见 workflow.build.md §3）
- *
- * 当前转换覆盖：
- * - 导出：命令类节点（agent/taskPlanner/selfCheck/codeAgent/keywordAgent…）+ 阶段标记 → step/artifact
- * - 导入：workflow.yml 的 steps / schema.yaml 的 artifacts → 平台节点与连线
- * - 控制节点（if/loop/retry/…）v1 暂不转换，导出时以注释提示（表达式需人工映射）
+ * - 导出逻辑已迁移至 `src/services/exporter.ts`，本文件保留映射表与导入解析能力。
  */
 import { v4 as uuidv4 } from 'uuid'
 import type { Node, Edge } from '@xyflow/react'
 import { NodeTypes } from '#/types'
 import type { SpecStepKey } from '#/constants/spec'
-import { topologicalSort } from '#/engine/topological'
 
 // ==================== 平台定义 ====================
 
@@ -102,9 +92,6 @@ export const NODE_TYPE_TO_OPENSPEC = new Map<string, string>([
   [NodeTypes.KEYWORD_AGENT, 'proposal'],
 ])
 
-/** 需要转成 gate 门禁步骤的节点类型 */
-const GATE_NODE_TYPES = new Set<string>([NodeTypes.USER_INPUT, NodeTypes.ANSWER])
-
 // ==================== 反向映射（导入用） ====================
 
 /** SpecKit 命令 → 平台阶段标记 */
@@ -160,123 +147,6 @@ export interface ParsedSpecWorkflow {
   name?: string
   nodes: Node[]
   edges: Edge[]
-}
-
-/** 读取节点的 Spec 阶段标记（data.specStep，兼容旧数据未标记） */
-function getSpecStep(node: Node): SpecStepKey | undefined {
-  const step = (node.data as any)?.specStep
-  return typeof step === 'string' ? (step as SpecStepKey) : undefined
-}
-
-/** 生成合法的 step id（小写 + 连字符；中文保留，避免空 id） */
-function toStepId(raw: string, fallback: string): string {
-  const id = raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return id || fallback
-}
-
-/** 解析目标 workflow 里的节点 specStep */
-function resolveSpecStep(node: Node): SpecStepKey | undefined {
-  return getSpecStep(node)
-}
-
-// ==================== 最小 YAML 序列化（仅覆盖导出子集） ====================
-
-function yamlScalar(v: unknown): string {
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  const s = String(v)
-  if (
-    s === '' ||
-    /[:#\[\]{}&*!|>'"%@`,]/.test(s) ||
-    /^[-?]/.test(s) ||
-    /^\s|\s$/.test(s) ||
-    /^-?\d/.test(s) ||
-    s === 'true' ||
-    s === 'false' ||
-    s === 'null'
-  ) {
-    return `"${s.replace(/"/g, '\\"')}"`
-  }
-  return s
-}
-
-function emitMapEntry(key: string, value: unknown, indent: number): string[] {
-  const pad = ' '.repeat(indent)
-  const head = `${pad}${key}:`
-  if (value === null || value === undefined) return [`${head} null`]
-  if (typeof value === 'string') {
-    if (value.includes('\n')) {
-      return [`${head} |`, ...value.split('\n').map((l) => `${pad}  ${l || ''}`)]
-    }
-    return [`${head} ${yamlScalar(value)}`]
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return [`${head} ${String(value)}`]
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${head} []`]
-    if (value.every((x) => x === null || typeof x !== 'object')) {
-      return [`${head} [${value.map((x) => yamlScalar(x)).join(', ')}]`]
-    }
-    const out = [head]
-    for (const item of value) out.push(...emitListItem(item, indent + 2))
-    return out
-  }
-  const entries = Object.entries(value as Record<string, unknown>).filter(
-    ([, v]) => v !== undefined && v !== null,
-  )
-  if (entries.length === 0) return [`${head} {}`]
-  const out = [head]
-  for (const [k, v] of entries) out.push(...emitMapEntry(k, v, indent + 2))
-  return out
-}
-
-function emitListItem(item: unknown, indent: number): string[] {
-  const pad = ' '.repeat(indent)
-  if (item === null || item === undefined) return [`${pad}- null`]
-  if (typeof item !== 'object' || Array.isArray(item)) {
-    return [`${pad}- ${yamlScalar(item)}`]
-  }
-  const entries = Object.entries(item as Record<string, unknown>).filter(
-    ([, v]) => v !== undefined && v !== null,
-  )
-  if (entries.length === 0) return [`${pad}- {}`]
-  const out: string[] = []
-  entries.forEach(([k, v], i) => {
-    if (i === 0) {
-      if (typeof v === 'string' && v.includes('\n')) {
-        out.push(`${pad}- ${k}: |`)
-        out.push(...v.split('\n').map((l) => `${pad}    ${l || ''}`))
-      } else if (typeof v === 'object' && v !== null) {
-        out.push(`${pad}- ${k}:`)
-        if (Array.isArray(v)) {
-          for (const x of v) out.push(...emitListItem(x, indent + 4))
-        } else {
-          for (const [kk, vv] of Object.entries(v as Record<string, unknown>)) {
-            out.push(...emitMapEntry(kk, vv, indent + 4))
-          }
-        }
-      } else {
-        out.push(`${pad}- ${k}: ${yamlScalar(v)}`)
-      }
-    } else {
-      out.push(...emitMapEntry(k, v, indent + 2))
-    }
-  })
-  return out
-}
-
-/** 序列化简单对象为 YAML 文本（支持嵌套 map / list / 块标量） */
-export function yamlStringify(root: Record<string, unknown>): string {
-  const out: string[] = []
-  for (const [k, v] of Object.entries(root)) {
-    if (v === undefined) continue
-    out.push(...emitMapEntry(k, v, 0))
-  }
-  return out.join('\n')
 }
 
 // ==================== 最小 YAML 解析（覆盖导入子集） ====================
@@ -488,167 +358,6 @@ export function yamlParse(src: string): Record<string, unknown> {
     : {}) as Record<string, unknown>
 }
 
-// ==================== 导出：SpecKit workflow.yml ====================
-
-function resolveStepType(node: Node): 'command' | 'gate' | 'skip' {
-  if (GATE_NODE_TYPES.has(node.type || '')) return 'gate'
-  return 'command'
-}
-
-/** 把平台节点解析为一个 workflow.yml step（command / gate），控制节点返回 null */
-function nodeToStep(node: Node): Record<string, unknown> | null {
-  const stepType = resolveStepType(node)
-  const id = toStepId((node.data as any)?.title || '', node.id.slice(0, 12))
-
-  if (stepType === 'gate') {
-    const question = (node.data as any)?.input?.prompt || (node.data as any)?.question
-    return {
-      id,
-      type: 'gate',
-      message: question || `Review before proceeding (from node "${(node.data as any)?.title || id}").`,
-      options: ['approve', 'reject'],
-      on_reject: 'abort',
-    }
-  }
-
-  const command =
-    SPEC_STEP_TO_SPECKIT.get(resolveSpecStep(node) as SpecStepKey) ||
-    NODE_TYPE_TO_SPECKIT.get(node.type || '')
-  if (!command) return null
-
-  const step: Record<string, unknown> = {
-    id,
-    command,
-    integration: '{{ inputs.integration }}',
-  }
-  const alias = (node.data as any)?.modal?.alias
-  if (typeof alias === 'string' && alias) step.model = alias
-  step.input = { args: '{{ inputs.spec }}' }
-  return step
-}
-
-/**
- * 平台节点/连线 → SpecKit workflow.yml 文本
- * 控制节点（if/loop/retry…）v1 不转换，以顶部注释提示数量
- */
-export function buildSpecKitWorkflow(
-  nodes: Node[],
-  edges: Edge[],
-  workflowName?: string,
-): string {
-  const { sortedIds } = topologicalSort(nodes, edges)
-  const sorted = sortedIds
-    .map((id) => nodes.find((n) => n.id === id))
-    .filter((n): n is Node => Boolean(n))
-
-  const steps: Record<string, unknown>[] = []
-  let skipped = 0
-  for (const node of sorted) {
-    const step = nodeToStep(node)
-    if (step) steps.push(step)
-    else skipped++
-  }
-
-  const name = workflowName?.trim() || 'picop-workflow'
-  const doc: Record<string, unknown> = {
-    schema_version: '1.0',
-    workflow: {
-      id: toStepId(name, 'picop-workflow'),
-      name,
-      version: '1.0.0',
-      author: 'ai-workflow',
-      description: `Exported from Picop (${nodes.length} nodes, ${edges.length} edges).`,
-    },
-    requires: {
-      speckit_version: '>=0.8.5',
-      integrations: { any: ['claude', 'copilot', 'gemini', 'opencode'] },
-    },
-    inputs: {
-      spec: {
-        type: 'string',
-        required: true,
-        prompt: 'Describe what you want to build',
-      },
-      integration: { type: 'string', default: 'auto' },
-    },
-    steps,
-  }
-
-  const comment = skipped > 0
-    ? `# Note: ${skipped} control node(s) (if/loop/retry...) skipped - map expressions manually.\n`
-    : ''
-  return comment + yamlStringify(doc)
-}
-
-// ==================== 导出：OpenSpec schema.yaml ====================
-
-/** 把平台节点解析为一个 openspec artifact，控制节点 / 未映射返回 null */
-function nodeToArtifact(node: Node): Record<string, unknown> | null {
-  if (GATE_NODE_TYPES.has(node.type || '')) return null
-  const artifactId =
-    SPEC_STEP_TO_OPENSPEC.get(resolveSpecStep(node) as SpecStepKey) ||
-    NODE_TYPE_TO_OPENSPEC.get(node.type || '')
-  if (!artifactId) return null
-
-  const title = (node.data as any)?.title || artifactId
-  const instruction = (node.data as any)?.instruction || ''
-  return {
-    id: artifactId,
-    generates: `${artifactId}.md`,
-    description: title,
-    instruction:
-      instruction ||
-      `Create the ${artifactId} document for this change (platform node: ${title}).`,
-    requires: [],
-  }
-}
-
-/**
- * 平台节点/连线 → OpenSpec schema.yaml 文本
- * artifacts 按拓扑顺序去重，requires 构成依赖链
- */
-export function buildOpenSpecSchema(
-  nodes: Node[],
-  edges: Edge[],
-  workflowName?: string,
-): string {
-  const { sortedIds } = topologicalSort(nodes, edges)
-  const sorted = sortedIds
-    .map((id) => nodes.find((n) => n.id === id))
-    .filter((n): n is Node => Boolean(n))
-
-  const artifacts: Record<string, unknown>[] = []
-  const seen = new Set<string>()
-  for (const node of sorted) {
-    const artifact = nodeToArtifact(node)
-    if (!artifact) continue
-    if (seen.has(artifact.id as string)) continue
-    seen.add(artifact.id as string)
-    artifacts.push(artifact)
-  }
-
-  // 依赖链：前一个 artifact 是后一个的前置
-  artifacts.forEach((a, i) => {
-    a.requires = i === 0 ? [] : [artifacts[i - 1].id as string]
-  })
-
-  const last = artifacts[artifacts.length - 1]
-  const doc: Record<string, unknown> = {
-    name: toStepId(workflowName?.trim() || 'picop-workflow', 'picop-workflow'),
-    version: 1,
-    description: workflowName?.trim() || 'Exported from Picop',
-    artifacts,
-  }
-  if (last) {
-    doc.apply = {
-      requires: [last.id as string],
-      tracks: `${last.id}.md`,
-    }
-  }
-
-  return yamlStringify(doc)
-}
-
 // ==================== 导入：SpecKit workflow.yml → 平台 ====================
 
 /** 创建一个平台节点（导入用） */
@@ -663,13 +372,13 @@ function createNode(
     type,
     position: { x: 60 + index * 220, y: 0 },
     data: { title, ...extra },
-  } as unknown as Node
+  }
 }
 
 /** 解析 workflow.yml 的 steps → 平台节点与连线（链式连接） */
 export function parseSpecKitWorkflow(text: string): ParsedSpecWorkflow {
   const doc = yamlParse(text)
-  const workflow = (doc.workflow as Record<string, unknown>) || {}
+  const workflow = (doc.workflow as Record<string, unknown> | undefined) ?? {}
   const steps = Array.isArray(workflow.steps)
     ? (workflow.steps as Record<string, unknown>[])
     : Array.isArray(doc.steps)
@@ -687,7 +396,7 @@ export function parseSpecKitWorkflow(text: string): ParsedSpecWorkflow {
       ? NodeTypes.USER_INPUT
       : SPECKIT_COMMAND_TO_NODE.get(command) || NodeTypes.AGENT
     const specStep = isGate ? undefined : SPECKIT_COMMAND_TO_STEP.get(command)
-    const args = (step.input as Record<string, unknown>)?.args
+    const args = (step.input as Record<string, unknown> | undefined)?.args
 
     const title =
       (typeof step.id === 'string' && step.id) ||

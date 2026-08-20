@@ -14,25 +14,25 @@ import {
   message,
   Typography,
   Radio,
+  Checkbox,
+  Space,
 } from 'antd'
 import {
   UploadOutlined,
   DownloadOutlined,
   CopyOutlined,
+  FileZipOutlined,
 } from '@ant-design/icons'
-import { BrushCleaning,  Download, Save, Upload as UploadIcon } from 'lucide-react'
+import { BrushCleaning, Download, Save, Upload as UploadIcon } from 'lucide-react'
 import type { RcFile } from 'antd/es/upload'
 import {
   SPEC_TARGETS,
-  buildSpecKitWorkflow,
-  buildOpenSpecSchema,
   parseSpecKitWorkflow,
   parseOpenSpecSchema,
 } from '#/services/specMap'
 import type { SpecTarget } from '#/services/specMap'
+import { buildWorkflow } from '#/services/exporter'
 import styles from '../index.module.scss'
-
-
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -46,6 +46,8 @@ interface WorkflowData {
   nodes: Node[]
   edges: Edge[]
 }
+
+type ExportMode = 'yml' | 'zip'
 
 export interface ToolsPanelProps extends PanelProps {}
 
@@ -68,22 +70,27 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   const [importTarget, setImportTarget] = useState<SpecTarget>('picop')
   const [exportTarget, setExportTarget] = useState<SpecTarget>('picop')
 
+  // 导出选项
+  const [exportMode, setExportMode] = useState<ExportMode>('yml')
+  const [exportName, setExportName] = useState('')
+  const [mergeParallel, setMergeParallel] = useState(false)
+  const [knowledgeStrategy, setKnowledgeStrategy] = useState<'snapshot' | 'api'>('snapshot')
+
   const buildExportJson = () => {
     // 导出时剥离 modal 敏感字段，只保留模型 ID 引用
     const data: WorkflowData = { nodes: stripNodesModals(nodes), edges }
     return JSON.stringify(data, null, 2)
   }
 
-  /** 按目标平台生成导出文本 */
+  /** 按目标平台生成导出文本（仅 yml 模式使用） */
   const buildExportText = (target: SpecTarget): string => {
-    switch (target) {
-      case 'speckit':
-        return buildSpecKitWorkflow(nodes, edges)
-      case 'openspec':
-        return buildOpenSpecSchema(nodes, edges)
-      default:
-        return buildExportJson()
-    }
+    if (target === 'picop') return buildExportJson()
+    const result = buildWorkflow(target, nodes, edges, {
+      name: exportName,
+      mergeParallel,
+      knowledgeStrategy,
+    })
+    return result.yaml
   }
 
   const doImport = async (jsonStr: string) => {
@@ -169,10 +176,14 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   }
 
   const handleExportDownload = () => {
+    if (exportMode === 'zip' && exportTarget !== 'picop') {
+      handleZipDownload()
+      return
+    }
+
     const text = exportJson || buildExportText(exportTarget)
     const ext = SPEC_TARGETS.find((t) => t.key === exportTarget)?.ext || 'json'
-    const mime =
-      ext === 'yml' ? 'application/yaml' : 'application/json'
+    const mime = ext === 'yml' ? 'application/yaml' : 'application/json'
     const blob = new Blob([text], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -181,6 +192,50 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     a.click()
     URL.revokeObjectURL(url)
     message.success('工作流已下载')
+  }
+
+  const handleZipDownload = async () => {
+    if (exportTarget === 'picop') {
+      message.warning('Picop 原生 JSON 不支持 zip 全量导出')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/export/zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nodes: stripNodesModals(nodes),
+          edges,
+          target: exportTarget,
+          name: exportName,
+          options: {
+            name: exportName,
+            mergeParallel,
+            knowledgeStrategy,
+            snapshotThreshold: 2 * 1024 * 1024,
+          },
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: '导出失败' }))
+        message.error(data.error || 'zip 导出失败')
+        return
+      }
+
+      const blob = await res.blob()
+      const safeName = (exportName || 'picop-workflow').replace(/[^a-zA-Z0-9_-]+/g, '-')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${safeName}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      message.success('zip 包已下载')
+    } catch (err: any) {
+      message.error('zip 导出失败: ' + err.message)
+    }
   }
 
   // 打开保存弹窗时加载已有工作流列表
@@ -309,9 +364,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         />
         <div style={{ marginBottom: 12 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {
-              SPEC_TARGETS.find((t) => t.key === importTarget)?.description
-            }
+            {SPEC_TARGETS.find((t) => t.key === importTarget)?.description}
           </Text>
         </div>
         <div style={{ marginBottom: 12 }}>
@@ -375,7 +428,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         open={exportOpen}
         onCancel={() => setExportOpen(false)}
         footer={null}
-        width={560}
+        width={600}
       >
         <div style={{ marginBottom: 12 }}>
           <Text strong>选择目标平台</Text>
@@ -390,8 +443,69 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           optionType="button"
           buttonStyle="solid"
           options={SPEC_TARGETS.map((t) => ({ label: t.label, value: t.key }))}
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: 16 }}
         />
+
+        {exportTarget !== 'picop' && (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>导出模式</Text>
+            </div>
+            <Radio.Group
+              value={exportMode}
+              onChange={(e) => setExportMode(e.target.value as ExportMode)}
+              style={{ marginBottom: 16 }}
+            >
+              <Radio value="yml">仅导出 workflow.yml</Radio>
+              <Radio value="zip">全量导出 zip（含输入物）</Radio>
+            </Radio.Group>
+          </>
+        )}
+
+        <div style={{ marginBottom: 8 }}>
+          <Text strong>工作流名称</Text>
+        </div>
+        <Input
+          placeholder="留空则使用 picop-workflow"
+          value={exportName}
+          onChange={(e) => {
+            setExportName(e.target.value)
+            if (exportTarget !== 'picop') {
+              setExportJson(buildExportText(exportTarget))
+            }
+          }}
+          style={{ marginBottom: 16 }}
+        />
+
+        {exportTarget !== 'picop' && (
+          <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
+            <Checkbox
+              checked={mergeParallel}
+              onChange={(e) => {
+                setMergeParallel(e.target.checked)
+                setExportJson(buildExportText(exportTarget))
+              }}
+            >
+              合并并行步骤（仅当 command / integration / model / input 完全相同时）
+            </Checkbox>
+
+            {exportMode === 'zip' && (
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  知识库导出策略
+                </Text>
+                <Radio.Group
+                  value={knowledgeStrategy}
+                  onChange={(e) => setKnowledgeStrategy(e.target.value)}
+                >
+                  <Radio value="snapshot">纯文本快照（默认，单集合超 2MB 警告）</Radio>
+                  <Radio value="api">HTTPS API 访问</Radio>
+                </Radio.Group>
+              </div>
+            )}
+          </Space>
+        )}
+
         <div
           style={{
             marginBottom: 8,
@@ -401,9 +515,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           }}
         >
           <Text strong>
-            {
-              SPEC_TARGETS.find((t) => t.key === exportTarget)?.label
-            }{' '}
+            {SPEC_TARGETS.find((t) => t.key === exportTarget)?.label}{' '}
             内容
           </Text>
           <Button
@@ -422,12 +534,14 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         />
         <Button
           type="primary"
-          icon={<DownloadOutlined />}
+          icon={exportMode === 'zip' && exportTarget !== 'picop' ? <FileZipOutlined /> : <DownloadOutlined />}
           style={{ marginTop: 12 }}
           onClick={handleExportDownload}
           block
         >
-          下载为 {exportTarget === 'picop' ? 'JSON' : 'YAML'} 文件
+          {exportMode === 'zip' && exportTarget !== 'picop'
+            ? '下载 zip 包'
+            : `下载为 ${exportTarget === 'picop' ? 'JSON' : 'YAML'} 文件`}
         </Button>
       </Modal>
 

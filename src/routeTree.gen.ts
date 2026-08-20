@@ -21,6 +21,7 @@ import { Route as ApiWorkflowExecStateRouteImport } from './routes/api/workflow/
 import { Route as ApiWorkflowExecHistoryRouteImport } from './routes/api/workflow/exec-history'
 import { Route as ApiSkillImportRouteImport } from './routes/api/skill/import'
 import { Route as ApiSkillContentRouteImport } from './routes/api/skill/content'
+import { Route as ApiExportZipRouteImport } from './routes/api/export/zip'
 import { Route as ApiExecuteTaskPlannerRouteImport } from './routes/api/execute/taskPlanner'
 import { Route as ApiExecuteSelfCheckRouteImport } from './routes/api/execute/selfCheck'
 import { Route as ApiExecuteQdrantRouteImport } from './routes/api/execute/qdrant'
@@ -100,6 +101,11 @@ const ApiSkillContentRoute = ApiSkillContentRouteImport.update({
   id: '/content',
   path: '/content',
   getParentRoute: () => ApiSkillRoute,
+} as any)
+const ApiExportZipRoute = ApiExportZipRouteImport.update({
+  id: '/api/export/zip',
+  path: '/api/export/zip',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExecuteTaskPlannerRoute = ApiExecuteTaskPlannerRouteImport.update({
   id: '/api/execute/taskPlanner',
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
+  '/api/export/zip': typeof ApiExportZipRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
+  '/api/export/zip': typeof ApiExportZipRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/api/execute/qdrant': typeof ApiExecuteQdrantRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
+  '/api/export/zip': typeof ApiExportZipRoute
   '/api/skill/content': typeof ApiSkillContentRoute
   '/api/skill/import': typeof ApiSkillImportRoute
   '/api/workflow/exec-history': typeof ApiWorkflowExecHistoryRoute
@@ -326,6 +335,7 @@ export interface FileRouteTypes {
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
+    | '/api/export/zip'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
+    | '/api/export/zip'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/api/execute/qdrant'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
+    | '/api/export/zip'
     | '/api/skill/content'
     | '/api/skill/import'
     | '/api/workflow/exec-history'
@@ -426,6 +438,7 @@ export interface RootRouteChildren {
   ApiExecuteQdrantRoute: typeof ApiExecuteQdrantRoute
   ApiExecuteSelfCheckRoute: typeof ApiExecuteSelfCheckRoute
   ApiExecuteTaskPlannerRoute: typeof ApiExecuteTaskPlannerRoute
+  ApiExportZipRoute: typeof ApiExportZipRoute
   ApiWorkflowExecHistoryRoute: typeof ApiWorkflowExecHistoryRoute
   ApiWorkflowExecStateRoute: typeof ApiWorkflowExecStateRoute
   ApiWorkflowPinRoute: typeof ApiWorkflowPinRoute
@@ -517,6 +530,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/skill/content'
       preLoaderRoute: typeof ApiSkillContentRouteImport
       parentRoute: typeof ApiSkillRoute
+    }
+    '/api/export/zip': {
+      id: '/api/export/zip'
+      path: '/api/export/zip'
+      fullPath: '/api/export/zip'
+      preLoaderRoute: typeof ApiExportZipRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/execute/taskPlanner': {
       id: '/api/execute/taskPlanner'
@@ -694,6 +714,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteQdrantRoute: ApiExecuteQdrantRoute,
   ApiExecuteSelfCheckRoute: ApiExecuteSelfCheckRoute,
   ApiExecuteTaskPlannerRoute: ApiExecuteTaskPlannerRoute,
+  ApiExportZipRoute: ApiExportZipRoute,
   ApiWorkflowExecHistoryRoute: ApiWorkflowExecHistoryRoute,
   ApiWorkflowExecStateRoute: ApiWorkflowExecStateRoute,
   ApiWorkflowPinRoute: ApiWorkflowPinRoute,
