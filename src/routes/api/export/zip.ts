@@ -1,10 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import JSZip from 'jszip'
 import type { Node, Edge } from '@xyflow/react'
-import { buildWorkflow   } from '#/services/exporter'
-import type {ExportTarget, ExportOptions} from '#/services/exporter';
-import { collectArtifacts } from '#/services/artifactCollector'
+import { buildWorkflow } from '#/services/exporter'
+import type { ExportTarget, ExportOptions } from '#/services/exporter'
 
+/**
+ * zip 全量导出 API
+ * 动态引入 jszip 与 artifactCollector（含 Node 内置模块），避免 SSR 预加载异常。
+ */
 export const Route = createFileRoute('/api/export/zip')({
   server: {
     handlers: {
@@ -35,6 +37,11 @@ export const Route = createFileRoute('/api/export/zip')({
             edges,
             exportOptions,
           )
+
+          const [{ default: JSZip }, { collectArtifacts }] = await Promise.all([
+            import('jszip'),
+            import('#/services/artifactCollector'),
+          ])
 
           const zip = new JSZip()
 
@@ -83,11 +90,14 @@ export const Route = createFileRoute('/api/export/zip')({
             },
           })
         } catch (err: any) {
-          return Response.json({
-            status: 'error',
-            error: err.message,
-            logs,
-          }, { status: 500 })
+          return Response.json(
+            {
+              status: 'error',
+              error: err.message,
+              logs,
+            },
+            { status: 500 },
+          )
         }
       },
     },
