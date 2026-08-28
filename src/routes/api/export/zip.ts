@@ -31,12 +31,7 @@ export const Route = createFileRoute('/api/export/zip')({
             snapshotThreshold: options?.snapshotThreshold ?? 2 * 1024 * 1024,
           }
 
-          const { yaml, workflowPath, artifacts: plannedArtifacts } = buildWorkflow(
-            target,
-            nodes,
-            edges,
-            exportOptions,
-          )
+          const { yaml, workflowPath } = buildWorkflow(target, nodes, edges, exportOptions)
 
           const [{ default: JSZip }, { collectArtifacts }] = await Promise.all([
             import('jszip'),
@@ -49,31 +44,23 @@ export const Route = createFileRoute('/api/export/zip')({
           zip.file(workflowPath, yaml)
           logs.push(`已生成 ${workflowPath}`)
 
-          // 2. 收集占位文件（spec 阶段模板等）
-          for (const artifact of plannedArtifacts) {
-            if (!zip.file(artifact.path)) {
-              zip.file(artifact.path, artifact.content)
-            }
-          }
-
-          // 3. 收集真实输入物内容（Skill / Memory / Lark / Qdrant 快照）
+          // 2. 收集输入物真实内容（userInput 静态内容 / Skill / Memory / BMad / Lark 引用 / Wiki 快照 / Qdrant 快照）
           const collected = await collectArtifacts(nodes, {
             knowledgeStrategy: exportOptions.knowledgeStrategy,
             snapshotThreshold: exportOptions.snapshotThreshold,
           })
 
           for (const item of collected) {
-            // 真实内容覆盖占位内容
             zip.file(item.path, item.content)
             if (item.warning) logs.push(`警告: ${item.warning}`)
           }
 
-          // 4. 写入 manifest
+          // 3. 写入 manifest
           const manifest = {
             name: name || 'picop-workflow',
             target,
             workflowPath,
-            artifactCount: plannedArtifacts.length + collected.length,
+            artifactCount: collected.length,
             collectedSources: collected.map((c) => c.source),
             logs,
           }

@@ -29,12 +29,12 @@ function writeIndex(skills: Skill[]): void {
   fs.writeFileSync(INDEX_PATH, JSON.stringify(skills, null, 2))
 }
 
-/** 获取某个技能的 skill.md 路径 */
+/** 获取某个技能的 SKILL.md 路径（统一大写命名，与磁盘现状一致） */
 function skillContentPath(skillId: string): string {
-  return path.join(SKILLS_DIR, skillId, 'skill.md')
+  return path.join(SKILLS_DIR, skillId, 'SKILL.md')
 }
 
-/** 保存技能内容到 skill.md */
+/** 保存技能内容到 SKILL.md */
 function saveSkillContent(skillId: string, content: string): void {
   const dir = path.dirname(skillContentPath(skillId))
   if (!fs.existsSync(dir)) {
@@ -43,14 +43,14 @@ function saveSkillContent(skillId: string, content: string): void {
   fs.writeFileSync(skillContentPath(skillId), content || '', 'utf-8')
 }
 
-/** 读取 skill.md 内容 */
+/** 读取 SKILL.md 内容 */
 function readSkillContent(skillId: string): string | null {
   const fp = skillContentPath(skillId)
   if (!fs.existsSync(fp)) return null
   return fs.readFileSync(fp, 'utf-8')
 }
 
-/** 删除技能目录（包括 skill.md） */
+/** 删除技能目录（包括 SKILL.md） */
 function deleteSkillDir(skillId: string): void {
   const dir = path.dirname(skillContentPath(skillId))
   if (fs.existsSync(dir)) {
@@ -137,7 +137,7 @@ export const Route = createFileRoute('/api/skill')({
 
         body.id = body.id || crypto.randomUUID()
 
-        // 保存 content 到 skill.md，从索引中移除 systemPrompt 字段
+        // 保存 content 到 SKILL.md，从索引中移除 systemPrompt 字段
         const content = body.systemPrompt || ''
         delete (body as any).systemPrompt
         saveSkillContent(body.id, content)
@@ -154,7 +154,7 @@ export const Route = createFileRoute('/api/skill')({
           return Response.json({ error: 'Skill not found' }, { status: 404 })
         }
 
-        // 更新 content 到 skill.md
+        // 更新 content 到 SKILL.md
         const content = body.systemPrompt || ''
         delete (body as any).systemPrompt
         saveSkillContent(body.id, content)
@@ -182,7 +182,7 @@ export const Route = createFileRoute('/api/skill')({
 
 /**
  * 从 Markdown 文件导入技能
- * 写入到 workflows/skills/{skillName}/skill.md 并更新索引
+ * 写入到 workflows/skills/{skillName}/SKILL.md 并更新索引
  */
 export async function importSkillFromMarkdown(filePath: string): Promise<Skill> {
   const resolvedPath = path.resolve(process.cwd(), filePath)
@@ -246,7 +246,7 @@ export async function scanMarkdownSkills(dirPath: string): Promise<Skill[]> {
   return skills
 }
 
-/** 按 id 读取技能内容（从 skill.md） */
+/** 按 id 读取技能内容（从 SKILL.md） */
 export async function getSkillContentById(id: string): Promise<string | null> {
   return readSkillContent(id)
 }

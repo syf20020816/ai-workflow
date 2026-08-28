@@ -1,10 +1,13 @@
 /**
  * 导出输入物收集器（后端专用）
  *
- * 负责在导出 zip 时拉取各节点引用的真实内容：
- * - Skill 文件
+ * 负责在导出 zip 时收集各节点引用的真实内容：
+ * - userInput / agent 静态输入（文字/提示词/URL 清单）
+ * - Skill 文件（workflows/skills/<id>/SKILL.md）
+ * - BMad 角色文件（内容内联在节点 data，生成文件）
  * - Memory 文件
- * - Lark 文档 / 知识库
+ * - Lark 文档：不拉取全文，导出 URL 清单 + lark-cli 使用技能
+ * - Lark Wiki 知识库全量快照
  * - Qdrant 集合纯文本快照
  *
  * 本文件使用 Node.js fs/path 与外部 API，只能被后端 route/service 导入。
@@ -13,17 +16,29 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
 import type { Node } from '@xyflow/react'
-import { listCollectableArtifacts } from '#/services/exporter'
+import {
+  listCollectableArtifacts,
+  userInputArtifactPath,
+  skillArtifactPath,
+  bmadArtifactPath,
+  wikiArtifactPath,
+  knowledgeArtifactPath,
+  memoryArtifactPath,
+  safeSegment,
+} from '#/services/exporter'
 
 const SKILLS_DIR = path.resolve(process.cwd(), 'workflows/skills')
-const MEMORY_DIR = path.resolve(process.cwd(), 'memory')
-const MEMORY_FILE = path.join(MEMORY_DIR, 'memory.md')
+const MEMORY_FILE = path.resolve(process.cwd(), 'memory/memory.md')
 const QDRANT_HOST = process.env.QDRANT_HOST || 'http://localhost:6333'
 
 export interface CollectedArtifact {
+  /** zip 包内相对路径 */
   path: string
+  /** 文件内容 */
   content: string
+  /** 来源标识（skill:<id> / memory:<path> / lark:<url> ...） */
   source: string
+  /** 收集过程中的警告（不影响导出，写入 manifest 日志） */
   warning?: string
 }
 
@@ -41,86 +56,201 @@ async function readFileSafe(filePath: string): Promise<string | null> {
   }
 }
 
-/** 收集所有 Skill 文件内容 */
+// ==================== userInput / agent 静态输入 ====================
+
+/** 收集 userInput / agent 节点的静态输入内容（label/prompt/files/urls） */
+async function collectUserInputs(
+  nodes: Node[],
+  larkUrls: Array<{ url: string; kind: 'doc' | 'template'; title: string }>,
+): Promise<CollectedArtifact[]> {
+  const results: CollectedArtifact[] = []
+  const userUrls: string[] = []
+
+  for (const node of nodes) {
+    const data = node.data as Record<string, any>
+    const input = data.input || {}
+    const mdPath = userInputArtifactPath(node)
+    const filesDir = path.dirname(mdPath) + '/files'
+    const parts: string[] = [`# ${data.title || '用户输入'}`]
+
+    if (input.label) parts.push(`## 输入内容\n\n${input.label}`)
+    if (input.prompt) parts.push(`## 提示词\n\n${input.prompt}`)
+
+    // 上传文件：File 对象经 JSON 序列化后无法读取内容，仅能检测存在性
+    const files: unknown[] = Array.isArray(input.files) ? input.files : []
+    files.forEach((file, i) => {
+      if (
+        file && typeof file === 'object' &&
+        typeof (file as File).text === 'function'
+      ) {
+        // 仅前端直调（非 JSON 请求）时可读到内容，后端通常走不到
+        results.push({
+          path: `${filesDir}/${safeSegment((file as File).name, `file-${i + 1}`)}`,
+          content: `<!-- 文件内容见运行时上传，此处为占位 -->\n`,
+          source: `user-input-file:${node.id}`,
+        })
+      } else {
+        results.push({
+          path: `${filesDir}/file-${i + 1}.md`,
+          content: `<!-- 文件内容未持久化，无法随导出携带 -->\n`,
+          source: `user-input-file:${node.id}`,
+          warning: `节点 "${data.title || node.id}" 的第 ${i + 1} 个上传文件内容未持久化，导出为占位`,
+        })
+      }
+    })
+
+    if (Array.isArray(input.urls)) {
+      for (const url of input.urls) {
+        if (typeof url === 'string' && url) userUrls.push(url)
+      }
+    }
+
+    results.push({
+      path: mdPath,
+      content: parts.join('\n\n') + '\n',
+      source: `user-input:${node.id}`,
+    })
+  }
+
+  // URL 清单（Lark 引用 + 用户输入链接），有内容才生成
+  if (larkUrls.length > 0 || userUrls.length > 0) {
+    const lines: string[] = ['# 输入 URL 清单', '']
+    if (larkUrls.length > 0) {
+      lines.push('## Lark 文档（lark-cli 读取，见 skills/lark-cli/SKILL.md）', '')
+      for (const ref of larkUrls) {
+        lines.push(`- [${ref.title}](${ref.url})${ref.kind === 'template' ? '（模板）' : ''}`)
+      }
+      lines.push('')
+    }
+    if (userUrls.length > 0) {
+      lines.push('## 用户输入链接', '')
+      for (const url of userUrls) lines.push(`- ${url}`)
+      lines.push('')
+    }
+    results.push({
+      path: 'inputs/urls.md',
+      content: lines.join('\n'),
+      source: 'urls',
+    })
+  }
+
+  return results
+}
+
+// ==================== Skill ====================
+
+/** 收集所有 Skill 文件内容（磁盘统一为 SKILL.md，大小写敏感系统同样命中） */
 async function collectSkills(ids: string[]): Promise<CollectedArtifact[]> {
   const results: CollectedArtifact[] = []
   for (const id of ids) {
-    const skillMdPath = path.join(SKILLS_DIR, id, 'SKILL.md')
-    const content = await readFileSafe(skillMdPath)
+    const zipPath = skillArtifactPath(id)
+    if (zipPath.includes('..')) {
+      results.push({ path: zipPath, content: `<!-- 非法 skillId: ${id} -->\n`, source: `skill:${id}`, warning: `skillId 含非法路径段: ${id}` })
+      continue
+    }
+    const diskPath = path.join(SKILLS_DIR, safeSegment(id, 'skill'), 'SKILL.md')
+    const content = await readFileSafe(diskPath)
     if (content !== null) {
-      results.push({ path: `skills/${id}/SKILL.md`, content, source: `skill:${id}` })
+      results.push({ path: zipPath, content, source: `skill:${id}` })
     } else {
       results.push({
-        path: `skills/${id}/SKILL.md`,
+        path: zipPath,
         content: `<!-- SKILL ${id} 文件未找到 -->\n`,
         source: `skill:${id}`,
-        warning: `未找到 ${skillMdPath}`,
+        warning: `未找到 ${diskPath}`,
       })
     }
   }
   return results
 }
+
+// ==================== BMad 角色 ====================
+
+/** 从节点 data 生成 BMad 角色定义文件 */
+function collectBMadAgents(nodes: Node[]): CollectedArtifact[] {
+  const results: CollectedArtifact[] = []
+  for (const node of nodes) {
+    const data = node.data as Record<string, any>
+    const role = data.role || 'bmad-agent'
+    const parts: string[] = [
+      `# ${role}`,
+      '',
+    ]
+    if (data.agentId) parts.push(`Agent ID: ${data.agentId}`)
+    if (data.roleDescription) parts.push(`## 角色职责\n\n${data.roleDescription}`)
+    if (data.systemPrompt) parts.push(`## 系统提示词\n\n${data.systemPrompt}`)
+    results.push({
+      path: bmadArtifactPath(node),
+      content: parts.join('\n\n') + '\n',
+      source: `bmad:${node.id}`,
+    })
+  }
+  return results
+}
+
+// ==================== Memory ====================
 
 /** 收集 memory 文件 */
-async function collectMemories(paths: string[]): Promise<CollectedArtifact[]> {
+async function collectMemories(nodes: Node[]): Promise<CollectedArtifact[]> {
   const results: CollectedArtifact[] = []
-  for (const p of paths) {
-    const normalized = p.replace(/^\/+/, '')
-    const content = normalized === 'memory/memory.md'
+  const seen = new Set<string>()
+  for (const node of nodes) {
+    const zipPath = memoryArtifactPath(node)
+    if (seen.has(zipPath)) continue
+    seen.add(zipPath)
+    if (zipPath.includes('..')) {
+      results.push({ path: 'memory/memory.md', content: `<!-- 非法 memoryPath，回退默认 -->\n`, source: `memory:${node.id}`, warning: `memoryPath 含非法路径段` })
+      continue
+    }
+    const content = zipPath === 'memory/memory.md'
       ? await readFileSafe(MEMORY_FILE)
-      : await readFileSafe(path.resolve(process.cwd(), normalized))
+      : await readFileSafe(path.resolve(process.cwd(), zipPath))
     if (content !== null) {
-      results.push({ path: normalized, content, source: `memory:${p}` })
+      results.push({ path: zipPath, content, source: `memory:${node.id}` })
     } else {
       results.push({
-        path: normalized,
-        content: `<!-- memory 文件未找到: ${p} -->\n`,
-        source: `memory:${p}`,
-        warning: `未找到 ${p}`,
+        path: zipPath,
+        content: `<!-- memory 文件未找到: ${zipPath} -->\n`,
+        source: `memory:${node.id}`,
+        warning: `未找到 ${zipPath}`,
       })
     }
   }
   return results
 }
 
-/** 调用 lark-cli 读取文档 */
-function fetchLarkDoc(url: string): { content: string; warning?: string } {
-  try {
-    const stdout = execSync(
-      `lark-cli docs +fetch --doc "${url}" --doc-format markdown --format json`,
-      { encoding: 'utf-8', timeout: 30000 },
-    )
-    const result = JSON.parse(stdout)
-    if (result.ok === false) {
-      return {
-        content: `<!-- Lark 文档读取失败: ${url} -->\n`,
-        warning: result.error?.message || 'Lark 操作失败',
-      }
-    }
-    // lark-cli +fetch 返回的 JSON 中 content 字段可能包含 markdown
-    const content = result.data?.content || result.content || stdout
-    return { content: typeof content === 'string' ? content : JSON.stringify(content, null, 2) }
-  } catch (err: any) {
-    return {
-      content: `<!-- Lark 文档读取失败: ${url} -->\n`,
-      warning: err.message,
-    }
-  }
+// ==================== Lark：URL 引用模式（不拉取全文） ====================
+
+/** lark-cli 使用技能（静态内容，本地 agent 按指引自行读取文档） */
+const LARK_CLI_SKILL = `---
+name: lark-cli
+description: 使用 lark-cli 读取本工作流引用的飞书文档
+---
+
+# 使用 lark-cli 读取飞书文档
+
+本工作流引用的飞书文档 URL 清单见 \`inputs/urls.md\`。
+
+读取文档内容（markdown）：
+
+\`\`\`bash
+lark-cli docs +fetch --doc "<文档URL>" --doc-format markdown --jq '.data.document.content'
+\`\`\`
+
+完整用法与安全约束参考：\`lark-cli skills read lark-doc\`。
+`
+
+/** Lark 文档引用模式：导出 URL 清单（在 collectUserInputs 中合并生成）+ lark-cli 技能文件 */
+function collectLarkRefs(
+  refs: Array<{ url: string; kind: 'doc' | 'template'; title: string }>,
+): CollectedArtifact[] {
+  if (refs.length === 0) return []
+  return [
+    { path: 'skills/lark-cli/SKILL.md', content: LARK_CLI_SKILL, source: 'lark-cli-skill' },
+  ]
 }
 
-/** 收集 Lark 文档 */
-function collectLarkDocs(urls: string[]): CollectedArtifact[] {
-  return urls.map((url) => {
-    const { content, warning } = fetchLarkDoc(url)
-    const fileName = url.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') || 'lark-doc'
-    return {
-      path: `inputs/lark/${fileName}.md`,
-      content,
-      source: `lark:${url}`,
-      warning,
-    }
-  })
-}
+// ==================== Lark Wiki ====================
 
 /** 对 shell 双引号内的内容进行转义 */
 function escapeShellArg(s: string): string {
@@ -235,14 +365,20 @@ function readWikiDocContent(objToken: string): string {
   return content
 }
 
-/** 收集 Lark Wiki 空间文档 */
-function collectLarkWikiSpaces(spaceUrls: string[]): CollectedArtifact[] {
+/** 收集 Lark Wiki 空间文档全量快照 */
+function collectLarkWikiSpaces(nodes: Node[]): CollectedArtifact[] {
   const results: CollectedArtifact[] = []
-  for (const url of spaceUrls) {
+  const seenPaths = new Set<string>()
+  for (const node of nodes) {
+    const data = node.data as Record<string, any>
+    const zipPath = wikiArtifactPath(node)
+    if (seenPaths.has(zipPath)) continue
+    seenPaths.add(zipPath)
     try {
-      const { spaceId } = resolveSpaceId(url)
-      const docs = walkWikiTree(spaceId).slice(0, 200)
-      const parts: string[] = [`# Lark 知识库: ${url}\n`]
+      const { spaceId } = resolveSpaceId(data.spaceUrl)
+      const maxDocs = data.maxDocs || 200
+      const docs = walkWikiTree(spaceId).slice(0, maxDocs)
+      const parts: string[] = [`# Lark 知识库: ${data.spaceUrl}\n`]
       for (const doc of docs) {
         try {
           const content = readWikiDocContent(doc.objToken)
@@ -251,24 +387,24 @@ function collectLarkWikiSpaces(spaceUrls: string[]): CollectedArtifact[] {
           parts.push(`## ${doc.title}\n\n<!-- 读取失败: ${err.message} -->`)
         }
       }
-      const fileName = url.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') || 'wiki'
       results.push({
-        path: `inputs/lark/wiki/${fileName}.md`,
+        path: zipPath,
         content: parts.join('\n\n---\n\n'),
-        source: `lark-wiki:${url}`,
+        source: `lark-wiki:${data.spaceUrl}`,
       })
     } catch (err: any) {
-      const fileName = url.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') || 'wiki'
       results.push({
-        path: `inputs/lark/wiki/${fileName}.md`,
-        content: `<!-- Lark 知识库遍历失败: ${url} -->\n`,
-        source: `lark-wiki:${url}`,
+        path: zipPath,
+        content: `<!-- Lark 知识库遍历失败: ${data.spaceUrl} -->\n`,
+        source: `lark-wiki:${data.spaceUrl}`,
         warning: err.message,
       })
     }
   }
   return results
 }
+
+// ==================== Qdrant ====================
 
 /** 直接调用 Qdrant scroll API 拉取集合全部 payload.content */
 async function fetchQdrantCollectionContent(collectionName: string): Promise<string> {
@@ -309,21 +445,17 @@ async function collectKnowledgeSnapshots(
 ): Promise<CollectedArtifact[]> {
   const results: CollectedArtifact[] = []
   for (const name of collections) {
+    const zipPath = knowledgeArtifactPath(name)
     try {
       const content = await fetchQdrantCollectionContent(name)
       const size = Buffer.byteLength(content, 'utf-8')
       const warning = size > threshold
         ? `集合 ${name} 快照大小 ${(size / 1024 / 1024).toFixed(2)}MB，超过阈值 ${(threshold / 1024 / 1024).toFixed(0)}MB`
         : undefined
-      results.push({
-        path: `knowledge/${name.replace(/[^a-zA-Z0-9_-]+/g, '-')}.md`,
-        content,
-        source: `qdrant:${name}`,
-        warning,
-      })
+      results.push({ path: zipPath, content, source: `qdrant:${name}`, warning })
     } catch (err: any) {
       results.push({
-        path: `knowledge/${name.replace(/[^a-zA-Z0-9_-]+/g, '-')}.md`,
+        path: zipPath,
         content: `<!-- Qdrant 集合 ${name} 读取失败 -->\n`,
         source: `qdrant:${name}`,
         warning: err.message,
@@ -333,25 +465,23 @@ async function collectKnowledgeSnapshots(
   return results
 }
 
+// ==================== 汇总入口 ====================
+
 /** 收集所有需要真实内容的输入物 */
 export async function collectArtifacts(nodes: Node[], options: CollectOptions = {}): Promise<CollectedArtifact[]> {
-  const {
-    skills,
-    memories,
-    larkUrls,
-    larkWikiSpaces,
-    knowledgeCollections,
-  } = listCollectableArtifacts(nodes)
+  const plan = listCollectableArtifacts(nodes)
 
   const results: CollectedArtifact[] = []
-  results.push(...await collectSkills(skills))
-  results.push(...await collectMemories(memories))
-  results.push(...collectLarkDocs(larkUrls))
-  results.push(...collectLarkWikiSpaces(larkWikiSpaces))
+  results.push(...await collectUserInputs(plan.userInputNodes, plan.larkRefs))
+  results.push(...collectBMadAgents(plan.bmadNodes))
+  results.push(...collectLarkRefs(plan.larkRefs))
+  results.push(...await collectSkills(plan.skills))
+  results.push(...await collectMemories(plan.memoryNodes))
+  results.push(...collectLarkWikiSpaces(plan.wikiNodes))
 
   if (options.knowledgeStrategy !== 'api') {
     const threshold = options.snapshotThreshold ?? 2 * 1024 * 1024
-    results.push(...await collectKnowledgeSnapshots(knowledgeCollections, threshold))
+    results.push(...await collectKnowledgeSnapshots(plan.knowledgeCollections, threshold))
   }
 
   return results
