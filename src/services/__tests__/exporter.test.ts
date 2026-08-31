@@ -50,11 +50,13 @@ describe('导出物管理', () => {
   })
 
   it('openspec：输入节点生成拉取指引，生成节点同名 artifact 跳过', () => {
-    const { yaml } = buildOpenSpecWorkflow(nodes, edges, { name: '测试' })
+    const { yaml, workflowPath } = buildOpenSpecWorkflow(nodes, edges, { name: '测试' })
     expect(yaml).toContain('lark-cli')
     expect(yaml).toContain('design.md')
     // design artifact 只出现一次（agent 的 plan→design 被 lark 覆盖）
     const designCount = (yaml.match(/- id: design/g) || []).length
     expect(designCount).toBe(1)
+    // schema 路径为 openspec/schemas/<name>/schema.yaml
+    expect(workflowPath).toBe('openspec/schemas/测试/schema.yaml')
   })
 })

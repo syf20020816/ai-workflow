@@ -33,7 +33,7 @@ export const Route = createFileRoute('/api/export/zip')({
 
           const { yaml, workflowPath } = buildWorkflow(target, nodes, edges, exportOptions)
 
-          const [{ default: JSZip }, { collectArtifacts }] = await Promise.all([
+          const [{ default: JSZip }, { collectArtifacts, openSpecSchemaDir }] = await Promise.all([
             import('jszip'),
             import('#/services/artifactCollector'),
           ])
@@ -50,12 +50,25 @@ export const Route = createFileRoute('/api/export/zip')({
             snapshotThreshold: exportOptions.snapshotThreshold,
           })
 
+          // OpenSpec：输入物与 schema.yaml 同级（openspec/schemas/<name>/ 下）
+          // Speckit：输入物保持 zip 根目录（shell 步骤相对执行目录引用）
+          const prefix = target === 'openspec' ? `${openSpecSchemaDir(name || 'picop-workflow')}/` : ''
+
           for (const item of collected) {
-            zip.file(item.path, item.content)
+            zip.file(prefix + item.path, item.content)
             if (item.warning) logs.push(`警告: ${item.warning}`)
           }
 
-          // 3. 写入 manifest
+          // 3. OpenSpec 附加文件：config.yaml（默认 schema）+ changes/archive/ 目录
+          if (target === 'openspec') {
+            // schema 名与 openspec/schemas/<name>/ 目录名保持一致（同为 toStepId 清洗结果）
+            const schemaName = prefix.split('/').filter(Boolean).pop() || 'picop-workflow'
+            zip.file('openspec/config.yaml', `schema: ${schemaName}\n`)
+            zip.file('openspec/changes/archive/.gitkeep', '')
+            logs.push('已生成 openspec/config.yaml')
+          }
+
+          // 4. 写入 manifest
           const manifest = {
             name: name || 'picop-workflow',
             target,

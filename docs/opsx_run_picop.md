@@ -1,0 +1,423 @@
+# Picop 导出自定义工作流执行指南
+
+> Picop 是一个可视化工作流编排平台，导出 zip 包后在本地用 spec-kit 或 OpenSpec 工具链即可执行自定义工作流。
+>
+> 导出 zip 支持两种目标格式，各自有独立的执行方式，请根据实际导出目标选择对应章节。
+
+---
+
+## 1. 通用环境准备
+
+### 1.1 spec-kit CLI（两种格式均需要）
+
+```bash
+npm install -g @github/spec-kit
+specify --version
+```
+
+### 1.2 lark-cli（如果工作流引用了 Lark 节点）
+
+```bash
+npm install -g @lark-openapi/cli
+lark-cli auth login
+lark-cli auth status
+```
+
+> 如果工作流不包含 Lark 节点（`lark` / `larkTemplate` / `larkWikiTraversal`），可跳过 lark-cli 安装。
+
+### 1.3 解压 zip 包
+
+```bash
+unzip my-workflow.zip -d ./my-workflow
+cd ./my-workflow
+```
+
+### 1.4 查看 manifest
+
+```bash
+cat manifest.json
+```
+
+manifest 包含导出物来源与收集警告（如文件未持久化、快照超阈值等），建议先查看。
+
+---
+
+## 2. 目录结构
+
+zip 包内同时包含两种目标格式的目录，根据导出时选择的格式使用对应目录：
+
+```text
+my-workflow/
+├── specify/workflows/my-workflow/     # Specify 格式
+│   ├── workflow.yml                   # 主工作流文件
+│   ├── inputs/                        # 输入物
+│   │   ├── user-input/<node>.md       # 用户输入内容 + 提示词
+│   │   ├── user-input/<node>/files/   # 上传文件（可能为占位）
+│   │   └── urls.md                    # URL 链接清单（含 Lark 引用）
+│   ├── skills/<skillId>/SKILL.md      # Skill 节点文件
+│   ├── skills/lark-cli/SKILL.md       # Lark 使用技能指引
+│   ├── bmad/agents/<agent>.md        # BMad 角色定义
+│   ├── memory/memory.md              # 记忆文件
+│   ├── knowledge/<collection>.md     # Qdrant 知识库快照
+│   └── manifest.json                 # 导出清单
+│
+└── openspec/                            # OpenSpec 格式
+    ├── config.yaml                      # 默认 schema 配置（schema: <name>）
+    ├── schemas/my-workflow/
+    │   ├── schema.yaml                  # 工作流 schema
+    │   └── inputs/...                   # 输入物，结构与 Specify 一致
+    └── changes/
+        └── archive/                     # 变更归档目录
+```
+
+---
+
+## 3. Specify 格式（workflow.yml）
+
+Specify 格式导出为单一 `workflow.yml` 文件，由 spec-kit 引擎按步骤顺序执行，适合有明确控制流（门禁、分支、循环）的工作流。
+
+### 3.1 执行工作流
+
+```bash
+# 运行工作流
+specify workflow run ./specify/workflows/my-workflow/workflow.yml \
+  --input spec="你想要的实现功能描述"
+
+# 指定集成（默认 auto）
+specify workflow run ./workflow.yml \
+  --input spec="..." \
+  --input integration=claude
+```
+
+执行流程：
+
+1. 按 `workflow.yml` 中的 `steps` 顺序依次执行
+2. 遇到 `gate` 步骤暂停，等待人工审批后 `resume`
+3. 遇到 `shell` 步骤自动执行 shell 命令
+4. 遇到 `command` 步骤调用 speckit 命令生成产物
+
+### 3.2 运行状态与恢复
+
+```bash
+# 列出所有运行
+specify workflow status
+
+# 查看某个 run 的详细状态
+specify workflow status <run_id>
+
+# 从 gate 暂停点恢复
+specify workflow resume <run_id>
+
+# 从失败步骤恢复
+specify workflow resume <run_id> --from-failed
+
+# 恢复时携带审批结果
+specify workflow resume <run_id> --option approve
+```
+
+### 3.3 产物落盘
+
+执行过程中，各步骤生成的产物落盘到工作流目录同级：
+
+```text
+specify/workflows/my-workflow/
+├── workflow.yml        # 原始定义
+├── spec.md             # spec 步骤产物
+├── plan.md             # plan 步骤产物
+├── tasks.md            # tasks 步骤产物
+├── design.md           # data-model/contracts 等
+└── ...
+```
+
+### 3.4 输入物使用
+
+#### userInput 节点
+
+`inputs/user-input/<node>.md` 包含用户在编排时输入的文字和提示词。
+
+- 如果 `spec.md` 等产物已在导出时从 userInput 静态生成（workflow 有 `shell: cp` 步骤），可直接使用
+- 否则手动将内容复制到第一阶段产物，或修改 workflow.yml 引用文件
+
+#### 上传文件
+
+`inputs/user-input/<node>/files/` 下为上传文件。
+
+- 如果文件内容未持久化，zip 中为占位文件（标记 `<!-- 文件内容未持久化 -->`）
+- 需在本地手动补充对应文件
+
+#### Skill 节点
+
+`skills/<skillId>/SKILL.md` 是技能说明文件，workflow.yml 中的对应步骤会自动引用。
+
+#### BMad 角色
+
+`bmad/agents/<agent>.md` 是角色定义文件（系统提示词 + 职责描述），workflow.yml 中的步骤引用这些文件作为 context。
+
+#### 记忆文件
+
+`memory/memory.md` 是持久化的工作记忆，workflow 中的 `memory` 步骤会自动读取。
+
+#### Lark 文档引用
+
+`inputs/urls.md` 包含工作流引用的所有 Lark 文档 URL 链接。
+
+`skills/lark-cli/SKILL.md` 是 lark-cli 使用指引：
+
+```bash
+# 读取 Lark 文档内容（markdown 格式）
+lark-cli docs +fetch \
+  --doc "https://xxx.feishu.cn/docx/xxx" \
+  --doc-format markdown \
+  --jq '.data.document.content'
+```
+
+#### Lark 知识库快照
+
+`inputs/lark/wiki/<spaceName>.md` 包含知识库全量文档快照（上限 200 篇），可直接引用或全文搜索。
+
+#### Qdrant 知识库快照
+
+`knowledge/<collection>.md` 包含知识库集合的纯文本全量快照，可直接用于 LLM 上下文。
+
+### 3.5 高级用法
+
+#### 外部文档作为 spec 产物
+
+如果工作流中存在 Lark 节点标注了 `specStep`（如 lark 文档标注为 `plan`），导出的 workflow.yml 会包含 `shell` 步骤自动拉取文档：
+
+```yaml
+- id: fetch-plan
+  type: shell
+  run: >-
+    lark-cli docs +fetch --doc "https://xxx.feishu.cn/docx/xxx"
+    --doc-format markdown --jq '.data.document.content' > plan.md
+  timeout: 60
+```
+
+确保已安装 lark-cli 并登录，该步骤会自动执行。
+
+#### 并行步骤合并
+
+如果导出时勾选了「合并并行步骤」，同一拓扑层中完全相同的 command 步骤会合并为单个 step，减少 token 消耗。
+
+#### 修改工作流
+
+直接编辑 `workflow.yml` 即可调整步骤：
+
+```yaml
+steps:
+  - id: my-step
+    command: speckit.plan
+    model: "DoubaoSeed2.1"    # 指定模型
+    input:
+      args: "{{ steps.specify.output.file }}"
+```
+
+支持 11 种 step 类型：`command`、`prompt`、`shell`、`gate`、`init`、`if`、`switch`、`while`、`do-while`、`fan-out`、`fan-in`。
+
+---
+
+## 4. OpenSpec 格式（schema.yaml）
+
+OpenSpec 格式导出为 `openspec/` 目录：`schemas/<name>/schema.yaml`（工作流定义）+ 同级 `inputs/`（输入物）+ `config.yaml`（默认 schema 配置）。**schema.yaml 不是由引擎自动执行的，而是由 AI agent 读取并理解后，按 artifacts 依赖图逐个生成产物。**
+
+### 4.1 执行原理
+
+```
+schema.yaml 定义 artifacts 依赖图
+    │
+    ▼
+AI agent 读取 schema.yaml，理解 artifacts 顺序
+    │
+    ▼
+agent 按 requires 依赖逐个生成产物文件（proposal.md → design.md → tasks.md）
+    │
+    ▼
+agent 读取 schemas/<name>/inputs/ 目录下的输入物作为上下文
+    │
+    ▼
+产物落盘到 openspec/changes/<name>/
+```
+
+关键区别：
+
+- **Specify 格式**：有 `specify workflow run` 运行时引擎，steps 自动执行，gate 自动暂停
+- **OpenSpec 格式**：**没有运行时引擎**，`schema.yaml` 是给 AI agent 读的声明式指令，由 agent 理解并执行
+
+### 4.2 何时触发执行
+
+OpenSpec 工作流不是自动执行的，需要在 AI 聊天中通过**用户主动输入斜杠命令**触发：
+
+| 触发时机 | 命令 | 作用 |
+|---|---|---|
+| 开始一个新功能/变更 | `/opsx:propose <name>` | 创建变更目录，按 schema 生成全套产物 |
+| 实施任务清单 | `/opsx:apply` | 按 tasks.md 逐步实施 |
+| 验收后归档 | `/opsx:archive <name>` | Delta 合并到 specs/ 真相源 |
+
+**触发条件**：agent 工具（如 Claude Code、Copilot、Trae 等）必须内置了 OpenSpec 协议支持（即识别 `/opsx:*` 命令并理解 `artifacts`/`requires`/`generates` 语义），否则 schema.yaml 只是一个普通 YAML 文件。
+
+### 4.3 放置与配置
+
+将解压后的 `openspec/` 目录放置到项目根目录下。导出 zip 已按 OpenSpec 目录约定组织，无需手动搬移：
+
+```text
+openspec/
+├── config.yaml                      # 内容为 schema: <name>，指定默认 schema
+├── schemas/<name>/schema.yaml       # 工作流定义（OpenSpec 从该目录发现 schema）
+└── changes/
+    └── archive/                     # 变更归档目录
+```
+
+```bash
+# 验证 schema 是否可识别
+openspec schema which <name>
+
+# 验证 schema 结构与模板
+openspec schema validate <name>
+```
+
+> 如果目标项目尚未初始化 OpenSpec，先执行 `openspec init`，再将导出的 `openspec/` 内容合并进去。
+
+### 4.4 执行工作流
+
+在 AI 聊天中通过斜杠命令驱动执行：
+
+```text
+# 用户输入斜杠命令 → agent 读取 schema.yaml → 按依赖图生成产物
+# 产物文件按 schema.yaml 中 artifacts 定义的 generates 字段落盘
+/opsx:propose my-workflow
+
+# 按 tasks.md 实施
+/opsx:apply
+
+# 归档完成变更（Delta 合并到 specs/ 真相源）
+/opsx:archive my-workflow
+```
+
+执行流程：
+
+1. 用户输入 `/opsx:propose my-workflow`
+2. agent 读取 `openspec/schemas/my-workflow/schema.yaml`
+3. 按 `artifacts[].requires` 解析依赖顺序（无依赖的 artifact 先生成）
+4. 按顺序读取每个 artifact 的 `instruction`，将其作为 AI 生成指令
+5. 生成产物文件写入 `openspec/changes/my-workflow/<generates>`
+6. 产物落盘后，用户可查看并继续 `/opsx:apply` 实施
+
+### 4.5 产物落盘
+
+执行过程中，各 artifact 按 schema 定义顺序生成，产物落盘到 `openspec/changes/my-workflow/`：
+
+```text
+openspec/changes/my-workflow/
+├── proposal.md          # 提案产物
+├── design.md            # 设计产物
+├── tasks.md             # 任务清单产物
+└── specs/               # 增量规格目录
+    └── <domain>/
+        └── spec.md
+
+# 输入物在 schema 目录下（非变更产物目录）：
+# openspec/schemas/my-workflow/inputs/...
+```
+
+### 4.6 输入物使用
+
+#### 静态输入（userInput / BMad / Memory）
+
+`openspec/schemas/<name>/inputs/` 目录下的文件与 Specify 格式结构一致（路径前缀不同），AI 助手在生成产物时按 `instruction` 中的指引读取这些文件作为上下文。
+
+#### Lark 文档引用
+
+`openspec/schemas/<name>/inputs/urls.md` 中的 Lark 文档 URL 由 AI 助手根据 `lark-cli` 技能指引自行拉取。schema 中对应 artifact 的 `instruction` 字段会包含拉取指引：
+
+```yaml
+- id: plan
+  generates: design.md
+  instruction: |
+    使用 lark-cli 拉取文档内容
+    （lark-cli docs +fetch --doc "https://xxx.feishu.cn/docx/xxx" --doc-format markdown）
+    并原样保存为 design.md，不要自行生成或改写内容。
+```
+
+#### 知识库快照
+
+`openspec/schemas/<name>/knowledge/<collection>.md` 由 AI 助手在生成相关产物时自动读取。
+
+### 4.7 自定义 schema
+
+如需调整 artifact 依赖关系或指令，直接编辑 `openspec/schemas/<name>/schema.yaml`：
+
+```yaml
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    instruction: |
+      Create a proposal explaining WHY this change is needed.
+      Focus on the problem, not the solution.
+    requires: []
+
+  - id: design
+    generates: design.md
+    instruction: |
+      Create a design document explaining HOW to implement.
+    requires: [proposal]
+
+  - id: tasks
+    generates: tasks.md
+    requires: [design]
+
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+```
+
+---
+
+## 5. 常见问题
+
+### Q: 运行时报错 `speckit.xxx command not found`
+
+A: 确保已安装 speckit 命令集：
+
+```bash
+specify extension add speckit
+specify extension list
+```
+
+### Q: lark 节点拉取失败
+
+A: 确认 lark-cli 已登录且文档 URL 可访问：
+
+```bash
+lark-cli auth status
+lark-cli docs +fetch --doc "文档URL" --doc-format markdown --jq '.data.document.content' | head
+```
+
+### Q: Skill 文件未找到
+
+A: 确认 zip 中包含对应 skill：
+
+```bash
+ls skills/
+```
+
+如果缺少，检查导出时 manifest.json 中是否有对应警告，然后在本地手动补充。
+
+### Q: 知识库快照过大
+
+A: 快照超过 2MB 时会在 manifest.json 中警告。可以：
+
+- 在导出时选择「HTTPS API 访问」策略（需要平台 API 可访问）
+- 或手动裁剪快照文件
+
+### Q: 需要重新导出
+
+A: 回到 Picop 平台修改工作流后重新导出 zip，覆盖本地目录即可。
+
+---
+
+## 参考
+
+- [spec-kit Workflows 文档](https://github.com/github/spec-kit/tree/main/workflows)
+- [lark-cli 文档](https://github.com/larksuite/lark-cli)
+- [OpenSpec 文档](https://github.com/Fission-AI/OpenSpec)

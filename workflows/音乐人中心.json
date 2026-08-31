@@ -123,7 +123,8 @@
       "data": {
         "title": "Lark文档节点",
         "action": "write",
-        "url": "https://lizhi2021.feishu.cn/wiki/TLUhwkobfi4nJzkunHVcXhZPnyb"
+        "url": "https://lizhi2021.feishu.cn/wiki/TLUhwkobfi4nJzkunHVcXhZPnyb",
+        "specStep": "plan"
       },
       "measured": {
         "width": 160,
@@ -259,6 +260,6 @@
       "id": "xy-edge__144fb7bc-cc43-433b-a9b3-6bdb3254a0e4-c9b5e271-313c-47ed-89e6-9b01bc6c99f3"
     }
   ],
-  "createdAt": "2026-08-19T06:31:53.340Z",
-  "updatedAt": "2026-08-19T06:31:53.340Z"
+  "createdAt": "2026-08-28T10:13:16.106Z",
+  "updatedAt": "2026-08-28T10:13:16.106Z"
 }

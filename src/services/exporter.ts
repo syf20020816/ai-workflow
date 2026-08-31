@@ -505,8 +505,13 @@ export function buildSpecKitWorkflow(
   return { yaml, workflowPath }
 }
 
-/** 输入类节点 → OpenSpec artifact 的拉取指引 */
-function buildOpenSpecFetchInstruction(node: Node, artifactId: string): string {
+/** OpenSpec schema 在 zip 内的目录（输入物与 schema.yaml 同级存放） */
+export function openSpecSchemaDir(workflowName: string): string {
+  return `openspec/schemas/${toStepId(workflowName, 'picop-workflow')}`
+}
+
+/** 输入类节点 → OpenSpec artifact 的拉取指引（schemaDir 为输入物所在目录前缀） */
+function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir: string): string {
   const data = node.data as Record<string, any>
   const file = `${artifactId}.md`
   switch (node.type) {
@@ -517,22 +522,22 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string): string {
       return `使用 lark-cli 拉取文档内容（lark-cli docs +fetch --doc "${url}" --doc-format markdown）并原样保存为 ${file}，不要自行生成或改写内容。`
     }
     case NodeTypes.SKILL:
-      return `读取导出的 ${skillArtifactPath(String(data.skillId || ''))} 文件内容并保存为 ${file}。`
+      return `读取导出的 ${schemaDir}/${skillArtifactPath(String(data.skillId || ''))} 文件内容并保存为 ${file}。`
     case NodeTypes.MEMORY:
-      return `读取导出的 ${memoryArtifactPath(node)} 文件内容并保存为 ${file}。`
+      return `读取导出的 ${schemaDir}/${memoryArtifactPath(node)} 文件内容并保存为 ${file}。`
     case NodeTypes.BMAD_AGENT:
-      return `读取导出的 ${bmadArtifactPath(node)} 文件内容并保存为 ${file}。`
+      return `读取导出的 ${schemaDir}/${bmadArtifactPath(node)} 文件内容并保存为 ${file}。`
     case NodeTypes.LARK_WIKI_TRAVERSAL:
-      return `读取导出的 ${wikiArtifactPath(node)} 快照内容并保存为 ${file}。`
+      return `读取导出的 ${schemaDir}/${wikiArtifactPath(node)} 快照内容并保存为 ${file}。`
     case NodeTypes.KNOWLEDGE_RETRIEVAL:
-      return `读取导出的 knowledge/*.md 快照内容并整理保存为 ${file}。`
+      return `读取导出的 ${schemaDir}/knowledge/*.md 快照内容并整理保存为 ${file}。`
     default:
       return `Create the ${file} document for this change.`
   }
 }
 
 /** 把节点解析为 OpenSpec artifact */
-function nodeToArtifact(node: Node): Record<string, unknown> | null {
+function nodeToArtifact(node: Node, schemaDir: string): Record<string, unknown> | null {
   if (GATE_NODE_TYPES.has(node.type || '')) return null
   const artifactId = resolveOpenSpecArtifactId(node)
   if (!artifactId) return null
@@ -543,7 +548,7 @@ function nodeToArtifact(node: Node): Record<string, unknown> | null {
 
   // 输入类节点：产物由外部资源/导出文件提供，instruction 改为拉取指引
   if (isSpecStepProvider(node)) {
-    instruction = buildOpenSpecFetchInstruction(node, artifactId)
+    instruction = buildOpenSpecFetchInstruction(node, artifactId, schemaDir)
   }
 
   return {
@@ -575,6 +580,9 @@ export function buildOpenSpecWorkflow(
     if (artifactId) providedArtifactIds.add(artifactId)
   }
 
+  const name = options.name?.trim() || 'picop-workflow'
+  const schemaDir = openSpecSchemaDir(name)
+
   const artifacts: Record<string, unknown>[] = []
   const seen = new Set<string>()
   for (const node of sorted) {
@@ -582,7 +590,7 @@ export function buildOpenSpecWorkflow(
     if (!isSpecStepProvider(node) && providedArtifactIds.has(resolveOpenSpecArtifactId(node) || '')) {
       continue
     }
-    const artifact = nodeToArtifact(node)
+    const artifact = nodeToArtifact(node, schemaDir)
     if (!artifact) continue
     if (seen.has(artifact.id as string)) continue
     seen.add(artifact.id as string)
@@ -593,7 +601,6 @@ export function buildOpenSpecWorkflow(
     a.requires = i === 0 ? [] : [artifacts[i - 1].id as string]
   })
 
-  const name = options.name?.trim() || 'picop-workflow'
   const doc: Record<string, unknown> = {
     name: toStepId(name, 'picop-workflow'),
     version: 1,
@@ -610,7 +617,8 @@ export function buildOpenSpecWorkflow(
   }
 
   const yaml = dump(doc, { lineWidth: -1, noRefs: true })
-  const workflowPath = `openspec/changes/${toStepId(name, 'picop-workflow')}/schema.yml`
+  // schema 放 openspec/schemas/<name>/schema.yaml，输入物同级存放
+  const workflowPath = `${schemaDir}/schema.yaml`
 
   return { yaml, workflowPath }
 }
