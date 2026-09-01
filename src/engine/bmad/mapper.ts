@@ -231,7 +231,7 @@ export function generateExecutionPlan(
   )
 
   for (const entry of entryNodes) {
-    plan.push(`📥 输入: ${(entry.data as any)?.title || entry.type}`)
+    plan.push(`输入: ${(entry.data as any)?.title || entry.type}`)
   }
 
   // 按阶段排序技能
@@ -242,7 +242,7 @@ export function generateExecutionPlan(
 
   for (const skill of sortedSkills) {
     const phaseInfo = getPhaseInfo(skill.phase)
-    plan.push(`🔧 [${phaseInfo.label}] ${skill.displayName}: ${skill.description}`)
+    plan.push(`[${phaseInfo.label}] ${skill.displayName}: ${skill.description}`)
   }
 
   // 确定终点
@@ -250,7 +250,7 @@ export function generateExecutionPlan(
     (n) => !edges.some((e) => e.source === n.id),
   )
   for (const exit of exitNodes) {
-    plan.push(`📤 输出: ${(exit.data as any)?.title || exit.type}`)
+    plan.push(`输出: ${(exit.data as any)?.title || exit.type}`)
   }
 
   return plan

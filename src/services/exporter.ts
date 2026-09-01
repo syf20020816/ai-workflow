@@ -3,7 +3,8 @@
  *
  * 把平台画布节点/连线翻译为外部可执行格式：
  * - Speckit：workflow.yml（命令步骤流水线）
- * - OpenSpec：schema.yaml 语义的内容，按约定放在 openspec/changes/<name>/workflow.yml
+ * - OpenSpec：schema.yaml（artifacts 依赖图，含类型兜底与 tasks 自动补全）
+ * - Spec：workflow.yaml（同构 artifacts 依赖图，只认手动 specStep 标注，无需安装框架）
  *
  * 本文件只包含纯函数，不涉及 fs/path 等 Node 内置模块，可在前端或后端使用。
  */
@@ -20,7 +21,7 @@ import {
   NODE_TYPE_TO_OPENSPEC,
 } from '#/services/specMap'
 
-export type ExportTarget = 'speckit' | 'openspec'
+export type ExportTarget = 'speckit' | 'openspec' | 'spec'
 
 export interface ExportOptions {
   /** 工作流/变更名称 */
@@ -59,11 +60,6 @@ function getSpecStep(node: Node): SpecStepKey | undefined {
 /** 解析节点应使用的 Speckit 命令 */
 function resolveSpeckitCommand(node: Node): string | undefined {
   return SPEC_STEP_TO_SPECKIT.get(getSpecStep(node) as SpecStepKey) || NODE_TYPE_TO_SPECKIT.get(node.type || '')
-}
-
-/** 解析节点应映射到的 OpenSpec artifact id */
-function resolveOpenSpecArtifactId(node: Node): string | undefined {
-  return SPEC_STEP_TO_OPENSPEC.get(getSpecStep(node) as SpecStepKey) || NODE_TYPE_TO_OPENSPEC.get(node.type || '')
 }
 
 /** 需要转成 gate 门禁步骤的节点类型 */
@@ -583,20 +579,6 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir
   }
 }
 
-/** 输入类节点（标注 specStep）→ OpenSpec 拉取型 artifact */
-function nodeToArtifact(node: Node, schemaDir: string): Record<string, unknown> | null {
-  const artifactId = resolveOpenSpecArtifactId(node)
-  if (!artifactId) return null
-  const title = (node.data as any)?.title || artifactId
-  return {
-    id: artifactId,
-    generates: `${artifactId}.md`,
-    description: title,
-    instruction: buildOpenSpecFetchInstruction(node, artifactId, schemaDir),
-    requires: [] as string[],
-  }
-}
-
 /** 沿边 BFS 查找最近的满足条件的节点（向上找处理节点 / 向下找注入目标） */
 function findNearestNode(
   start: Node,
@@ -739,19 +721,42 @@ function buildProcessingInstruction(
   return parts.join('\n\n')
 }
 
-/** 平台节点/连线 → OpenSpec schema 文本与配套产物 */
-export function buildOpenSpecWorkflow(
+/** Spec 导出：变更目录（md 产物与输入物所在层级） */
+export function specChangeDir(workflowName: string): string {
+  return `spec/changes/${toStepId(workflowName, 'picop-workflow')}`
+}
+
+/** artifacts 流水线配置（OpenSpec 与 Spec 导出共用） */
+interface ArtifactsPipelineConfig {
+  /** artifact id 解析：'openspec' 用映射表（plan→design），'step' 直接用 specStep key（plan→plan） */
+  artifactIdMode: 'openspec' | 'step'
+  /** 未标注 specStep 的处理节点是否用类型兜底产出 artifact（Spec 导出为 false，只认手动标注） */
+  typeFallback: boolean
+  /** lark write 节点是否必须标注 specStep 才参与挂接（Spec 导出为 true） */
+  writeNeedsSpecStep: boolean
+  /** 链尾是否自动补全 tasks artifact（Spec 导出为 false） */
+  autoTasks: boolean
+  /** 输入物所在目录前缀（instruction 引用路径） */
+  schemaDir: string
+}
+
+/**
+ * artifacts 依赖图构建流水线（OpenSpec / Spec 导出共用）：
+ * 输入节点（标注 specStep）→ 拉取型 artifact；处理节点 → 生成型 artifact；
+ * lark write → 反向挂接投递；bmadAgent → 角色注入；可选 tasks 自动补全。
+ */
+function buildArtifactsPipeline(
   nodes: Node[],
   edges: Edge[],
-  options: ExportOptions = {},
-): ExportResult {
+  config: ArtifactsPipelineConfig,
+): Record<string, unknown>[] {
   const { sortedIds } = topologicalSort(nodes, edges)
   const sorted = sortedIds
     .map((id) => nodes.find((n) => n.id === id))
     .filter((n): n is Node => Boolean(n))
 
-  const name = options.name?.trim() || 'picop-workflow'
-  const schemaDir = openSpecSchemaDir(name)
+  const stepToArtifactId = (step: SpecStepKey): string =>
+    config.artifactIdMode === 'openspec' ? SPEC_STEP_TO_OPENSPEC.get(step) || step : step
 
   // 前驱 / 后继邻接表
   const preds = new Map<string, string[]>()
@@ -770,6 +775,7 @@ export function buildOpenSpecWorkflow(
   const orphanWrites: Array<{ url: string; mode: string; title: string }> = []
   for (const node of sorted) {
     if (!isLarkWriteNode(node)) continue
+    if (config.writeNeedsSpecStep && !getSpecStep(node)) continue
     const url = (node.data as any)?.url
     if (!url) continue
     const mode = ((node.data as any)?.writeMode === 'append' ? 'append' : 'overwrite')
@@ -791,7 +797,7 @@ export function buildOpenSpecWorkflow(
   const providedArtifactIds = new Set<string>()
   for (const node of sorted) {
     if (!isSpecStepProvider(node)) continue
-    const artifactId = SPEC_STEP_TO_OPENSPEC.get(getSpecStep(node)!)
+    const artifactId = stepToArtifactId(getSpecStep(node)!)
     if (artifactId) providedArtifactIds.add(artifactId)
   }
 
@@ -805,34 +811,37 @@ export function buildOpenSpecWorkflow(
     if (node.type === NodeTypes.KNOWLEDGE_STORE) continue // 输出型节点，不产出 artifact
     if (node.type === NodeTypes.ANSWER) continue // 交互问答 gate
 
-    // userInput + specStep：静态内容直接作为产物（优先于 gate 跳过）
+    // userInput + specStep：静态内容直接作为产物
     if (node.type === NodeTypes.USER_INPUT) {
       const step = getSpecStep(node)
       if (!step) continue
-      const artifactId = SPEC_STEP_TO_OPENSPEC.get(step)
+      const artifactId = stepToArtifactId(step)
       if (!artifactId || seenIds.has(artifactId)) continue
-      const title = (node.data as any)?.title || artifactId
       seenIds.add(artifactId)
-      const artifact = {
+      artifacts.push({
         id: artifactId,
         generates: `${artifactId}.md`,
-        description: title,
-        instruction: buildOpenSpecFetchInstruction(node, artifactId, schemaDir),
+        description: (node.data as any)?.title || artifactId,
+        instruction: buildOpenSpecFetchInstruction(node, artifactId, config.schemaDir),
         requires: [] as string[],
-      }
-      artifacts.push(artifact)
+      })
       continue
     }
 
     // 输入类节点（lark read / skill / memory / bmad / wiki / 知识库）：标注 specStep 时产出拉取型 artifact
     if (isInputNode(node)) {
-      if (!getSpecStep(node)) continue
-      const artifact = nodeToArtifact(node, schemaDir)
-      if (!artifact) continue
-      const id = artifact.id as string
-      if (seenIds.has(id)) continue
-      seenIds.add(id)
-      artifacts.push(artifact)
+      const step = getSpecStep(node)
+      if (!step) continue
+      const artifactId = stepToArtifactId(step)
+      if (!artifactId || seenIds.has(artifactId)) continue
+      seenIds.add(artifactId)
+      artifacts.push({
+        id: artifactId,
+        generates: `${artifactId}.md`,
+        description: (node.data as any)?.title || artifactId,
+        instruction: buildOpenSpecFetchInstruction(node, artifactId, config.schemaDir),
+        requires: [] as string[],
+      })
       continue
     }
 
@@ -842,24 +851,25 @@ export function buildOpenSpecWorkflow(
     const mountedStep = mountSpecStep.get(node.id)
     // artifact id 解析优先级：自身 specStep > 反向挂接 specStep > 类型兜底 > 标题 slug
     let artifactId: string
-    if (ownStep) artifactId = SPEC_STEP_TO_OPENSPEC.get(ownStep) || nodeSlug(node, 'artifact')
-    else if (mountedStep) artifactId = SPEC_STEP_TO_OPENSPEC.get(mountedStep) || nodeSlug(node, 'artifact')
-    else artifactId = NODE_TYPE_TO_OPENSPEC.get(node.type || '') || nodeSlug(node, 'artifact')
+    if (ownStep) artifactId = stepToArtifactId(ownStep) || nodeSlug(node, 'artifact')
+    else if (mountedStep) artifactId = stepToArtifactId(mountedStep) || nodeSlug(node, 'artifact')
+    else if (config.typeFallback)
+      artifactId = NODE_TYPE_TO_OPENSPEC.get(node.type || '') || nodeSlug(node, 'artifact')
+    else continue // Spec 导出：只认手动标注
     // 类型兜底 id 被占用时（多个 agent 争抢 proposal），降级为标题 slug
     if (seenIds.has(artifactId)) artifactId = nodeSlug(node, 'artifact')
     if (seenIds.has(artifactId)) continue
     // specStep 产物已由输入节点提供（拉取型优先）→ 跳过生成
     if ((ownStep || mountedStep) && providedArtifactIds.has(artifactId)) continue
 
-    const title = (node.data as any)?.title || artifactId
     const artifact = {
       id: artifactId,
       generates: `${artifactId}.md`,
-      description: title,
+      description: (node.data as any)?.title || artifactId,
       instruction: buildProcessingInstruction(
         node,
         artifactId,
-        schemaDir,
+        config.schemaDir,
         preds,
         nodeMap,
         deliveries.get(node.id) || [],
@@ -880,7 +890,7 @@ export function buildOpenSpecWorkflow(
     const data = node.data as Record<string, any>
     const roleHeader =
       `## 角色\n以 ${data.role || 'BMad Agent'}（${data.agentId || node.id}）身份执行：` +
-      `${data.roleDescription || data.systemPrompt || ''}\n完整角色定义见 ${schemaDir}/${bmadArtifactPath(node)}\n\n`
+      `${data.roleDescription || data.systemPrompt || ''}\n完整角色定义见 ${config.schemaDir}/${bmadArtifactPath(node)}\n\n`
     artifact.instruction = roleHeader + artifact.instruction
   }
 
@@ -902,23 +912,44 @@ export function buildOpenSpecWorkflow(
     })
   }
 
-  // ---- 6. tasks artifact 自动补全：保证 /opsx:apply 可执行 ----
-  const hasTasks = seenIds.has('tasks') || sorted.some((n) => getSpecStep(n) === 'tasks')
-  if (!hasTasks && artifacts.length > 0) {
-    const lastId = artifacts[artifacts.length - 1].id as string
-    seenIds.add('tasks')
-    artifacts.push({
-      id: 'tasks',
-      generates: 'tasks.md',
-      description: '实施任务清单（自动补全）',
-      instruction: `基于 ${lastId}.md 拆解出可勾选的实施任务清单（- [ ] 1.x 子任务格式，含验收标准引用）。`,
-      requires: [] as string[],
-    })
+  // ---- 6. tasks artifact 自动补全：保证 /opsx:apply 可执行（OpenSpec 专属） ----
+  if (config.autoTasks) {
+    const hasTasks = seenIds.has('tasks') || sorted.some((n) => getSpecStep(n) === 'tasks')
+    if (!hasTasks && artifacts.length > 0) {
+      const lastId = artifacts[artifacts.length - 1].id as string
+      seenIds.add('tasks')
+      artifacts.push({
+        id: 'tasks',
+        generates: 'tasks.md',
+        description: '实施任务清单（自动补全）',
+        instruction: `基于 ${lastId}.md 拆解出可勾选的实施任务清单（- [ ] 1.x 子任务格式，含验收标准引用）。`,
+        requires: [] as string[],
+      })
+    }
   }
 
   // ---- 7. requires 依赖链（拓扑顺序） ----
   artifacts.forEach((a, i) => {
     a.requires = i === 0 ? [] : [artifacts[i - 1].id as string]
+  })
+
+  return artifacts
+}
+
+/** 平台节点/连线 → OpenSpec schema 文本与配套产物 */
+export function buildOpenSpecWorkflow(
+  nodes: Node[],
+  edges: Edge[],
+  options: ExportOptions = {},
+): ExportResult {
+  const name = options.name?.trim() || 'picop-workflow'
+  const schemaDir = openSpecSchemaDir(name)
+  const artifacts = buildArtifactsPipeline(nodes, edges, {
+    artifactIdMode: 'openspec',
+    typeFallback: true,
+    writeNeedsSpecStep: false,
+    autoTasks: true,
+    schemaDir,
   })
 
   const doc: Record<string, unknown> = {
@@ -944,6 +975,41 @@ export function buildOpenSpecWorkflow(
   return { yaml, workflowPath }
 }
 
+/**
+ * Spec 导出：与 OpenSpec 同构的 artifacts 依赖图，差异：
+ * - artifact id 直接用 specStep key（plan.md 而非 design.md）
+ * - 只认手动标注 specStep 的节点，不做类型兜底 / tasks 自动补全
+ * - 无 openspec 目录约定（config.yaml / archive），无需安装框架，任意 agent 读 workflow.yaml 即可执行
+ */
+export function buildSpecWorkflow(
+  nodes: Node[],
+  edges: Edge[],
+  options: ExportOptions = {},
+): ExportResult {
+  const name = options.name?.trim() || 'picop-workflow'
+  const changeDir = specChangeDir(name)
+  const artifacts = buildArtifactsPipeline(nodes, edges, {
+    artifactIdMode: 'step',
+    typeFallback: false,
+    writeNeedsSpecStep: true,
+    autoTasks: false,
+    schemaDir: changeDir,
+  })
+
+  const doc: Record<string, unknown> = {
+    name: toStepId(name, 'picop-workflow'),
+    version: 1,
+    description: name,
+    artifacts,
+  }
+
+  const yaml = dump(doc, { lineWidth: -1, noRefs: true })
+  // workflow.yaml 放 spec/changes/<name>/specs/<domain>/（domain 为导出时用户定义的工作流名）
+  const workflowPath = `${changeDir}/specs/${toStepId(name, 'picop-workflow')}/workflow.yaml`
+
+  return { yaml, workflowPath }
+}
+
 /** 解析目标平台生成主工作流文件 */
 export function buildWorkflow(
   target: ExportTarget,
@@ -951,9 +1017,9 @@ export function buildWorkflow(
   edges: Edge[],
   options: ExportOptions = {},
 ): ExportResult {
-  return target === 'openspec'
-    ? buildOpenSpecWorkflow(nodes, edges, options)
-    : buildSpecKitWorkflow(nodes, edges, options)
+  if (target === 'openspec') return buildOpenSpecWorkflow(nodes, edges, options)
+  if (target === 'spec') return buildSpecWorkflow(nodes, edges, options)
+  return buildSpecKitWorkflow(nodes, edges, options)
 }
 
 // ==================== 输入物收集规划（纯函数，供 artifactCollector 消费） ====================

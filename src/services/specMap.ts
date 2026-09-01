@@ -13,7 +13,7 @@ import type { SpecStepKey } from '#/constants/spec'
 
 // ==================== 平台定义 ====================
 
-export type SpecTarget = 'picop' | 'speckit' | 'openspec'
+export type SpecTarget = 'picop' | 'speckit' | 'openspec' | 'spec'
 
 export interface SpecTargetOption {
   key: SpecTarget
@@ -41,6 +41,12 @@ export const SPEC_TARGETS: SpecTargetOption[] = [
     key: 'openspec',
     label: 'OpenSpec',
     description: 'schema.yaml：artifacts 依赖图（proposal/design/tasks…）',
+    ext: 'yml',
+  },
+  {
+    key: 'spec',
+    label: 'Spec',
+    description: 'workflow.yaml：artifacts 依赖图（spec/plan/tasks…），无需安装框架',
     ext: 'yml',
   },
 ]
@@ -116,27 +122,33 @@ export const SPECKIT_COMMAND_TO_NODE = new Map<string, string>([
   ['speckit.implement', NodeTypes.CODE_AGENT],
 ])
 
-/** OpenSpec artifact → 平台阶段标记 */
+/** OpenSpec artifact → 平台阶段标记（含 Spec 导出的 step-key artifact id） */
 export const OPENSPEC_ARTIFACT_TO_STEP = new Map<string, SpecStepKey>([
   ['proposal', 'spec'],
+  ['spec', 'spec'],
   ['research', 'research'],
   ['design', 'plan'],
+  ['plan', 'plan'],
   ['data-model', 'data-model'],
   ['contracts', 'contracts'],
   ['adr', 'adr'],
   ['tasks', 'tasks'],
+  ['report', 'report'],
   ['review', 'report'],
 ])
 
-/** OpenSpec artifact → 平台节点类型 */
+/** OpenSpec artifact → 平台节点类型（含 Spec 导出的 step-key artifact id） */
 export const OPENSPEC_ARTIFACT_TO_NODE = new Map<string, string>([
   ['proposal', NodeTypes.AGENT],
+  ['spec', NodeTypes.AGENT],
   ['research', NodeTypes.AGENT],
   ['design', NodeTypes.AGENT],
+  ['plan', NodeTypes.AGENT],
   ['data-model', NodeTypes.AGENT],
   ['contracts', NodeTypes.AGENT],
   ['adr', NodeTypes.AGENT],
   ['tasks', NodeTypes.TASK_PLANNER],
+  ['report', NodeTypes.SELF_CHECK],
   ['review', NodeTypes.SELF_CHECK],
 ])
 

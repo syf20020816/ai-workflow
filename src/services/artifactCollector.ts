@@ -28,7 +28,7 @@ import {
 } from '#/services/exporter'
 
 // re-export：zip 导出 API 经动态 import 从本模块取用
-export { openSpecSchemaDir } from '#/services/exporter'
+export { openSpecSchemaDir, specChangeDir } from '#/services/exporter'
 
 const SKILLS_DIR = path.resolve(process.cwd(), 'workflows/skills')
 const MEMORY_FILE = path.resolve(process.cwd(), 'memory/memory.md')

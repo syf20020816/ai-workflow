@@ -33,10 +33,11 @@ export const Route = createFileRoute('/api/export/zip')({
 
           const { yaml, workflowPath } = buildWorkflow(target, nodes, edges, exportOptions)
 
-          const [{ default: JSZip }, { collectArtifacts, openSpecSchemaDir }] = await Promise.all([
-            import('jszip'),
-            import('#/services/artifactCollector'),
-          ])
+          const [{ default: JSZip }, { collectArtifacts, openSpecSchemaDir, specChangeDir }] =
+            await Promise.all([
+              import('jszip'),
+              import('#/services/artifactCollector'),
+            ])
 
           const zip = new JSZip()
 
@@ -51,8 +52,15 @@ export const Route = createFileRoute('/api/export/zip')({
           })
 
           // OpenSpec：输入物与 schema.yaml 同级（openspec/schemas/<name>/ 下）
+          // Spec：输入物在变更目录（spec/changes/<name>/ 下，md 产物同级）
           // Speckit：输入物保持 zip 根目录（shell 步骤相对执行目录引用）
-          const prefix = target === 'openspec' ? `${openSpecSchemaDir(name || 'picop-workflow')}/` : ''
+          const workflowName = name || 'picop-workflow'
+          const prefix =
+            target === 'openspec'
+              ? `${openSpecSchemaDir(workflowName)}/`
+              : target === 'spec'
+                ? `${specChangeDir(workflowName)}/`
+                : ''
 
           for (const item of collected) {
             zip.file(prefix + item.path, item.content)
