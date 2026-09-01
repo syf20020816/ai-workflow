@@ -56,7 +56,82 @@ describe('导出物管理', () => {
     // design artifact 只出现一次（agent 的 plan→design 被 lark 覆盖）
     const designCount = (yaml.match(/- id: design/g) || []).length
     expect(designCount).toBe(1)
+    // userInput + specStep 产出拉取型 artifact（静态内容作为产物）
+    expect(yaml).toMatch(/- id: proposal[\s\S]*?inputs\/user-input\//)
     // schema 路径为 openspec/schemas/<name>/schema.yaml
     expect(workflowPath).toBe('openspec/schemas/测试/schema.yaml')
+    // apply 跟踪 tasks.md
+    expect(yaml).toContain('tracks: tasks.md')
+  })
+
+  it('openspec：处理节点产出生成型 artifact + lark write 反向挂接 + tasks 自动补全', () => {
+    // singer-center 结构复刻：userInput → lark read → agent → codeAgent → lark write(specStep=plan)
+    const scNodes = [
+      makeNode('input-1', 'userInput', { input: { prompt: '需求描述' } }),
+      makeNode('lark-read', 'lark', { url: 'https://x.feishu.cn/wiki/read' }),
+      makeNode('memory-1', 'memory', { memoryPath: 'memory/memory.md' }),
+      makeNode('agent-1', 'agent', { title: '需求文档梳理' }),
+      makeNode('bmad-1', 'bmadAgent', {
+        role: 'Senior Software Engineer',
+        agentId: 'Amelia',
+        roleDescription: 'Test-first discipline',
+      }),
+      makeNode('skill-1', 'skill', { skillId: '前端技术文档编写指南' }),
+      makeNode('code-1', 'codeAgent', {
+        title: '代码分析',
+        instruction: '分析项目代码输出技术文档',
+        projectPath: '/path/to/singer-center',
+        branch: 'master',
+      }),
+      makeNode('lark-write', 'lark', { action: 'write', url: 'https://x.feishu.cn/wiki/target', specStep: 'plan' }),
+    ]
+    const scEdges = [
+      makeEdge('input-1', 'lark-read'),
+      makeEdge('lark-read', 'agent-1'),
+      makeEdge('memory-1', 'agent-1'),
+      makeEdge('agent-1', 'code-1'),
+      makeEdge('bmad-1', 'code-1'),
+      makeEdge('skill-1', 'code-1'),
+      makeEdge('code-1', 'lark-write'),
+    ]
+
+    const { yaml } = buildOpenSpecWorkflow(scNodes, scEdges, { name: '音乐人中心' })
+
+    // agent → proposal artifact（类型兜底），instruction 含输入上下文引用
+    expect(yaml).toContain('- id: proposal')
+    expect(yaml).toContain('## 输入上下文')
+    expect(yaml).toContain('inputs/user-input/')
+    expect(yaml).toContain('lark-cli docs +fetch')
+    expect(yaml).toContain('memory/memory.md')
+
+    // codeAgent 经 lark write 反向挂接获得 design artifact，instruction 含角色/路径/投递
+    expect(yaml).toContain('- id: design')
+    expect(yaml).toContain('## 角色')
+    expect(yaml).toContain('Amelia')
+    expect(yaml).toContain('/path/to/singer-center')
+    expect(yaml).toContain('lark-cli docs +update --doc "https://x.feishu.cn/wiki/target" --command overwrite')
+    expect(yaml).toContain('@design.md')
+
+    // skill 引用注入 codeAgent 上下文
+    expect(yaml).toContain('skills/前端技术文档编写指南/SKILL.md')
+
+    // lark write 不产出独立 artifact、不被当作输入源
+    expect(yaml).not.toContain('- id: deliver')
+
+    // tasks 自动补全 + apply 跟踪
+    expect(yaml).toContain('自动补全')
+    expect(yaml).toContain('tracks: tasks.md')
+    expect(yaml).toContain('apply:\n  requires:\n    - tasks\n  tracks: tasks.md')
+  })
+
+  it('speckit：lark write 生成投递 shell 步骤（不生成拉取步骤）', () => {
+    const scNodes = [
+      makeNode('code-1', 'codeAgent', { instruction: '分析代码' }),
+      makeNode('lark-write', 'lark', { action: 'write', url: 'https://x.feishu.cn/wiki/target', specStep: 'plan' }),
+    ]
+    const { yaml } = buildSpecKitWorkflow(scNodes, [makeEdge('code-1', 'lark-write')], { name: '测试' })
+    expect(yaml).toContain('lark-cli docs +update --doc "https://x.feishu.cn/wiki/target" --command overwrite --content @plan.md')
+    // write 节点不被当作输入源拉取
+    expect(yaml).not.toContain('+fetch')
   })
 })

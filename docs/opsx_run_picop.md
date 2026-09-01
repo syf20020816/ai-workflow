@@ -320,6 +320,13 @@ openspec/changes/my-workflow/
 # openspec/schemas/my-workflow/inputs/...
 ```
 
+导出器对处理节点与输出节点的映射规则：
+
+- **处理节点**（agent / codeAgent / taskPlanner / selfCheck 等）产出生成型 artifact，instruction 由节点配置翻译，并自动列出上游输入物的引用路径（`## 输入上下文`）；
+- **lark write 节点**（`action: write`）不产出独立 artifact，而是把「生成后用 `lark-cli docs +update --command overwrite/append` 写入目标文档」的投递指令追加到上游处理节点的 instruction（`## 产物投递`）；
+- **BMad 角色节点**不产出 artifact，角色约束注入下游处理节点的 instruction 头部（`## 角色`）；
+- 画布上没有 tasks 产物节点时，导出器自动在链尾补全 `tasks` artifact，`apply` 跟踪 `tasks.md`，保证 `/opsx:apply` 可执行。
+
 ### 4.6 输入物使用
 
 #### 静态输入（userInput / BMad / Memory）

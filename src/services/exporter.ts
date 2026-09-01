@@ -83,11 +83,39 @@ const INPUT_NODE_TYPES = new Set<string>([
   NodeTypes.KNOWLEDGE_RETRIEVAL,
 ])
 
+/** lark 输出节点（action=write）：产物投递目标，非输入源 */
+function isLarkWriteNode(node: Node): boolean {
+  return node.type === NodeTypes.LARK && (node.data as any)?.action === 'write'
+}
+
+/** 输入类节点判定（lark write 属于输出节点，排除） */
+function isInputNode(node: Node): boolean {
+  return INPUT_NODE_TYPES.has(node.type || '') && !isLarkWriteNode(node)
+}
+
+/**
+ * 处理类节点：产出「生成型 artifact」，instruction 由节点 data 翻译。
+ * （answer 是交互问答，归入 gate；knowledgeStore 是输出型节点）
+ */
+const PROCESSING_NODE_TYPES = new Set<string>([
+  NodeTypes.AGENT,
+  NodeTypes.CODE_AGENT,
+  NodeTypes.TASK_PLANNER,
+  NodeTypes.SELF_CHECK,
+  NodeTypes.KEYWORD_AGENT,
+  NodeTypes.AI_OUTPUT,
+])
+
+/** 处理类节点判定 */
+function isProcessingNode(node: Node): boolean {
+  return PROCESSING_NODE_TYPES.has(node.type || '')
+}
+
 /** 输入类节点（含 userInput）是否标注了 specStep */
 function isSpecStepProvider(node: Node): boolean {
   return Boolean(
     getSpecStep(node) &&
-    (INPUT_NODE_TYPES.has(node.type || '') || node.type === NodeTypes.USER_INPUT),
+    (isInputNode(node) || node.type === NodeTypes.USER_INPUT),
   )
 }
 
@@ -286,8 +314,25 @@ function nodeToSteps(node: Node, index: number): Record<string, unknown>[] {
     return [gate]
   }
 
+  // lark write 输出节点：生成产物投递 shell 步骤（把 specStep 产物写入飞书文档）
+  if (isLarkWriteNode(node)) {
+    const url = data?.url
+    const specStep = getSpecStep(node)
+    const fileName = specStep ? SPEC_STEP_TO_ARTIFACT_FILE[specStep] : undefined
+    if (!url || !fileName) return []
+    const mode = data?.writeMode === 'append' ? 'append' : 'overwrite'
+    return [
+      {
+        id: toStepId(`deliver-${data?.title || ''}`, `deliver-${index + 1}`),
+        type: 'shell',
+        run: `lark-cli docs +update --doc "${url}" --command ${mode} --content @${fileName} --doc-format markdown`,
+        timeout: 60,
+      },
+    ]
+  }
+
   // 输入类节点：内容随 zip 文件提供；标注 specStep 时生成运行时拉取步骤
-  if (INPUT_NODE_TYPES.has(node.type || '')) {
+  if (isInputNode(node)) {
     const specStep = getSpecStep(node)
     if (!specStep) return []
     const fetch = buildFetchStep(node, specStep, index)
@@ -450,8 +495,8 @@ export function buildSpecKitWorkflow(
 
     const nodeSteps = nodeToSteps(node, i)
     if (nodeSteps.length === 0) {
-      // 输入节点不映射为 command 步骤属预期行为，不计入控制节点跳过数
-      if (!INPUT_NODE_TYPES.has(node.type || '')) skipped++
+      // 输入/输出节点不映射为 command 步骤属预期行为，不计入控制节点跳过数
+      if (!isInputNode(node) && !isLarkWriteNode(node)) skipped++
       return
     }
     for (const step of nodeSteps) {
@@ -531,34 +576,167 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir
       return `读取导出的 ${schemaDir}/${wikiArtifactPath(node)} 快照内容并保存为 ${file}。`
     case NodeTypes.KNOWLEDGE_RETRIEVAL:
       return `读取导出的 ${schemaDir}/knowledge/*.md 快照内容并整理保存为 ${file}。`
+    case NodeTypes.USER_INPUT:
+      return `读取导出的 ${schemaDir}/${userInputArtifactPath(node)} 内容并整理保存为 ${file}。`
     default:
       return `Create the ${file} document for this change.`
   }
 }
 
-/** 把节点解析为 OpenSpec artifact */
+/** 输入类节点（标注 specStep）→ OpenSpec 拉取型 artifact */
 function nodeToArtifact(node: Node, schemaDir: string): Record<string, unknown> | null {
-  if (GATE_NODE_TYPES.has(node.type || '')) return null
   const artifactId = resolveOpenSpecArtifactId(node)
   if (!artifactId) return null
-
   const title = (node.data as any)?.title || artifactId
-  const data = node.data as Record<string, any>
-  let instruction = data?.instruction || ''
-
-  // 输入类节点：产物由外部资源/导出文件提供，instruction 改为拉取指引
-  if (isSpecStepProvider(node)) {
-    instruction = buildOpenSpecFetchInstruction(node, artifactId, schemaDir)
-  }
-
   return {
     id: artifactId,
     generates: `${artifactId}.md`,
     description: title,
-    instruction:
-      instruction || `Create the ${artifactId} document for this change (platform node: ${title}).`,
-    requires: [],
+    instruction: buildOpenSpecFetchInstruction(node, artifactId, schemaDir),
+    requires: [] as string[],
   }
+}
+
+/** 沿边 BFS 查找最近的满足条件的节点（向上找处理节点 / 向下找注入目标） */
+function findNearestNode(
+  start: Node,
+  neighbors: Map<string, string[]>,
+  nodeMap: Map<string, Node>,
+  predicate: (n: Node) => boolean,
+): Node | null {
+  const visited = new Set<string>([start.id])
+  const queue = [...(neighbors.get(start.id) || [])]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    const n = nodeMap.get(id)
+    if (!n) continue
+    if (predicate(n)) return n
+    queue.push(...(neighbors.get(id) || []))
+  }
+  return null
+}
+
+/** 输入类节点的导出物引用文本（供处理节点 instruction 的「输入上下文」引用） */
+function inputNodeRef(node: Node, schemaDir: string): string | undefined {
+  const data = node.data as Record<string, any>
+  switch (node.type) {
+    case NodeTypes.LARK:
+    case NodeTypes.LARK_TEMPLATE: {
+      if (isLarkWriteNode(node)) return undefined
+      const url = data.url || data.templateUrl
+      if (!url) return undefined
+      return `Lark 文档「${data.title || url}」：${url}（lark-cli docs +fetch --doc "${url}" --doc-format markdown 拉取）`
+    }
+    case NodeTypes.SKILL:
+      return data.skillId
+        ? `${schemaDir}/${skillArtifactPath(String(data.skillId))}（技能指引：${data.skillName || data.skillId}）`
+        : undefined
+    case NodeTypes.MEMORY:
+      return `${schemaDir}/${memoryArtifactPath(node)}（项目记忆）`
+    case NodeTypes.LARK_WIKI_TRAVERSAL:
+      return `${schemaDir}/${wikiArtifactPath(node)}（Lark Wiki 快照）`
+    case NodeTypes.KNOWLEDGE_RETRIEVAL: {
+      const names = resolveKnowledgeCollections(node)
+      return names.length > 0
+        ? `${schemaDir}/knowledge/*.md（知识库快照：${names.join(', ')}）`
+        : undefined
+    }
+    case NodeTypes.USER_INPUT:
+      return `${schemaDir}/${userInputArtifactPath(node)}（用户输入）`
+    default:
+      return undefined
+  }
+}
+
+/** 收集节点的全部上游输入类节点引用（沿边递归遍历祖先） */
+function collectUpstreamInputRefs(
+  node: Node,
+  preds: Map<string, string[]>,
+  nodeMap: Map<string, Node>,
+  schemaDir: string,
+): string[] {
+  const refs: string[] = []
+  const visited = new Set<string>([node.id])
+  const queue = [...(preds.get(node.id) || [])]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    const n = nodeMap.get(id)
+    if (!n) continue
+    const ref = inputNodeRef(n, schemaDir)
+    if (ref) refs.push(ref)
+    queue.push(...(preds.get(id) || []))
+  }
+  return refs
+}
+
+/** 处理类节点 → 生成型 artifact 的 instruction */
+function buildProcessingInstruction(
+  node: Node,
+  artifactId: string,
+  schemaDir: string,
+  preds: Map<string, string[]>,
+  nodeMap: Map<string, Node>,
+  nodeDeliveries: Array<{ url: string; mode: string }>,
+): string {
+  const data = node.data as Record<string, any>
+  const title = data?.title || artifactId
+  const parts: string[] = []
+
+  switch (node.type) {
+    case NodeTypes.CODE_AGENT: {
+      const lines = [data.instruction || data.description || '分析项目代码并输出技术文档。']
+      if (data.projectPath) {
+        lines.push(
+          `项目路径：${data.projectPath}${data.branch ? `（分支 ${data.branch}）` : ''}，本地执行时直接读取项目源码。`,
+        )
+      }
+      parts.push(lines.join('\n'))
+      break
+    }
+    case NodeTypes.TASK_PLANNER:
+      parts.push(
+        [
+          data.instruction || '',
+          `基于上游产物拆解出可勾选的实施任务清单（- [ ] 1.x 子任务格式，含验收标准引用）。`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      )
+      break
+    case NodeTypes.SELF_CHECK:
+      parts.push(
+        [
+          data.instruction || '',
+          '对全部已产出文档执行跨产物一致性检查，输出问题清单与修订建议。',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      )
+      break
+    default:
+      parts.push(data.instruction || data.description || `完成「${title}」并输出 ${artifactId}.md。`)
+  }
+
+  // 输入上下文：上游输入类节点（含本节点内嵌 userInput 静态输入）的导出物引用
+  const refs = collectUpstreamInputRefs(node, preds, nodeMap, schemaDir)
+  const embedded = data.input?.label || data.input?.prompt || data.input?.files?.length || data.input?.urls?.length
+  if (embedded) refs.unshift(`${schemaDir}/${userInputArtifactPath(node)}（本节点输入）`)
+  if (refs.length > 0) {
+    parts.push('## 输入上下文\n' + refs.map((r) => `- ${r}`).join('\n'))
+  }
+
+  // 产物投递：lark write 反向挂接到本节点
+  for (const d of nodeDeliveries) {
+    parts.push(
+      `## 产物投递\n生成完成后使用 lark-cli 将 ${artifactId}.md 全文写入飞书文档：\nlark-cli docs +update --doc "${d.url}" --command ${d.mode} --content @${artifactId}.md --doc-format markdown`,
+    )
+  }
+
+  return parts.join('\n\n')
 }
 
 /** 平台节点/连线 → OpenSpec schema 文本与配套产物 */
@@ -572,7 +750,44 @@ export function buildOpenSpecWorkflow(
     .map((id) => nodes.find((n) => n.id === id))
     .filter((n): n is Node => Boolean(n))
 
-  // 输入节点提供的 specStep：生成节点的同名 artifact 跳过，以输入节点为准
+  const name = options.name?.trim() || 'picop-workflow'
+  const schemaDir = openSpecSchemaDir(name)
+
+  // 前驱 / 后继邻接表
+  const preds = new Map<string, string[]>()
+  const succs = new Map<string, string[]>()
+  for (const edge of edges) {
+    if (!preds.has(edge.target)) preds.set(edge.target, [])
+    preds.get(edge.target)!.push(edge.source)
+    if (!succs.has(edge.source)) succs.set(edge.source, [])
+    succs.get(edge.source)!.push(edge.target)
+  }
+  const nodeMap = new Map(sorted.map((n) => [n.id, n]))
+
+  // ---- 1. lark write 反向挂接：找上游最近处理节点，specStep 与投递指令转移给它 ----
+  const mountSpecStep = new Map<string, SpecStepKey>()
+  const deliveries = new Map<string, Array<{ url: string; mode: string }>>()
+  const orphanWrites: Array<{ url: string; mode: string; title: string }> = []
+  for (const node of sorted) {
+    if (!isLarkWriteNode(node)) continue
+    const url = (node.data as any)?.url
+    if (!url) continue
+    const mode = ((node.data as any)?.writeMode === 'append' ? 'append' : 'overwrite')
+    const upstream = findNearestNode(node, preds, nodeMap, isProcessingNode)
+    if (upstream) {
+      const list = deliveries.get(upstream.id) || []
+      list.push({ url, mode })
+      deliveries.set(upstream.id, list)
+      const step = getSpecStep(node)
+      if (step && !getSpecStep(upstream) && !mountSpecStep.has(upstream.id)) {
+        mountSpecStep.set(upstream.id, step)
+      }
+    } else {
+      orphanWrites.push({ url, mode, title: (node.data as any)?.title || node.id })
+    }
+  }
+
+  // ---- 2. 输入节点提供的 specStep（拉取型 artifact 优先） ----
   const providedArtifactIds = new Set<string>()
   for (const node of sorted) {
     if (!isSpecStepProvider(node)) continue
@@ -580,23 +795,128 @@ export function buildOpenSpecWorkflow(
     if (artifactId) providedArtifactIds.add(artifactId)
   }
 
-  const name = options.name?.trim() || 'picop-workflow'
-  const schemaDir = openSpecSchemaDir(name)
-
+  // ---- 3. 生成 artifacts：输入拉取型 + 处理生成型 ----
   const artifacts: Record<string, unknown>[] = []
-  const seen = new Set<string>()
+  const seenIds = new Set<string>()
+  const artifactByNode = new Map<string, Record<string, unknown>>()
+
   for (const node of sorted) {
-    // 生成节点的 specStep 已由输入节点提供 → 跳过，输入节点会产出该 artifact
-    if (!isSpecStepProvider(node) && providedArtifactIds.has(resolveOpenSpecArtifactId(node) || '')) {
+    if (isLarkWriteNode(node)) continue // 已反向挂接 / 降级为独立 delivery artifact
+    if (node.type === NodeTypes.KNOWLEDGE_STORE) continue // 输出型节点，不产出 artifact
+    if (node.type === NodeTypes.ANSWER) continue // 交互问答 gate
+
+    // userInput + specStep：静态内容直接作为产物（优先于 gate 跳过）
+    if (node.type === NodeTypes.USER_INPUT) {
+      const step = getSpecStep(node)
+      if (!step) continue
+      const artifactId = SPEC_STEP_TO_OPENSPEC.get(step)
+      if (!artifactId || seenIds.has(artifactId)) continue
+      const title = (node.data as any)?.title || artifactId
+      seenIds.add(artifactId)
+      const artifact = {
+        id: artifactId,
+        generates: `${artifactId}.md`,
+        description: title,
+        instruction: buildOpenSpecFetchInstruction(node, artifactId, schemaDir),
+        requires: [] as string[],
+      }
+      artifacts.push(artifact)
       continue
     }
-    const artifact = nodeToArtifact(node, schemaDir)
-    if (!artifact) continue
-    if (seen.has(artifact.id as string)) continue
-    seen.add(artifact.id as string)
+
+    // 输入类节点（lark read / skill / memory / bmad / wiki / 知识库）：标注 specStep 时产出拉取型 artifact
+    if (isInputNode(node)) {
+      if (!getSpecStep(node)) continue
+      const artifact = nodeToArtifact(node, schemaDir)
+      if (!artifact) continue
+      const id = artifact.id as string
+      if (seenIds.has(id)) continue
+      seenIds.add(id)
+      artifacts.push(artifact)
+      continue
+    }
+
+    // 处理类节点：生成型 artifact
+    if (!isProcessingNode(node)) continue
+    const ownStep = getSpecStep(node)
+    const mountedStep = mountSpecStep.get(node.id)
+    // artifact id 解析优先级：自身 specStep > 反向挂接 specStep > 类型兜底 > 标题 slug
+    let artifactId: string
+    if (ownStep) artifactId = SPEC_STEP_TO_OPENSPEC.get(ownStep) || nodeSlug(node, 'artifact')
+    else if (mountedStep) artifactId = SPEC_STEP_TO_OPENSPEC.get(mountedStep) || nodeSlug(node, 'artifact')
+    else artifactId = NODE_TYPE_TO_OPENSPEC.get(node.type || '') || nodeSlug(node, 'artifact')
+    // 类型兜底 id 被占用时（多个 agent 争抢 proposal），降级为标题 slug
+    if (seenIds.has(artifactId)) artifactId = nodeSlug(node, 'artifact')
+    if (seenIds.has(artifactId)) continue
+    // specStep 产物已由输入节点提供（拉取型优先）→ 跳过生成
+    if ((ownStep || mountedStep) && providedArtifactIds.has(artifactId)) continue
+
+    const title = (node.data as any)?.title || artifactId
+    const artifact = {
+      id: artifactId,
+      generates: `${artifactId}.md`,
+      description: title,
+      instruction: buildProcessingInstruction(
+        node,
+        artifactId,
+        schemaDir,
+        preds,
+        nodeMap,
+        deliveries.get(node.id) || [],
+      ),
+      requires: [] as string[],
+    }
+    seenIds.add(artifactId)
     artifacts.push(artifact)
+    artifactByNode.set(node.id, artifact)
   }
 
+  // ---- 4. bmadAgent 角色注入：无 specStep 的角色节点，约束注入下游最近处理节点 ----
+  for (const node of sorted) {
+    if (node.type !== NodeTypes.BMAD_AGENT || getSpecStep(node)) continue
+    const target = findNearestNode(node, succs, nodeMap, isProcessingNode)
+    const artifact = target ? artifactByNode.get(target.id) : undefined
+    if (!artifact) continue
+    const data = node.data as Record<string, any>
+    const roleHeader =
+      `## 角色\n以 ${data.role || 'BMad Agent'}（${data.agentId || node.id}）身份执行：` +
+      `${data.roleDescription || data.systemPrompt || ''}\n完整角色定义见 ${schemaDir}/${bmadArtifactPath(node)}\n\n`
+    artifact.instruction = roleHeader + artifact.instruction
+  }
+
+  // ---- 5. 无上游处理节点的 lark write：降级为独立 delivery artifact ----
+  for (const w of orphanWrites) {
+    if (artifacts.length === 0) break
+    const id = toStepId(`deliver-${w.title}`, 'deliver')
+    if (seenIds.has(id)) continue
+    seenIds.add(id)
+    artifacts.push({
+      id,
+      generates: `${id}.md`,
+      description: `将上游产物写入飞书文档（${w.title}）`,
+      instruction:
+        `读取上游产物文档全文，使用 lark-cli 写入飞书文档：\n` +
+        `lark-cli docs +update --doc "${w.url}" --command ${w.mode} --content @<上游产物文件> --doc-format markdown\n` +
+        `本步骤不产生新内容，仅投递。`,
+      requires: [] as string[],
+    })
+  }
+
+  // ---- 6. tasks artifact 自动补全：保证 /opsx:apply 可执行 ----
+  const hasTasks = seenIds.has('tasks') || sorted.some((n) => getSpecStep(n) === 'tasks')
+  if (!hasTasks && artifacts.length > 0) {
+    const lastId = artifacts[artifacts.length - 1].id as string
+    seenIds.add('tasks')
+    artifacts.push({
+      id: 'tasks',
+      generates: 'tasks.md',
+      description: '实施任务清单（自动补全）',
+      instruction: `基于 ${lastId}.md 拆解出可勾选的实施任务清单（- [ ] 1.x 子任务格式，含验收标准引用）。`,
+      requires: [] as string[],
+    })
+  }
+
+  // ---- 7. requires 依赖链（拓扑顺序） ----
   artifacts.forEach((a, i) => {
     a.requires = i === 0 ? [] : [artifacts[i - 1].id as string]
   })
@@ -609,10 +929,11 @@ export function buildOpenSpecWorkflow(
   }
 
   if (artifacts.length > 0) {
-    const last = artifacts[artifacts.length - 1]
+    // apply 优先跟踪 tasks（/opsx:apply 按任务清单实施）
+    const tracked = artifacts.find((a) => a.id === 'tasks') || artifacts[artifacts.length - 1]
     doc.apply = {
-      requires: [last.id as string],
-      tracks: `${last.id}.md`,
+      requires: [tracked.id as string],
+      tracks: `${tracked.id}.md`,
     }
   }
 
@@ -685,7 +1006,7 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
       bmadNodes.push(node)
     }
     if (node.type === NodeTypes.MEMORY) memoryNodes.push(node)
-    if (node.type === NodeTypes.LARK && data.url) {
+    if (node.type === NodeTypes.LARK && data.url && !isLarkWriteNode(node)) {
       larkRefs.push({ url: data.url, kind: 'doc', title: data.title || node.id })
     }
     if (node.type === NodeTypes.LARK_TEMPLATE && data.templateUrl) {
