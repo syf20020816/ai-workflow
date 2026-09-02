@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=8192' vite dev --port 3030 && cd picop-docs && npm run dev --port 3031",
+    "dev": "NODE_OPTIONS='--max-old-space-size=8192' vite dev --port 3030",
     "runner": "node runner/server.mjs",
     "generate-routes": "tsr generate",
     "build": "vite build",

@@ -14,16 +14,32 @@ AI Workflow 是一个基于 **BMad Method** + **Lark CLI** 构建的轻量化 **
 本项目是一个**设计时（Design-time）编排平台**，不是最终工作流的运行时：
 
 1. **编排** — 用可视化 DAG 画布组合 21 种节点，并在 Spec 模式下用脚印按钮标记每个节点的输出属于哪个工作流阶段（功能规格 / 技术方案 / 任务清单 / 自检报告…）。
-2. **验证** — 平台内置的轻量 Agent 仅用于验证编排是否正确（单节点调试 / PIN 固定 / 断点续跑 / 输出检查）。复杂 Agent 交给专业的 Codex / Claude Code 等工具。
+2. **验证** — 在画布上运行工作流验证编排是否正确（单节点调试 / PIN 固定 / 断点续跑 / 输出检查）。AI 类节点的执行由用户本机上的 AI CLI 工具（Claude Code / Codex / DeepSeek）完成，平台不内置也不配置模型。
 3. **导出** — 编排与验证通过后，把工作流导出为 `workflow.yml`（类 speckit 格式），放入自己的 **Codex / Trae / Claude Code** 中执行。
 
 > **Spec 分工（边界清晰）**：平台**不生产 `specs/` 目录**——那是 openspec / speckit 等专业 spec 框架的职责。平台只做**阶段标记**（`specStep`），导出后的 `workflow.yml` 携带标记，spec 框架据此自动生成 `specs/` 目录。
+
+### 执行架构：本地 Runner
+
+平台前端只做编排，所有"副作用"执行（AI / Lark / 文件）通过本机一个零依赖的 Runner 服务（`runner/server.mjs`，监听 `127.0.0.1:7523`）：
+
+```
+浏览器/前端（控制面-编排）──HTTP(127.0.0.1:7523)──► 本地 Runner 服务
+                                                    │
+                                                    ├─ 子进程跑 lark-cli / claude / codex / deepseek
+                                                    └─ 读写用户本地文件
+```
+
+- 平台不持有任何模型凭据、不做 shell 执行、不访问用户文件系统——凭据与订阅全留在用户机器
+- 服务器部署只需托管前端静态产物，无 API Key、无 model.conf，天然解决多用户共享凭据与服务器无法访问用户本地文件的问题
+- 使用前需本机启动 Runner：在 `ai-workflow` 目录执行 `npm run runner`
 
 ## 设计哲学
 
 | 原则 | 说明 |
 |------|------|
-| 不自建复杂 Agent 运行时 | 内置简单 Agent 只用于编排验证；最终执行交给用户自己的 Codex / Trae / Claude Code |
+| 控制面 / 执行面分离 | 平台只做编排与结果展示，执行统一走本机 Runner |
+| 不配置模型 | AI 类节点复用用户本机的 Claude Code / Codex / DeepSeek，凭据全留本地 |
 | 不重复造 Spec 框架 | 阶段标记（specStep）由平台负责，specs/ 目录由 openspec / speckit 等专业框架生成 |
 | 编辑器即验证台 | 所见即所得，支持单节点调试、PIN 固定、断点续跑 |
 | PIN 机制 | 满足迭代调试场景，避免重复消耗 Token |
@@ -37,12 +53,15 @@ AI Workflow 是一个基于 **BMad Method** + **Lark CLI** 构建的轻量化 **
 - **画布**: React Flow 12 (`@xyflow/react`)
 - **状态**: Zustand 5 + Immer 11
 - **样式**: Sass (SCSS Modules)
-- **服务端**: Node.js + TanStack Router Server Functions
-- **AI SDK**: Vercel AI SDK（`ai` + `@ai-sdk/openai`）
+- **服务端**: Node.js + TanStack Router Server Functions（前端侧）
+- **本地执行**: `runner/server.mjs`（零依赖 Node 本地 Runner）
 
 ## 项目结构
 
 ```
+runner/
+└── server.mjs               # 本地 Runner 服务（127.0.0.1:7523）
+                             #   /ping /tools /agent-cli /task/:id /lark /fs/*
 src/
 ├── engine/
 │   ├── workflow.ts           # DAG 执行引擎（拓扑排序 + 分层并行 + 上下文累积）
@@ -58,7 +77,7 @@ src/
 │   ├── file-editor/          # 文件编辑器（含 CodeEditor / MdPreview）
 │   └── ...
 ├── services/                # 共享服务（前后端共用）
-│   ├── ai.ts                # AI 调用封装（callAI）
+│   ├── runner.ts            # 前端直连本地 Runner（探测/提交 AI 任务/轮询日志）
 │   ├── upstreamContext.ts   # 上游累积上下文构建
 │   └── ...
 ├── store/                   # Zustand 全局状态

@@ -9,8 +9,8 @@ hero:
     - text: 快速入门
       link: /tutorial/quickstart
 features:
-  - title: 不自建复杂 Agent 运行时
-    description: 内置简单 Agent 只用于编排验证；最终执行交给用户自己的 Codex / Trae / Claude Code
+  - title: 不内置也不配置模型
+    description: AI 类节点直接复用用户本机的 Claude Code / Codex / DeepSeek，执行靠本地 Runner，凭据全留用户机器
   - title: 不重复造 Spec 框架
     description: 阶段标记（specStep）由平台负责，specs/ 目录由 openspec / speckit 等专业框架生成
   - title: 编辑器即验证台
