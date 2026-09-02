@@ -57,6 +57,8 @@ interface FileTreeProps {
   selectedKey?: string
   onSelect: (key: string) => void
   onRename: (path: string) => void
+  onCreate: (type: 'file' | 'directory', relativePath: string) => void
+  onDelete: (relativePath: string) => void
 }
 
 const TreeNodeRow = React.memo<{
@@ -65,7 +67,15 @@ const TreeNodeRow = React.memo<{
   selectedKey?: string
   onSelect: (key: string) => void
   onRename: (path: string) => void
-}>(({ node, depth, selectedKey, onSelect, onRename }) => {
+  onCreate: (type: 'file' | 'directory', relativePath: string) => void
+  onDelete: (relativePath: string) => void
+}>(({ node, depth, selectedKey, onSelect, onRename, onCreate, onDelete }) => {
+  // 目录的右键操作路径；文件取其所在目录
+  const dirPath = node.contextPath
+    ? node.contextPath.endsWith('/')
+      ? node.contextPath
+      : node.contextPath + '/'
+    : ''
   const [expanded, setExpanded] = useState(true)
 
   const hasChildren = node.children && node.children.length > 0
@@ -78,9 +88,26 @@ const TreeNodeRow = React.memo<{
 
   const menuItems: MenuProps['items'] = [
     {
+      key: "createFile",
+      label: "创建文件",
+      disabled: node.isLeaf,
+      onClick: () => onCreate('file', dirPath),
+    },
+    {
+      key: "createDir",
+      label: "创建目录",
+      disabled: node.isLeaf,
+      onClick: () => onCreate('directory', dirPath),
+    },
+    {
       key: 'rename',
       label: '重命名',
       onClick: () => onRename(node.contextPath),
+    },
+    {
+      key: 'delete',
+      label: '删除',
+      onClick: () => onDelete(node.contextPath),
     },
   ]
 
@@ -131,6 +158,8 @@ const TreeNodeRow = React.memo<{
               selectedKey={selectedKey}
               onSelect={onSelect}
               onRename={onRename}
+              onCreate={onCreate}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -140,7 +169,7 @@ const TreeNodeRow = React.memo<{
 })
 
 const FileTree = React.memo<FileTreeProps>(
-  ({ nodes, selectedKey, onSelect, onRename }) => {
+  ({ nodes, selectedKey, onSelect, onRename, onCreate, onDelete }) => {
     return (
       <div className={styles.fileTree}>
         {nodes.map((node) => (
@@ -151,6 +180,8 @@ const FileTree = React.memo<FileTreeProps>(
             selectedKey={selectedKey}
             onSelect={onSelect}
             onRename={onRename}
+            onCreate={onCreate}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -264,9 +295,12 @@ export const FileEditor = () => {
   }, [])
 
   // --- 创建目录/文件 ---
-  const openCreateModal = (type: 'file' | 'directory') => {
+  const openCreateModal = (
+    type: 'file' | 'directory',
+    basePath = '',
+  ) => {
     setCreateType(type)
-    setCreatePath('')
+    setCreatePath(basePath) // 目录内创建时预填目标目录前缀
     setCreateModalOpen(true)
   }
 
@@ -346,6 +380,46 @@ export const FileEditor = () => {
       message.error(`重命名失败: ${err.message}`)
     }
   }
+
+  // --- 删除 ---
+  const handleDelete = useCallback((relativePath: string) => {
+    Modal.confirm({
+      title: '删除确认',
+      content: `确定要删除「${relativePath}」吗？此操作不可恢复。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await fetch('/api/editor/fs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', path: relativePath }),
+          })
+          const data = await res.json()
+          if (data.status === 'success') {
+            message.success('已删除')
+            // 关闭被删除文件的编辑器
+            setActiveFile((cur) => {
+              if (
+                cur &&
+                (cur.path === relativePath ||
+                  cur.path.startsWith(relativePath + '/'))
+              ) {
+                return null
+              }
+              return cur
+            })
+            fetchList()
+          } else {
+            message.error(data.error || '删除失败')
+          }
+        } catch (err: any) {
+          message.error(`删除失败: ${err.message}`)
+        }
+      },
+    })
+  }, [])
 
   /** 将路径分割后构建嵌套树节点 */
   const makeTreeFromFiles = (files: FileGroup['files']): TreeNodeItem[] => {
@@ -503,6 +577,8 @@ export const FileEditor = () => {
                 selectedKey={activeFile?.path}
                 onSelect={handleTreeSelect}
                 onRename={handleTreeRename}
+                onCreate={openCreateModal}
+                onDelete={handleDelete}
               />
             ) : (
               <div className={styles.emptyState}>

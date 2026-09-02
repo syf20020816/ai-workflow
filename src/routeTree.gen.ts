@@ -16,8 +16,6 @@ import { Route as ApiPromptsRouteImport } from './routes/api/prompts'
 import { Route as ApiSkillRouteImport } from './routes/api/skill'
 import { Route as ApiWorkflowsRouteImport } from './routes/api/workflows'
 import { Route as ApiBmadAgentsRouteImport } from './routes/api/bmad/agents'
-import { Route as ApiDocsAssetRouteImport } from './routes/api/docs/asset'
-import { Route as ApiDocsListRouteImport } from './routes/api/docs/list'
 import { Route as ApiEditorContentRouteImport } from './routes/api/editor/content'
 import { Route as ApiEditorFsRouteImport } from './routes/api/editor/fs'
 import { Route as ApiEditorListRouteImport } from './routes/api/editor/list'
@@ -75,16 +73,6 @@ const ApiWorkflowsRoute = ApiWorkflowsRouteImport.update({
 const ApiBmadAgentsRoute = ApiBmadAgentsRouteImport.update({
   id: '/api/bmad/agents',
   path: '/api/bmad/agents',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDocsAssetRoute = ApiDocsAssetRouteImport.update({
-  id: '/api/docs/asset',
-  path: '/api/docs/asset',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDocsListRoute = ApiDocsListRouteImport.update({
-  id: '/api/docs/list',
-  path: '/api/docs/list',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEditorContentRoute = ApiEditorContentRouteImport.update({
@@ -212,8 +200,6 @@ export interface FileRoutesByFullPath {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
-  '/api/docs/asset': typeof ApiDocsAssetRoute
-  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -246,8 +232,6 @@ export interface FileRoutesByTo {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
-  '/api/docs/asset': typeof ApiDocsAssetRoute
-  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -281,8 +265,6 @@ export interface FileRoutesById {
   '/api/skill': typeof ApiSkillRouteWithChildren
   '/api/workflows': typeof ApiWorkflowsRoute
   '/api/bmad/agents': typeof ApiBmadAgentsRoute
-  '/api/docs/asset': typeof ApiDocsAssetRoute
-  '/api/docs/list': typeof ApiDocsListRoute
   '/api/editor/content': typeof ApiEditorContentRoute
   '/api/editor/fs': typeof ApiEditorFsRoute
   '/api/editor/list': typeof ApiEditorListRoute
@@ -317,8 +299,6 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
-    | '/api/docs/asset'
-    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -351,8 +331,6 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
-    | '/api/docs/asset'
-    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -385,8 +363,6 @@ export interface FileRouteTypes {
     | '/api/skill'
     | '/api/workflows'
     | '/api/bmad/agents'
-    | '/api/docs/asset'
-    | '/api/docs/list'
     | '/api/editor/content'
     | '/api/editor/fs'
     | '/api/editor/list'
@@ -420,8 +396,6 @@ export interface RootRouteChildren {
   ApiSkillRoute: typeof ApiSkillRouteWithChildren
   ApiWorkflowsRoute: typeof ApiWorkflowsRoute
   ApiBmadAgentsRoute: typeof ApiBmadAgentsRoute
-  ApiDocsAssetRoute: typeof ApiDocsAssetRoute
-  ApiDocsListRoute: typeof ApiDocsListRoute
   ApiEditorContentRoute: typeof ApiEditorContentRoute
   ApiEditorFsRoute: typeof ApiEditorFsRoute
   ApiEditorListRoute: typeof ApiEditorListRoute
@@ -494,20 +468,6 @@ declare module '@tanstack/react-router' {
       path: '/api/bmad/agents'
       fullPath: '/api/bmad/agents'
       preLoaderRoute: typeof ApiBmadAgentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/docs/asset': {
-      id: '/api/docs/asset'
-      path: '/api/docs/asset'
-      fullPath: '/api/docs/asset'
-      preLoaderRoute: typeof ApiDocsAssetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/docs/list': {
-      id: '/api/docs/list'
-      path: '/api/docs/list'
-      fullPath: '/api/docs/list'
-      preLoaderRoute: typeof ApiDocsListRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/editor/content': {
@@ -696,8 +656,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSkillRoute: ApiSkillRouteWithChildren,
   ApiWorkflowsRoute: ApiWorkflowsRoute,
   ApiBmadAgentsRoute: ApiBmadAgentsRoute,
-  ApiDocsAssetRoute: ApiDocsAssetRoute,
-  ApiDocsListRoute: ApiDocsListRoute,
   ApiEditorContentRoute: ApiEditorContentRoute,
   ApiEditorFsRoute: ApiEditorFsRoute,
   ApiEditorListRoute: ApiEditorListRoute,

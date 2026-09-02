@@ -61,6 +61,19 @@ export const Route = createFileRoute('/api/editor/fs')({
               return Response.json({ status: 'success', message: '已重命名' })
             }
 
+            case 'delete': {
+              if (fullPath === WORKSPACE) {
+                return Response.json({ status: 'error', error: '不能删除项目根目录' })
+              }
+              const stat = await fs.stat(fullPath)
+              if (stat.isDirectory()) {
+                await fs.rm(fullPath, { recursive: true, force: true })
+              } else {
+                await fs.rm(fullPath, { force: true })
+              }
+              return Response.json({ status: 'success', message: '已删除' })
+            }
+
             default:
               return Response.json({ status: 'error', error: `未知操作: ${action}` })
           }

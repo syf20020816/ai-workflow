@@ -11,7 +11,6 @@ import { Execution } from '#/components/execution'
 import { FileEditor } from '#/components/file-editor'
 import { Logo } from '#/components/logo'
 import { useRouteStore } from '#/store/route'
-import { Wiki } from '#/components/wiki'
 import {
   Cable,
   FileCode,
@@ -46,7 +45,12 @@ function App() {
     { label: '知识库', key: 'knowledge', icon: <Database size={16} /> },
     { label: '执行结果', key: 'execution', icon: <ListChecks size={16} /> },
     { label: '编辑器', key: 'editor', icon: <FileCode size={16} /> },
-    { label: '文档', key: 'wiki', icon: <BookSearch size={16} /> },
+    {
+      label: '文档',
+      key: 'wiki',
+      icon: <BookSearch size={16} />,
+      onClick: () => window.open('http://localhost:4000', '_blank'),
+    },
   ]
 
   const menuItems = collapsed
@@ -78,7 +82,10 @@ function App() {
             )}
           </div>
           <Menu
-            onClick={({ key }) => switchTo(key)}
+            onClick={({ key }) => {
+              if (key === 'wiki') return // wiki 由菜单项 onClick 打开独立文档站
+              switchTo(key)
+            }}
             selectedKeys={[activeKey]}
             mode="vertical"
             items={menuItems}
@@ -107,7 +114,6 @@ function App() {
           {activeKey === 'knowledge' && <KnowledgeManager />}
           {activeKey === 'execution' && <Execution />}
           {activeKey === 'editor' && <FileEditor />}
-          {activeKey === 'wiki' && <Wiki />}
         </Content>
       </Layout>
     </ConfigProvider>
