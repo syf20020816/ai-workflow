@@ -6,7 +6,13 @@ import type { Model } from '#/types/model'
 const DATA_PATH = path.resolve(process.cwd(), 'model.conf.json')
 
 function readModels(): Model[] {
-  return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+    // 配置文件可能是空对象 {} 或损坏内容，统一兜底为空数组
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
 }
 
 function writeModels(models: Model[]): void {

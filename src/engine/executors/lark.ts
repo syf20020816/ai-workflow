@@ -1,8 +1,10 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { runnerFetch } from '#/services/runner'
 
 /**
  * Lark 文档节点执行器
- * 调用后端 API 执行真实的 lark-cli 命令。
+ * 优先由本地 Runner 执行真实的 lark-cli 命令（授权凭据留在用户机器上），
+ * Runner 离线时回退同源服务端路由（本地开发）。
  */
 export const larkExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
@@ -38,7 +40,7 @@ export const larkExecutor: NodeExecutor = {
     logs.push(`Lark ${action} 操作: ${url || '新建文档'}`)
 
     try {
-      const res = await fetch('/api/execute/lark', {
+      const res = await runnerFetch('/lark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, url, content }),

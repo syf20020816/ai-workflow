@@ -1,25 +1,29 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { runnerFetch, startAgentCli, pollAgentCliTask } from '#/services/runner'
 
 /**
  * 智能体节点执行器
- * 调用真实的 AI API（OpenAI/Anthropic/Ollama 兼容格式）
+ * 两条执行路径：
+ *  1. data.tool 配置了本地 CLI 工具 → Runner 无头模式执行（凭据/订阅全留用户机器）
+ *  2. 否则走模型 API（OpenAI/Anthropic/Ollama 兼容格式）
  */
 export const agentExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
     const { config, input } = ctx
     const modal = config.data.modal || {}
+    const localTool = config.data.tool
 
-    if (!modal.name) {
+    if (!localTool && !modal.name) {
       return {
         nodeId: config.nodeId,
         status: 'error',
         output: {},
-        logs: ['未配置模型，请在编辑面板中选择模型'],
+        logs: ['未配置模型，请在编辑面板中选择模型或本地工具'],
         error: '未选择模型',
       }
     }
 
-    if (!modal.url) {
+    if (!localTool && !modal.url) {
       return {
         nodeId: config.nodeId,
         status: 'error',
@@ -177,13 +181,76 @@ export const agentExecutor: NodeExecutor = {
     }
 
     const logs: string[] = []
+
+    // === 本地 CLI 工具路径（data.tool 配置时优先）===
+    if (localTool) {
+      logs.push(`使用本地工具: ${localTool}`)
+
+      try {
+        // CLI 无 system/message 之分，合并为单个 prompt
+        const prompt = systemPrompt
+          ? `${systemPrompt}\n\n---\n\n${inputText}`
+          : inputText
+
+        const taskId = await startAgentCli({ tool: localTool, prompt })
+        logs.push(`任务已提交: ${taskId}`)
+
+        // 轮询直到完成，运行中的日志（stderr 采样）持续追加
+        const seenLogCount = { n: 0 }
+        const task = await pollAgentCliTask(taskId, (t) => {
+          const fresh = t.logs.slice(seenLogCount.n)
+          if (fresh.length > 0) {
+            logs.push(...fresh)
+            seenLogCount.n = t.logs.length
+          }
+        })
+
+        if (task.status === 'error') {
+          return {
+            nodeId: config.nodeId,
+            status: 'error',
+            output: {},
+            logs: [...logs, task.error || '本地工具执行失败'],
+            error: task.error || '本地工具执行失败',
+          }
+        }
+
+        // 与模型路径输出结构保持一致，下游节点无感切换
+        const passThrough: Record<string, string> = {}
+        if ((input as any).templateContent) passThrough.templateContent = (input as any).templateContent
+        if ((input as any).instructions) passThrough.instructions = (input as any).instructions
+
+        return {
+          nodeId: config.nodeId,
+          status: 'success',
+          output: {
+            response: task.output?.response || '',
+            model: task.toolName || localTool,
+            ...passThrough,
+          },
+          logs: [...logs, `本地工具 "${task.toolName}" 执行完成`],
+        }
+      } catch (err: any) {
+        return {
+          nodeId: config.nodeId,
+          status: 'error',
+          output: {},
+          logs: [...logs, `请求失败: ${err.message}`],
+          error: `本地工具执行失败: ${err.message}`,
+        }
+      }
+    }
+
+    // === 模型 API 路径 ===
     logs.push(`调用模型: ${modal.name}`)
 
     try {
-      const res = await fetch('/api/execute/agent', {
+      const res = await runnerFetch('/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // Runner 优先按 modelId 在用户本地解析完整凭据（key 不出用户机器）
+          ...(modal.id ? { modelId: modal.id } : {}),
           model: {
             url: modal.url,
             apiKey: modal.key,

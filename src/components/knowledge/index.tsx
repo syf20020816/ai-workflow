@@ -42,6 +42,7 @@ import {
 import { useEffect, useState, useCallback } from 'react'
 import type { TableProps } from 'antd'
 import { VectorGraph } from './VectorGraph'
+import { runnerFetch } from '#/services/runner'
 
 const { Text, Title } = Typography
 const { Panel } = Collapse
@@ -319,7 +320,7 @@ export const KnowledgeManager = () => {
   // === Load model list ===
   const loadModels = useCallback(async () => {
     try {
-      const res = await fetch('/api/execute/models')
+      const res = await runnerFetch('/models')
       const data = await res.json()
       if (data.status === 'success') {
         setModelList(data.output?.models || [])

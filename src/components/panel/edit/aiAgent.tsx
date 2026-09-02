@@ -10,7 +10,7 @@ import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 import { EditButton } from '#/components/button'
-import { ModelSelect } from '#/components/select'
+import { ModelSelect, ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -85,6 +85,24 @@ export const EditAgent = () => {
         />
       ),
       actionRender: <EditButton.To url={'prompts'} />,
+    },
+    {
+      key: 'tool',
+      label: '本地工具（可选）',
+      valueRender: (onChange) => (
+        <ToolSelect
+          style={{ width: '100%' }}
+          value={currentNode.data.tool}
+          onChange={(toolId) => {
+            patchCurrentNode((draft) => {
+              const data = d(draft)
+              // 设置后优先于模型：节点改由本机 CLI 无头模式执行（凭据全留用户机器）
+              data.tool = toolId || undefined
+            })
+            onChange(toolId)
+          }}
+        />
+      ),
     },
     {
       key: 'agent',
@@ -175,6 +193,22 @@ export const EditAgent = () => {
               }}
             />
           </Tooltip>
+        </div>
+      )}
+
+      {/* 本地工具模式提示 */}
+      {currentNode.data.tool && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: 8,
+          }}
+        >
+          <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            本地工具模式：由本机 CLI 执行，优先于上方模型配置
+          </Text>
         </div>
       )}
 

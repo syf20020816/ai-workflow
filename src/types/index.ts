@@ -61,6 +61,9 @@ export type NUserInputData = {
 export type NUserInput = Node<NUserInputData, typeof NodeTypes.USER_INPUT>
 
 export type NAgentData = NNode & {
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），设置后优先于 modal，
+   *  节点改由用户本机的 AI CLI 无头模式执行，平台无需模型配置 */
+  tool?: string
   modal?: {
     /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
     id?: string

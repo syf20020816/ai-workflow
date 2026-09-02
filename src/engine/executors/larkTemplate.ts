@@ -1,4 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { runnerFetch } from '#/services/runner'
 
 export const larkTemplateExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
@@ -19,7 +20,7 @@ export const larkTemplateExecutor: NodeExecutor = {
     }
 
     try {
-      const res = await fetch('/api/execute/lark', {
+      const res = await runnerFetch('/lark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'read', url: templateUrl, content: '' }),

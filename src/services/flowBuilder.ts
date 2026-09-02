@@ -3,6 +3,7 @@ import { NodeTypes } from '#/types'
 import type { AppNode } from '#/types'
 import { useNodeStore } from '#/store/node'
 import { useModelStore } from '#/store/model'
+import { runnerFetch } from '#/services/runner'
 // Vite ?raw 导入：将 markdown 文件作为纯文本字符串引入
 import flowBuilderPrompt from '../../prompts/flowBuilder.md?raw'
 
@@ -242,10 +243,12 @@ export async function buildWorkflow(
   const userMessage = `${message}\n\n--- 当前工作流状态 ---\n${currentWorkflow}`
   messages.push({ role: 'user', content: userMessage })
 
-  const res = await fetch('/api/execute/agent', {
+  const res = await runnerFetch('/agent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      // Runner 优先按 modelId 在用户本地解析完整凭据（key 不出用户机器）
+      modelId: model.id,
       model: {
         url: model.url,
         modelName: model.modelName,

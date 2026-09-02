@@ -1,4 +1,5 @@
 import { useNodeStore } from '#/store/node'
+import { runnerFetch } from '#/services/runner'
 import type { NKnowledgeStore, NKnowledgeStoreData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import { Select, Typography, message } from 'antd'
@@ -32,7 +33,7 @@ export const EditKnowledgeStore = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'collections' }),
           }),
-          fetch('/api/execute/models'),
+          runnerFetch('/models'),
         ])
         const colData = await colRes.json()
         const modelData = await modelRes.json()
