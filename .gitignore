@@ -14,6 +14,6 @@ todos.json
 **/.exec/*
 **/.pin/*
 **/.versions/*
-model.conf.json
+model.conf*.json
 assets/*
 **/.dumi
