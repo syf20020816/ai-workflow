@@ -4,8 +4,8 @@ import { Sender } from '@ant-design/x'
 import { useState, useRef, useEffect } from 'react'
 import styles from '../index.module.scss'
 import { Flex, message as messageApi, Button, Tooltip } from 'antd'
-import { ModelSelect } from '#/components/select'
-import { useModelStore } from '#/store/model'
+import { ToolSelect } from '#/components/select'
+import { fetchLocalTools } from '#/services/runner'
 import { buildWorkflow, applyWorkflow } from '#/services/flowBuilder'
 import type { ChatMessage } from '#/services/flowBuilder'
 import { DeleteOutlined } from '@ant-design/icons'
@@ -14,23 +14,20 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 export const SenderPanel = (props: PanelProps) => {
   const [loading, setLoading] = useState(false)
   const [value, setValue] = useState('')
-  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedTool, setSelectedTool] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
-  const models = useModelStore((state) => state.models)
-  const fetchModels = useModelStore((state) => state.fetchModels)
   const [collapse, setCollapse] = useState(true)
 
-  // 首次加载模型列表，并自动选中第一个
+  // 首次加载本地工具列表，自动选中第一个可用的
   useEffect(() => {
-    fetchModels()
-  }, [fetchModels])
-
-  useEffect(() => {
-    if (!selectedModel && models.length > 0) {
-      setSelectedModel(models[0].name)
-    }
-  }, [models, selectedModel])
+    fetchLocalTools().then((tools) => {
+      if (tools.length > 0) {
+        const first = tools.find((t) => t.available)
+        if (first) setSelectedTool(first.id)
+      }
+    })
+  }, [])
 
   // 消息变化时自动滚动到底部
   useEffect(() => {
@@ -41,8 +38,8 @@ export const SenderPanel = (props: PanelProps) => {
 
   const handleSubmit = async (content: string) => {
     if (!content.trim()) return
-    if (!selectedModel) {
-      messageApi.warning('请先选择模型')
+    if (!selectedTool) {
+      messageApi.warning('请先选择本地工具（需启动本地 Runner）')
       return
     }
 
@@ -59,7 +56,7 @@ export const SenderPanel = (props: PanelProps) => {
     try {
       const { explanation, workflow } = await buildWorkflow(
         content,
-        selectedModel,
+        selectedTool,
         messages,
       )
       const aiMsg: ChatMessage = {
@@ -172,10 +169,10 @@ export const SenderPanel = (props: PanelProps) => {
 
             return (
               <Flex justify="space-between" align="center">
-                <ModelSelect
+                <ToolSelect
                   style={{ width: 200 }}
-                  value={selectedModel}
-                  onChange={(v) => setSelectedModel(v)}
+                  value={selectedTool}
+                  onChange={(v) => setSelectedTool(v || '')}
                 />
 
                 {loading ? (

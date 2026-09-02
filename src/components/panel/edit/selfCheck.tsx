@@ -7,7 +7,7 @@ import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 import { EditButton } from '#/components/button'
-import { ModelSelect } from '#/components/select'
+import { ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -28,31 +28,19 @@ export const EditSelfCheck = () => {
     fetchAgents()
   }, [])
 
-  const selectedModelId = currentNode.data.modal?.name || undefined
-
   const rows: DynEditKVRow[] = [
     {
-      key: 'model',
-      label: '选择模型',
+      key: 'tool',
+      label: '本地工具',
       valueRender: (onChange) => (
-        <ModelSelect
+        <ToolSelect
           style={{ width: '100%' }}
-          value={selectedModelId}
-          onChange={(value, models) => {
-            const model = models.find((m) => m.name === value)
-            if (!model) return
+          value={currentNode.data.tool}
+          onChange={(toolId) => {
             patchCurrentNode((draft) => {
-              const data = d(draft)
-              data.modal ??= {}
-              data.modal.id = model.id
-              data.modal.name = model.modelName
-              data.modal.key = model.apiKey
-              data.modal.url = model.url
-              data.modal.token = model.token
-                ? { min: model.token.min, max: model.token.max }
-                : undefined
+              d(draft).tool = toolId || undefined
             })
-            onChange(value)
+            onChange(toolId)
           }}
         />
       ),

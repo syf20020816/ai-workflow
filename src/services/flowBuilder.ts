@@ -2,8 +2,7 @@ import { NodeBuilder } from '#/types/builder'
 import { NodeTypes } from '#/types'
 import type { AppNode } from '#/types'
 import { useNodeStore } from '#/store/node'
-import { useModelStore } from '#/store/model'
-import { runnerFetch } from '#/services/runner'
+import { startAgentCli, pollAgentCliTask } from '#/services/runner'
 // Vite ?raw 导入：将 markdown 文件作为纯文本字符串引入
 import flowBuilderPrompt from '../../prompts/flowBuilder.md?raw'
 
@@ -217,56 +216,42 @@ function serializeCurrentWorkflow(): string {
 }
 
 /**
- * 调用 AI 搭建工作流
+ * 调用本地 AI 工具搭建工作流
  * @param message 用户需求描述
- * @param modelName 使用的模型 name
+ * @param tool 本地 CLI 工具 ID（如 claude-code/codex/deepseek）
  * @param history 对话历史
  * @returns AI 的解释文本 + 工作流定义
  */
 export async function buildWorkflow(
   message: string,
-  modelName: string,
+  tool: string,
   history: ChatMessage[] = [],
 ): Promise<{ explanation: string; workflow: WorkflowDefinition }> {
-  const model = useModelStore.getState().models.find((m) => m.name === modelName)
-  if (!model) throw new Error(`模型 "${modelName}" 未找到`)
-  if (!model.url) throw new Error(`模型 "${modelName}" 缺少 API URL`)
+  if (!tool) throw new Error('未选择本地工具')
 
-  // 构建对话消息
-  const messages = history.map((m) => ({
-    role: m.role,
-    content: m.content,
-  })) as Array<{ role: 'user' | 'assistant'; content: string }>
+  // 对话历史（CLI 无多轮消息概念，平铺为文本）
+  const historyText = history
+    .map((m) => (m.role === 'user' ? `[用户]\n${m.content}` : `[助手]\n${m.content}`))
+    .join('\n\n')
 
   // 当前工作流状态作为上下文
   const currentWorkflow = serializeCurrentWorkflow()
-  const userMessage = `${message}\n\n--- 当前工作流状态 ---\n${currentWorkflow}`
-  messages.push({ role: 'user', content: userMessage })
+  const prompt = [
+    flowBuilderPrompt,
+    historyText,
+    `[用户需求]\n${message}`,
+    `--- 当前工作流状态 ---\n${currentWorkflow}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 
-  const res = await runnerFetch('/agent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      // Runner 优先按 modelId 在用户本地解析完整凭据（key 不出用户机器）
-      modelId: model.id,
-      model: {
-        url: model.url,
-        modelName: model.modelName,
-        apiKey: model.apiKey,
-        token: model.token,
-      },
-      messages,
-      systemPrompt: flowBuilderPrompt,
-      temperature: 0.3,
-    }),
-  })
-
-  const data = await res.json()
-  if (data.status !== 'success') {
-    throw new Error(data.error || 'AI 调用失败')
+  const taskId = await startAgentCli({ tool, prompt, timeoutMs: 5 * 60_000 })
+  const task = await pollAgentCliTask(taskId)
+  if (task.status === 'error') {
+    throw new Error(task.error || '本地工具执行失败')
   }
 
-  const responseText: string = data.output.response
+  const responseText: string = task.output?.response || ''
   const workflow = parseWorkflowResponse(responseText)
 
   return { explanation: workflow.explanation, workflow }

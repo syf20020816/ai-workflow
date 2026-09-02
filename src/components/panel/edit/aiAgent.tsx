@@ -10,7 +10,7 @@ import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
 import { EditButton } from '#/components/button'
-import { ModelSelect, ToolSelect } from '#/components/select'
+import { ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -37,7 +37,7 @@ export const EditAgent = () => {
     fetchAgents()
   }, [])
 
-  const selectedModelId = currentNode.data.modal?.name || undefined
+  const selectedTool = currentNode.data.tool || undefined
 
   // 查找当前 AgentNode 是否已连线 BMadNode（BMad 为上游，agent 为下游）
   const connectedBmadEdge = edges.find(
@@ -60,49 +60,23 @@ export const EditAgent = () => {
       placeholder: '给智能体取一个易记的别名',
     },
     {
-      key: 'model',
-      label: '选择模型',
-      valueRender: (onChange) => (
-        <ModelSelect
-          style={{ width: '100%' }}
-          value={selectedModelId}
-          onChange={(value, models) => {
-            const model = models.find((m) => m.name === value)
-            if (!model) return
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              data.modal ??= {}
-              data.modal.id = model.id
-              data.modal.name = model.modelName
-              data.modal.key = model.apiKey
-              data.modal.url = model.url
-              data.modal.token = model.token
-                ? { min: model.token.min, max: model.token.max }
-                : undefined
-            })
-            onChange(value)
-          }}
-        />
-      ),
-      actionRender: <EditButton.To url={'prompts'} />,
-    },
-    {
       key: 'tool',
-      label: '本地工具（可选）',
+      label: '本地工具',
       valueRender: (onChange) => (
         <ToolSelect
           style={{ width: '100%' }}
-          value={currentNode.data.tool}
+          value={selectedTool}
           onChange={(toolId) => {
             patchCurrentNode((draft) => {
               const data = d(draft)
-              // 设置后优先于模型：节点改由本机 CLI 无头模式执行（凭据全留用户机器）
+              // 节点由本机 CLI 无头模式执行（凭据全留用户机器），平台无模型配置
               data.tool = toolId || undefined
             })
             onChange(toolId)
           }}
         />
       ),
+      actionRender: <EditButton.To url={'prompts'} />,
     },
     {
       key: 'agent',
@@ -212,8 +186,8 @@ export const EditAgent = () => {
         </div>
       )}
 
-      {/* 当前选择的信息展示 */}
-      {selectedModelId && (
+      {/* 本地工具选中提示 */}
+      {selectedTool && (
         <div
           style={{
             fontSize: 11,
@@ -222,7 +196,7 @@ export const EditAgent = () => {
           }}
         >
           <Text type="secondary">
-            API URL: {currentNode.data.modal?.url || '未配置'}
+            执行工具: {selectedTool}（本机 CLI 无头模式）
           </Text>
         </div>
       )}

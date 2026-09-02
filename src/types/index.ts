@@ -61,25 +61,13 @@ export type NUserInputData = {
 export type NUserInput = Node<NUserInputData, typeof NodeTypes.USER_INPUT>
 
 export type NAgentData = NNode & {
-  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），设置后优先于 modal，
-   *  节点改由用户本机的 AI CLI 无头模式执行，平台无需模型配置 */
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），
+   *  节点由用户本机的 AI CLI 无头模式执行，平台不再持有模型配置 */
   tool?: string
+  /** 智能体元信息（模型配置已下线，仅保留别名等非敏感字段） */
   modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    /** 智能体名称(模型ID) */
-    name?: string
-    /** 智能体密钥 */
-    key?: string
     /** 智能体别名 */
     alias?: string
-    /** URL连接点 */
-    url?: string
-    /** Token范围 */
-    token?: {
-      min: number
-      max: number
-    }
   }
   input?: Pick<NUserInputData, 'input'>
   /** 输出结果 */
@@ -209,15 +197,8 @@ export type NCodeAgentData = NNode & {
   maxIterations?: number
   /** 应用地图（App-Desc）：analyze 时检测项目中的应用地图，有则使用，没有则自动生成初版（默认开启） */
   useAppMap?: boolean
-  /** 模型配置 */
-  modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    name?: string
-    key?: string
-    url?: string
-    token?: { min: number; max: number }
-  }
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），CLI 直接在项目目录执行 */
+  tool?: string
   /** 执行输出 - batch 模式已完成的批次号 */
   completedBatches?: number[]
   /** 执行输出 - batch 模式总批次 */
@@ -283,16 +264,8 @@ export type NKnowledgeRetrievalData = NNode & {
   }>
   /** 最大检索次数（默认 40）：无显式 query 时由 AI 自动生成多种查询进行多次搜索 */
   maxRetrievals?: number
-  /** AI 模型配置（用于自动生成搜索查询） */
-  modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    name: string
-    key: string
-    url: string
-    token: { min: number; max: number }
-    alias?: string
-  }
+  /** 本地 CLI 工具 ID（用于自动生成搜索查询，可选） */
+  tool?: string
 }
 
 export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
@@ -334,18 +307,10 @@ export type NLarkWikiTraversalData = NNode & {
 
 export type NLarkWikiTraversal = Node<NLarkWikiTraversalData, typeof NodeTypes.LARK_WIKI_TRAVERSAL>
 
-/** 关键词提取节点：调用 AI 从上游内容中提取关键词列表 */
+/** 关键词提取节点：调用本地 AI 工具从上游内容中提取关键词列表 */
 export type NKeywordAgentData = NNode & {
-  /** 模型配置 */
-  modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    name?: string
-    key?: string
-    url?: string
-    token?: { min: number; max: number }
-    alias?: string
-  }
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek） */
+  tool?: string
   /** 关键词输出格式（JSON 模板） */
   format?: string
   /** 执行结果 - 提取到的关键词数组 */
@@ -358,16 +323,8 @@ export type NKeywordAgent = Node<NKeywordAgentData, typeof NodeTypes.KEYWORD_AGE
 
 /** 任务拆解节点：把 plan.md + 现有 spec 骨架拆解为可独立执行的 batch 任务清单（不直接写代码） */
 export type NTaskPlannerData = NNode & {
-  /** 模型配置 */
-  modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    name?: string
-    key?: string
-    url?: string
-    token?: { min: number; max: number }
-    alias?: string
-  }
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek） */
+  tool?: string
   /** 自定义拆解指令（追加到系统提示词之后，如限定批次粒度/技术栈） */
   instruction?: string
   /** 执行输出 - 批次数量 */
@@ -383,16 +340,8 @@ export type NTaskPlannerData = NNode & {
 export type NTaskPlanner = Node<NTaskPlannerData, typeof NodeTypes.TASK_PLANNER>
 
 export type NSelfCheckData = NNode & {
-  /** 模型配置 */
-  modal?: {
-    /** 模型 ID 引用（持久化时仅保留该字段与 alias，不落 API Key） */
-    id?: string
-    name?: string
-    key?: string
-    url?: string
-    token?: { min: number; max: number }
-    alias?: string
-  }
+  /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），独立会话评审 */
+  tool?: string
   /** 项目路径（用于读取 git diff 前后对比） */
   projectPath?: string
   /** 自检指令（可选，追加到系统提示词之后） */

@@ -5,7 +5,7 @@ import type { NodeProps } from '@xyflow/react'
 import { Typography, Divider } from 'antd'
 import { DynEditKV } from './item'
 import { CodeEditor } from '#/components/file-editor/editor'
-import { ModelSelect } from '#/components/select'
+import { ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -19,7 +19,6 @@ export const EditKeywordAgent = () => {
   ) as NodeProps<NKeywordAgent>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const selectedModelId = currentNode.data.modal?.name || undefined
   const formatValue = currentNode.data.format || '{\n  "keywords": string[]\n}'
   const [promptContent, setPromptContent] = useState('')
 
@@ -51,31 +50,19 @@ export const EditKeywordAgent = () => {
 
   const rows = [
     {
-      key: 'model',
-      label: 'AI 模型',
+      key: 'tool',
+      label: '本地工具',
       valueRender: (onChange: (v: any) => void) => (
-        <ModelSelect
-          style={{ flex: 1, width: '100%' }}
-          placeholder="选择模型"
-          notFoundContent="暂无模型，请先在「规则与模型」中添加"
-          value={selectedModelId}
-          onChange={(value, models) => {
-            const model = models.find((m) => m.name === value)
-            if (model) {
-              onChange({
-                id: model.id,
-                name: model.modelName,
-                key: model.apiKey || '',
-                url: model.url || '',
-                token: model.token || { min: 100, max: 4096 },
-                alias: model.name,
-              })
-            } else {
-              onChange(undefined)
-            }
+        <ToolSelect
+          style={{ width: '100%' }}
+          placeholder="选择本地工具"
+          value={currentNode.data.tool}
+          onChange={(toolId) => {
+            patchCurrentNode((draft) => {
+              d(draft).tool = toolId || undefined
+            })
+            onChange(toolId)
           }}
-          allowClear
-          onClear={() => onChange(undefined)}
         />
       ),
     },
@@ -91,13 +78,8 @@ export const EditKeywordAgent = () => {
 
       <DynEditKV
         rows={rows}
-        onChange={(key, value) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            if (key === 'model') {
-              data.modal = value || undefined
-            }
-          })
+        onChange={() => {
+          // tool 的变更已在 valueRender 中处理
         }}
       />
 

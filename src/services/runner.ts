@@ -102,6 +102,10 @@ export async function startAgentCli(body: {
   prompt: string
   auto?: boolean
   timeoutMs?: number
+  /** 工作目录（如 codeAgent 在项目路径下执行，可直接读写项目代码） */
+  cwd?: string
+  /** 让 Runner 预先收集 cwd 的 git diff 附进 prompt（评审场景，CLI 无需执行命令） */
+  gitDiff?: boolean
 }): Promise<string> {
   const res = await runnerFetch('/agent-cli', {
     method: 'POST',

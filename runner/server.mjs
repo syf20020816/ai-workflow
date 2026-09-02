@@ -325,7 +325,7 @@ function pruneTasks() {
  * 启动一个 CLI agent 任务
  * @returns {{ taskId: string } | { error: string }}
  */
-function startCliTask({ tool: toolId, prompt, auto, timeoutMs }) {
+function startCliTask({ tool: toolId, prompt, auto, timeoutMs, cwd, gitDiff }) {
   const tool = CLI_TOOLS.find((t) => t.id === toolId)
   if (!tool) return { error: `未知工具: ${toolId}` }
   if (!prompt || !String(prompt).trim()) return { error: '缺少 prompt' }
@@ -353,10 +353,42 @@ function startCliTask({ tool: toolId, prompt, auto, timeoutMs }) {
   let stderr = ''
   let killed = false
 
+  // cwd：允许指定项目目录执行（如 codeAgent 在项目里读代码/写文件）
+  let workDir = process.cwd()
+  if (cwd) {
+    try {
+      const stat = fs.statSync(cwd)
+      if (!stat.isDirectory()) return { error: `项目路径不是目录: ${cwd}` }
+      workDir = cwd
+    } catch {
+      return { error: `项目路径不存在: ${cwd}` }
+    }
+  }
+
+  // gitDiff：由 Runner（同在用户本地）预先收集项目改动附进 prompt，
+  // 这样 CLI 无需执行任何命令（安全模式即可），评审材料自包含
+  if (gitDiff && workDir !== process.cwd()) {
+    try {
+      const diff = execSync('git --no-pager diff HEAD', {
+        cwd: workDir,
+        timeout: 15_000,
+        maxBuffer: 10 * 1024 * 1024,
+        encoding: 'utf8',
+      })
+      if (diff && diff.trim()) {
+        prompt = `以下是当前项目的 git diff（评审 ground truth 材料）：\n\`\`\`diff\n${diff}\n\`\`\`\n\n${prompt}`
+      } else {
+        prompt = `（注意：当前项目工作区无未提交改动，git diff 为空）\n\n${prompt}`
+      }
+    } catch {
+      // 非 git 目录或 git 不可用：忽略，仅用其余材料评审
+    }
+  }
+
   let child
   try {
     child = spawn(tool.cmd, tool.buildArgs(prompt, { auto }), {
-      cwd: process.cwd(),
+      cwd: workDir,
       shell: false,
       env: process.env,
       // stdin 必须显式关闭：CLI（如 codex）检测到非 tty 的 stdin 会等待附加输入，导致任务挂起

@@ -336,22 +336,6 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
     const nodeEntry = get().nodes.find((n) => n.id === current.id)
     if (!nodeEntry) return
 
-    // 获取 AgentNode 的模型配置
-    const agentModal = (nodeEntry.data as any).modal
-
-    // 提取模型配置中 bmad 需要的字段
-    const bmadModal = agentModal
-      ? {
-          id: agentModal.id,
-          name: agentModal.name,
-          key: agentModal.key,
-          url: agentModal.url,
-          token: agentModal.token
-            ? { min: agentModal.token.min, max: agentModal.token.max }
-            : undefined,
-        }
-      : undefined
-
     // 检查当前 AgentNode 是否已经有连线的 BMadNode（BMad 为上游，agent 为下游）
     const existingEdge = get().edges.find(
       (e) =>
@@ -373,7 +357,6 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
                   role: agent.title,
                   agentId: agent.id,
                   roleDescription: agent.skillContent || agent.description,
-                  modal: bmadModal, // 继承模型配置
                 },
               }
             : n,
@@ -419,7 +402,6 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
         role: agent.title,
         agentId: agent.id,
         roleDescription: agent.skillContent || agent.description,
-        modal: bmadModal, // 从 AgentNode 继承模型配置
       },
     } as unknown as Node
 

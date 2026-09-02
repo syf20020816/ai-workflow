@@ -1,5 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { callAI } from '#/services/ai'
+import { startAgentCli, pollAgentCliTask } from '#/services/runner'
 import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /** 调用嵌入 API 将文本转为向量 */
@@ -43,11 +43,11 @@ async function searchCollection(
   return (result.output.results || []).map((r: any) => ({ ...r, collectionName }))
 }
 
-/** 调用 AI 生成搜索查询 */
+/** 调用本地 CLI 生成搜索查询 */
 async function generateQueries(
   context: string,
   maxRetrievals: number,
-  modal: { name: string; key: string; url: string },
+  tool: string,
   logs: string[],
 ): Promise<string[]> {
   // 从 prompts/keywordAgent.md 加载系统提示词，支持通过「规则与模型」页面自定义
@@ -64,25 +64,24 @@ async function generateQueries(
   // 附加输出格式指令，确保解析兼容
   const systemPrompt = `${basePrompt}\n\nOutput format:\n- Generate up to ${maxRetrievals} queries, one per line\n- Do NOT number the queries\n- Do NOT add any explanation or commentary\n- Output ONLY the queries, one per line`
 
-  logs.push(`正在调用 AI 生成搜索查询...`)
+  logs.push(`正在调用本地工具生成搜索查询...`)
 
   const userText = `Generate search queries for the following context:\n\n${context.slice(0, 3000)}`
 
   let content: string
   try {
-    const result = await callAI({
-      model: {
-        name: modal.name,
-        key: modal.key,
-        url: modal.url,
-      },
-      systemPrompt,
-      prompt: userText,
-      temperature: 0.7,
+    const taskId = await startAgentCli({
+      tool,
+      prompt: `${systemPrompt}\n\n${userText}`,
+      timeoutMs: 5 * 60_000,
     })
-    content = result.text
+    const task = await pollAgentCliTask(taskId)
+    if (task.status === 'error') {
+      throw new Error(task.error || '本地工具执行失败')
+    }
+    content = task.output?.response || ''
   } catch (err: any) {
-    throw new Error(`AI 调用失败: ${err.message}`)
+    throw new Error(`本地工具调用失败: ${err.message}`)
   }
 
   const queries = content
@@ -90,7 +89,7 @@ async function generateQueries(
     .map((l: string) => l.trim())
     .filter((l: string) => l.length > 0 && !l.startsWith('#') && !l.startsWith('-'))
 
-  logs.push(`AI 生成了 ${queries.length} 个查询语句${queries.length > 0 ? `: ${queries.slice(0, 3).map((q: string) => `"${q.slice(0, 40)}"`).join(', ')}${queries.length > 3 ? `...等` : ''}` : ''}`)
+  logs.push(`本地工具生成了 ${queries.length} 个查询语句${queries.length > 0 ? `: ${queries.slice(0, 3).map((q: string) => `"${q.slice(0, 40)}"`).join(', ')}${queries.length > 3 ? `...等` : ''}` : ''}`)
   return queries.slice(0, maxRetrievals)
 }
 
@@ -216,7 +215,7 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
     const topK = data.topK || 5
     const scoreThreshold = data.scoreThreshold || 0
     const maxRetrievals = data.maxRetrievals || 40
-    const modal = data.modal
+    const localTool = data.tool
     const filters: Array<{ field: string; match: string }> = data.filters || []
 
     const logs: string[] = []
@@ -235,14 +234,14 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
     // 检查是否有任何查询来源
     const hasExplicitQuery = !!query
     const hasQueriesList = queriesFromInput.length > 0
-    const hasAutoMode = !!modal?.url
+    const hasAutoMode = !!localTool
 
     if (!hasExplicitQuery && !hasQueriesList && !hasAutoMode) {
       return {
         nodeId: config.nodeId,
         status: 'success',
-        output: { results: [], count: 0, error: '未指定查询文本，上游未提供查询列表，也未配置 AI 模型' },
-        logs: [...logs, '无法检索：未指定查询文本，上游未提供查询列表，也未配置 AI 模型'],
+        output: { results: [], count: 0, error: '未指定查询文本，上游未提供查询列表，也未选择本地工具' },
+        logs: [...logs, '无法检索：未指定查询文本，上游未提供查询列表，也未选择本地工具'],
       }
     }
 
@@ -354,7 +353,7 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
     try {
       // P0-4：优先用「优先级排序 + 预算截断」后的累积上下文（覆盖整条祖先链路），
       // 无累积时回退平铺单字段提取
-      const budgeted = buildBudgetedContext(input, modal?.token?.max)
+      const budgeted = buildBudgetedContext(input, 64000)
       const context =
         budgeted.response ||
         input.content ||
@@ -376,7 +375,7 @@ export const knowledgeRetrievalExecutor: NodeExecutor = {
 
       logs.push(`从上游获取上下文: ${context.slice(0, 100)}...`)
 
-      const queries = await generateQueries(context, maxRetrievals, modal, logs)
+      const queries = await generateQueries(context, maxRetrievals, localTool, logs)
 
       if (queries.length === 0) {
         logs.push('AI 未生成有效查询，跳过检索')

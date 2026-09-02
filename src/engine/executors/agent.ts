@@ -1,35 +1,23 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { runnerFetch, startAgentCli, pollAgentCliTask } from '#/services/runner'
+import { startAgentCli, pollAgentCliTask } from '#/services/runner'
 
 /**
  * 智能体节点执行器
- * 两条执行路径：
- *  1. data.tool 配置了本地 CLI 工具 → Runner 无头模式执行（凭据/订阅全留用户机器）
- *  2. 否则走模型 API（OpenAI/Anthropic/Ollama 兼容格式）
+ * 由用户本机的 AI CLI 工具（Claude Code / Codex / DeepSeek 等）无头模式执行，
+ * 平台不持有任何模型凭据。
  */
 export const agentExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
     const { config, input } = ctx
-    const modal = config.data.modal || {}
     const localTool = config.data.tool
 
-    if (!localTool && !modal.name) {
+    if (!localTool) {
       return {
         nodeId: config.nodeId,
         status: 'error',
         output: {},
-        logs: ['未配置模型，请在编辑面板中选择模型或本地工具'],
-        error: '未选择模型',
-      }
-    }
-
-    if (!localTool && !modal.url) {
-      return {
-        nodeId: config.nodeId,
-        status: 'error',
-        output: {},
-        logs: ['API URL 未配置'],
-        error: 'API URL 未配置',
+        logs: ['未选择本地工具，请在编辑面板中选择'],
+        error: '未选择本地工具',
       }
     }
 
@@ -139,9 +127,10 @@ export const agentExecutor: NodeExecutor = {
     // 按优先级排序：高价值内容（需求分析/指令/关键词）在前，检索结果最后，预算不足时先截检索尾部
     contentBlocks.sort((a, b) => a.priority - b.priority)
 
-    // 限制内容块总长度，防止超出模型上下文窗口
+    // 限制内容块总长度，防止超出本地工具的上下文窗口
     // 注意：超出预算时按块保留开头并截断，而不是整块丢弃（否则超大块会导致所有内容全被丢掉）
-    const tokenMax = modal.token?.max || 64000
+    // 旧模型配置的 token 上限已随模型配置下线，按通用上限估算
+    const tokenMax = 64000
     // 1 token ≈ 2 字符估算，预留约 40% 的空间给模型输出
     const MAX_CONTENT_LENGTH = Math.min(Math.floor(tokenMax * 1.2), 150000)
     let remainingBudget = MAX_CONTENT_LENGTH
@@ -182,106 +171,37 @@ export const agentExecutor: NodeExecutor = {
 
     const logs: string[] = []
 
-    // === 本地 CLI 工具路径（data.tool 配置时优先）===
-    if (localTool) {
-      logs.push(`使用本地工具: ${localTool}`)
-
-      try {
-        // CLI 无 system/message 之分，合并为单个 prompt
-        const prompt = systemPrompt
-          ? `${systemPrompt}\n\n---\n\n${inputText}`
-          : inputText
-
-        const taskId = await startAgentCli({ tool: localTool, prompt })
-        logs.push(`任务已提交: ${taskId}`)
-
-        // 轮询直到完成，运行中的日志（stderr 采样）持续追加
-        const seenLogCount = { n: 0 }
-        const task = await pollAgentCliTask(taskId, (t) => {
-          const fresh = t.logs.slice(seenLogCount.n)
-          if (fresh.length > 0) {
-            logs.push(...fresh)
-            seenLogCount.n = t.logs.length
-          }
-        })
-
-        if (task.status === 'error') {
-          return {
-            nodeId: config.nodeId,
-            status: 'error',
-            output: {},
-            logs: [...logs, task.error || '本地工具执行失败'],
-            error: task.error || '本地工具执行失败',
-          }
-        }
-
-        // 与模型路径输出结构保持一致，下游节点无感切换
-        const passThrough: Record<string, string> = {}
-        if ((input as any).templateContent) passThrough.templateContent = (input as any).templateContent
-        if ((input as any).instructions) passThrough.instructions = (input as any).instructions
-
-        return {
-          nodeId: config.nodeId,
-          status: 'success',
-          output: {
-            response: task.output?.response || '',
-            model: task.toolName || localTool,
-            ...passThrough,
-          },
-          logs: [...logs, `本地工具 "${task.toolName}" 执行完成`],
-        }
-      } catch (err: any) {
-        return {
-          nodeId: config.nodeId,
-          status: 'error',
-          output: {},
-          logs: [...logs, `请求失败: ${err.message}`],
-          error: `本地工具执行失败: ${err.message}`,
-        }
-      }
-    }
-
-    // === 模型 API 路径 ===
-    logs.push(`调用模型: ${modal.name}`)
+    // === 本地 CLI 工具执行（平台不持有任何模型凭据）===
+    logs.push(`使用本地工具: ${localTool}`)
 
     try {
-      const res = await runnerFetch('/agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Runner 优先按 modelId 在用户本地解析完整凭据（key 不出用户机器）
-          ...(modal.id ? { modelId: modal.id } : {}),
-          model: {
-            url: modal.url,
-            apiKey: modal.key,
-            modelName: modal.name,
-            token: modal.token,
-          },
-          messages: [
-            {
-              role: 'user',
-              content: inputText,
-            },
-          ],
-          systemPrompt,
-          temperature: config.data.temperature ?? 0.3,
-        }),
+      // CLI 无 system/message 之分，合并为单个 prompt
+      const prompt = systemPrompt
+        ? `${systemPrompt}\n\n---\n\n${inputText}`
+        : inputText
+
+      const taskId = await startAgentCli({ tool: localTool, prompt })
+      logs.push(`任务已提交: ${taskId}`)
+
+      // 轮询直到完成，运行中的日志（stderr 采样）持续追加
+      const seenLogCount = { n: 0 }
+      const task = await pollAgentCliTask(taskId, (t) => {
+        const fresh = t.logs.slice(seenLogCount.n)
+        if (fresh.length > 0) {
+          logs.push(...fresh)
+          seenLogCount.n = t.logs.length
+        }
       })
 
-      const result = await res.json()
-
-      if (result.status === 'error') {
+      if (task.status === 'error') {
         return {
           nodeId: config.nodeId,
           status: 'error',
           output: {},
-          logs: [...logs, ...(result.logs || []), result.error],
-          error: result.error,
+          logs: [...logs, task.error || '本地工具执行失败'],
+          error: task.error || '本地工具执行失败',
         }
       }
-
-      logs.push(...(result.logs || []))
-      logs.push(`智能体 "${modal.alias || config.title}" 执行完成`)
 
       // 将上游的内容块透传到下游，供后续节点（如 BMad）使用
       const passThrough: Record<string, string> = {}
@@ -292,12 +212,11 @@ export const agentExecutor: NodeExecutor = {
         nodeId: config.nodeId,
         status: 'success',
         output: {
-          response: result.output.response,
-          model: modal.name,
-          usage: result.output.usage,
+          response: task.output?.response || '',
+          model: task.toolName || localTool,
           ...passThrough,
         },
-        logs,
+        logs: [...logs, `本地工具 "${task.toolName}" 执行完成`],
       }
     } catch (err: any) {
       return {
@@ -305,7 +224,7 @@ export const agentExecutor: NodeExecutor = {
         status: 'error',
         output: {},
         logs: [...logs, `请求失败: ${err.message}`],
-        error: `AI API 调用失败: ${err.message}`,
+        error: `本地工具执行失败: ${err.message}`,
       }
     }
   },

@@ -9,9 +9,9 @@ export const KeywordAgentNode = (props: NodeProps<NKeywordAgent>) => {
 
   return (
     <UNode node={props}>
-      {data.modal?.name && (
+      {data.tool && (
         <div className={styles.row}>
-          <Tag color="blue">{data.modal.name}</Tag>
+          <Tag color="blue">{data.tool}</Tag>
         </div>
       )}
       {data.keywords && data.keywords.length > 0 && (

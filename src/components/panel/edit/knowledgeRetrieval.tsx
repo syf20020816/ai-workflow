@@ -6,7 +6,7 @@ import { Typography, Select, Space, Button, Input, Tooltip, Tag, Divider } from 
 import { PlusOutlined, DeleteOutlined, FilterOutlined, RobotOutlined } from '@ant-design/icons'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
-import { ModelSelect } from '#/components/select'
+import { ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -51,9 +51,6 @@ export const EditKnowledgeRetrieval = () => {
       ? [currentNode.data.collectionName]
       : []
 
-  // 当前选中的模型 ID
-  const selectedModelId = currentNode.data.modal?.name || undefined
-
   // 筛选条件
   const filters = currentNode.data.filters || []
 
@@ -86,8 +83,8 @@ export const EditKnowledgeRetrieval = () => {
       key: 'query',
       label: '查询文本',
       value: currentNode.data.query,
-      placeholder: currentNode.data.modal?.url
-        ? '留空则由 AI 自动生成多种查询进行检索'
+      placeholder: currentNode.data.tool
+        ? '留空则由本地工具自动生成多种查询进行检索'
         : '输入搜索关键词，或留空从上游节点获取',
       inputType: 'textArea',
       rows: 2,
@@ -155,46 +152,25 @@ export const EditKnowledgeRetrieval = () => {
         }}
       />
 
-      {/* ===== AI 模型配置 ===== */}
-      <Divider style={{ margin: '12px 0', fontSize: 12 }}>AI 模型（自动生成查询）</Divider>
+      {/* ===== 本地工具配置 ===== */}
+      <Divider style={{ margin: '12px 0', fontSize: 12 }}>本地工具（自动生成查询）</Divider>
       <div style={{ marginBottom: 12, padding: '0 4px' }}>
         <Text type="secondary" style={{ fontSize: 11 }}>
-          配置后，当「查询文本」为空时，AI 会根据上游上下文自动生成多种查询进行多次检索
+          选择后，当「查询文本」为空时，本地 AI 工具会根据上游上下文自动生成多种查询进行多次检索
         </Text>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
         <Space align="center" style={{ width: '100%' }}>
           <RobotOutlined style={{ color: '#888', fontSize: 12 }} />
-          <ModelSelect
+          <ToolSelect
             style={{ flex: 1 }}
             size="small"
-            placeholder="选择模型（可选）"
-            notFoundContent="暂无模型，请先在「规则与模型」中添加"
-            value={selectedModelId}
-            onChange={(value, models) => {
-              const model = models.find((m) => m.name === value)
-              if (model) {
-                patchCurrentNode((draft) => {
-                  const data = d(draft)
-                  data.modal = {
-                    id: model.id,
-                    name: model.modelName,
-                    key: model.apiKey || '',
-                    url: model.url || '',
-                    token: model.token || { min: 100, max: 4096 },
-                  }
-                })
-              } else {
-                patchCurrentNode((draft) => {
-                  d(draft).modal = undefined
-                })
-              }
-            }}
-            allowClear
-            onClear={() => {
+            placeholder="选择本地工具（可选）"
+            value={currentNode.data.tool}
+            onChange={(toolId) => {
               patchCurrentNode((draft) => {
-                d(draft).modal = undefined
+                d(draft).tool = toolId || undefined
               })
             }}
           />
