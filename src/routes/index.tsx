@@ -54,8 +54,8 @@ function App() {
 
   const baseMenuItems = [
     { label: '工作流编排', key: 'workflow', icon: <Cable size={16} /> },
-    { label: '规则与模型', key: 'prompts', icon: <Bot size={16} /> },
-    { label: '知识库', key: 'knowledge', icon: <Database size={16} /> },
+    { label: '规则与工作流', key: 'prompts', icon: <Bot size={16} /> },
+    { label: '知识库 close', key: 'knowledge', icon: <Database size={16} /> },
     { label: '执行结果', key: 'execution', icon: <ListChecks size={16} /> },
     { label: '编辑器', key: 'editor', icon: <FileCode size={16} /> },
     {

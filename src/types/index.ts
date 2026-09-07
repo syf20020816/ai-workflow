@@ -195,8 +195,8 @@ export type NCodeAgentData = NNode & {
   instruction?: string
   /** 最大迭代次数（防止死循环） */
   maxIterations?: number
-  /** 应用地图（App-Desc）：analyze 时检测项目中的应用地图，有则使用，没有则自动生成初版（默认开启） */
-  useAppMap?: boolean
+  /** 应用地图（App-Desc）文件路径：由使用者自行生成并提供（相对项目根目录或绝对路径），平台只读取注入，不自动生成 */
+  appMapPath?: string
   /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek），CLI 直接在项目目录执行 */
   tool?: string
   /** 执行输出 - batch 模式已完成的批次号 */

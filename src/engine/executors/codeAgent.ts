@@ -22,6 +22,7 @@ export const codeAgentExecutor: NodeExecutor = {
     const branch = data.branch || ''
     const instruction = data.instruction || (mode === 'batch' ? '请按任务清单完成本批次代码实现' : '请分析这个项目的结构和功能')
     const localTool = data.tool
+    const appMapPath = data.appMapPath || ''
 
     const logs: string[] = []
     logs.push(`CodeAgent 开始执行（模式: ${mode === 'batch' ? 'batch · 分批编码' : 'analyze · 代码分析'}）`)
@@ -84,6 +85,12 @@ export const codeAgentExecutor: NodeExecutor = {
       // 组装 prompt
       const parts: string[] = []
       if (branch) parts.push(`请先切换/确认当前 git 分支为 ${branch}。`)
+      if (appMapPath) {
+        logs.push(`应用地图: ${appMapPath}`)
+        parts.push(
+          `参考应用映射表:${appMapPath}(如果有)：先读取该文件，遵循其中的 zone 约束（zone=old 不主动改动，zone=transition 仅在任务明确涉及范围内修改）。`,
+        )
+      }
       parts.push(
         mode === 'batch'
           ? `请按以下任务清单（tasks.md）在当前项目中实现代码。要求：\n- 完成一个任务后在 tasks.md 中把对应复选框打勾（- [x]）\n- 遵循项目现有代码风格\n- 完成后汇报本次改动摘要\n\n${tasksMarkdown}`

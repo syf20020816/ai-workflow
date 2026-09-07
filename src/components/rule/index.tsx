@@ -10,6 +10,7 @@ import {
   Form,
   Input,
   Select,
+  Alert,
 } from 'antd'
 
 import { useEffect, useState } from 'react'
@@ -727,14 +728,22 @@ const PromptTab = ({ loading }: { loading: boolean }) => {
   ]
 
   return (
-    <Table
-      dataSource={list}
-      columns={columns}
-      rowKey="relativePath"
-      loading={l || loading}
-      size="small"
-      pagination={false}
-    />
+    <>
+      <Alert
+        type="warning"
+        title="不建议直接修改系统提示词，若需要自定义，可添加SKILL节点或使用用户输入节点来注入自定义提示词。"
+        showIcon
+        style={{marginBottom: 12}}
+      />
+      <Table
+        dataSource={list}
+        columns={columns}
+        rowKey="relativePath"
+        loading={l || loading}
+        size="small"
+        pagination={false}
+      />
+    </>
   )
 }
 
@@ -801,6 +810,13 @@ const MemoryTab = ({ loading }: { loading: boolean }) => {
   ]
 
   return (
+    <>
+    <Alert
+        type="info"
+        title="memory.md为默认记忆文件，若需要自定义，可在编辑器中memory目录下增加其他文件，在记忆节点中选择即可。"
+        showIcon
+        style={{marginBottom: 12}}
+      />
     <Table
       dataSource={list}
       columns={columns}
@@ -809,6 +825,7 @@ const MemoryTab = ({ loading }: { loading: boolean }) => {
       size="small"
       pagination={false}
     />
+    </>
   )
 }
 
@@ -838,7 +855,7 @@ export const PromptManager = () => {
           },
           {
             key: 'prompts',
-            label: '提示词',
+            label: '系统提示词',
             children: <PromptTab loading={false} />,
           },
           {

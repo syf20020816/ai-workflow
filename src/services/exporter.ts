@@ -676,6 +676,9 @@ function buildProcessingInstruction(
           `项目路径：${data.projectPath}${data.branch ? `（分支 ${data.branch}）` : ''}，本地执行时直接读取项目源码。`,
         )
       }
+      if (data.appMapPath) {
+        lines.push(`参考应用映射表:${data.appMapPath}(如果有)`)
+      }
       parts.push(lines.join('\n'))
       break
     }

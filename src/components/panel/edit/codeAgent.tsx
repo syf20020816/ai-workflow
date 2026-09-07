@@ -2,7 +2,7 @@ import { useNodeStore } from '#/store/node'
 import { useRouteStore } from '#/store/route'
 import type { NCodeAgent, NCodeAgentData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Select, Space, Switch, Typography } from 'antd'
+import { Select, Typography } from 'antd'
 import { DynEditKV, DynEditKey } from './item'
 import type { DynEditKVRow } from './item'
 import { ToolSelect } from '#/components/select'
@@ -37,29 +37,15 @@ export const EditCodeAgent = () => {
       placeholder: '留空使用当前分支，如：main、develop',
     },
     {
-      key: 'useAppMap',
+      key: 'appMapPath',
       label: (
         <DynEditKey
           title="应用地图"
-          info={'analyze 时检测项目 App-Desc，没有则自动生成初版'}
+          info={'应用映射表（App-Desc）文件路径，由使用者自行生成；留空则不使用'}
         />
       ),
-      valueRender: (onChange) => {
-        const enabled = currentNode.data.useAppMap ?? true
-        return (
-          <Space>
-            <Switch
-              checked={enabled}
-              onChange={(checked) => {
-                patchCurrentNode((draft) => {
-                  d(draft).useAppMap = checked
-                })
-                onChange(checked)
-              }}
-            />
-          </Space>
-        )
-      },
+      value: currentNode.data.appMapPath,
+      placeholder: '如：app-desc.json（相对项目根目录）或绝对路径',
     },
     {
       key: 'instruction',
@@ -157,8 +143,8 @@ export const EditCodeAgent = () => {
               data.instruction = (value || '') as string
             } else if (key === 'maxIterations') {
               data.maxIterations = typeof value === 'number' ? value : 20
-            } else if (key === 'useAppMap') {
-              data.useAppMap = !!value
+            } else if (key === 'appMapPath') {
+              data.appMapPath = (value || '') as string
             }
           })
         }}
