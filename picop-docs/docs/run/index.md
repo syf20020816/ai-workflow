@@ -11,6 +11,18 @@ order: 10
 
 ## 准备工作
 
+### 通过AI进行安装
+
+将以下内容添加到 `.agent/skills/picop-install/SKILL.md` 中：
+
+```bash
+/picop-install
+
+/picop-install --speckit # 安装speckit和lark-cli
+/picop-install --openspec # 安装openspec和lark-cli
+/picop-install --all # 安装所有依赖
+```
+
 ### spec-kit CLI（Specify 格式需要）
 
 ```bash
@@ -35,14 +47,19 @@ openspec --version
 
 ### lark-cli（如果工作流引用了 Lark 节点）
 
+lark-cli 使用内部定制版（lz-feishu-cli），不通过 npm 安装。**克隆到临时目录**，避免污染用户项目：
+
 ```bash
-npm install -g @lark-openapi/cli
+git clone https://gitlab.lizhi.fm/ocean/vibe_coding/mcp/application/lz-feishu-cli.git /tmp/lz-feishu-cli
+cd /tmp/lz-feishu-cli
+chmod +x ./install-lark-cli.sh
+./install-lark-cli.sh
+
 lark-cli auth login
 lark-cli auth status
 ```
 
 > 如果工作流不包含 Lark 节点（`lark` / `larkTemplate` / `larkWikiTraversal`），可跳过 lark-cli 安装。
-
 
 ## 常见问题
 
@@ -94,7 +111,7 @@ A: 确认 agent 工具支持读取 YAML 文件并按 `artifacts` 依赖图执行
 
 A: 这是预期行为——Spec 导出器不做 tasks 自动补全。如果工作流需要 tasks 产物，请在画布上手动标注一个 taskPlanner 节点或某个 lark 节点的 `specStep` 为 `tasks`。
 
-***
+---
 
 ## 参考
 
