@@ -37,21 +37,17 @@
 
 ---
 
-## 本地执行：环境准备
-
-平台在画布上"验证"工作流时，需要你本机先启动 Runner：
+## 开发
 
 ```bash
-# 1. 安装所需的 AI CLI 工具（至少一个，用于 AI 类节点）
-#    - DeepSeek Harness：https://github.com/dpx-desktop/deepseek-harness
-#    - Codex CLI：（OpenAI）
-#    - Claude Code：（Anthropic）
-# 2. 如需 Lark 节点，使用前安装并登录 lark-cli
-lark-cli auth login
+# 安装依赖
+npm install
 
-# 3. 启动本地 Runner（默认监听 127.0.0.1:7523）
-cd ai-workflow
-npm run runner
+# 启动开发服务器（端口 3030）
+npm run dev:all
+
+# 生成路由（新增 API/页面路由后需要）
+npm run generate-routes
 ```
 
 前端启动时通过 `GET /ping` 探测 Runner 是否在线；离线时 AI / Lark / 文件类节点会给出明确提示（AI 搭建工作流面板会提示启动命令）。Runner 只在 `127.0.0.1` 监听，并校验 `Origin` 白名单（默认允许任意 localhost 端口，可用 `RUNNER_ALLOWED_ORIGINS` 配部署域名），防止其他网页指挥你本机的 Runner。
@@ -63,6 +59,7 @@ npm run runner
 ## 已实现功能
 
 ### 1. 可视化工作流编辑器
+
 - **[React Flow](https://reactflow.dev/) 画布** — 节点拖拽、连线、缩放、平移，基于 `@xyflow/react` v12
 - **MiniMap** + **Controls** — 小地图导航和画布控制
 - **暗色主题** — Ant Design darkAlgorithm + React Flow 暗色适配
@@ -70,29 +67,30 @@ npm run runner
 
 ### 2. 21 种工作流节点
 
-| 节点类型 | 标识 | 用途 |
-|---------|------|------|
-| **用户输入节点** | `userInput` | 接受用户输入的文本、提示词、文件/URL 路径 |
-| **智能体节点** | `agent` | 调用本机 AI CLI 工具（Claude / Codex / DeepSeek）进行分析和生成，接收上游所有输入 + 全链路累积上下文 |
-| **BMad 角色节点** | `bmadAgent` | 赋予智能体特定角色指令（分析师/架构师/SM 等），内容同步到智能体（BMad 在上游、Agent 在下游，方向已修正） |
-| **代码处理节点** | `codeAgent` | 用本机 AI CLI 直接在项目目录编码：`analyze`（只读分析）/ `batch`（按 tasks.md 分批写代码）双模式 |
-| **任务拆解节点** | `taskPlanner` | 把上游概设输出的 plan 拆解为可独立执行的 batch 任务清单，产出 tasks.md |
-| **自检 Agent 节点** | `selfCheck` | 独立会话评审：配置 BMad 角色注入评审身份，材料按 git diff / 上游累积产物自动降级，输出 PASS / CONDITIONAL_PASS / FAIL |
-| **关键词智能体节点** | `keywordAgent` | 从输入中提取关键词列表，供下游使用 |
-| **知识库检索节点** | `knowledgeRetrieval` | 基于 embedding 从 Qdrant 向量库检索相关内容 |
-| **知识库存储节点** | `knowledgeStore` | 文档入库：embedding 分块写入 Qdrant 向量库 |
-| **Lark 文档节点** | `lark` | 读取/写入/创建飞书文档，通过 lark-cli 操作 |
-| **Lark 模板节点** | `larkTemplate` | 读取飞书文档作为内容模板，传递给下游 |
-| **Lark Wiki 遍历节点** | `larkWikiTraversal` | 遍历飞书知识库节点层级并读取文档内容 |
-| **记忆节点** | `memory` | 读写持久化记忆文件（markdown 格式），跨工作流传递上下文 |
-| **Skill 节点** | `skill` | 执行 BMad Skill（分析师/开发者等角色技能） |
-| **回答节点** | `answer` | 工作流暂停，等待用户输入后继续 |
-| **AI 输出节点** | `aiOutput` | 展示最终输出结果 |
-| **判断节点** | `if` / `ifCondition` | 条件分支，根据上游输出匹配关键词或 AI 判断选择路径 |
-| **循环节点** | `loop` / `loopCondition` | 循环迭代，支持计数器模式和上游数据驱动模式 |
-| **重试节点** | `retry` | 捕获上游错误，支持关键词匹配和 AI 判断两种重试条件 |
+| 节点类型               | 标识                     | 用途                                                                                                                  |
+| ---------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **用户输入节点**       | `userInput`              | 接受用户输入的文本、提示词、文件/URL 路径                                                                             |
+| **智能体节点**         | `agent`                  | 调用本机 AI CLI 工具（Claude / Codex / DeepSeek）进行分析和生成，接收上游所有输入 + 全链路累积上下文                  |
+| **BMad 角色节点**      | `bmadAgent`              | 赋予智能体特定角色指令（分析师/架构师/SM 等），内容同步到智能体（BMad 在上游、Agent 在下游，方向已修正）              |
+| **代码处理节点**       | `codeAgent`              | 用本机 AI CLI 直接在项目目录编码：`analyze`（只读分析）/ `batch`（按 tasks.md 分批写代码）双模式                      |
+| **任务拆解节点**       | `taskPlanner`            | 把上游概设输出的 plan 拆解为可独立执行的 batch 任务清单，产出 tasks.md                                                |
+| **自检 Agent 节点**    | `selfCheck`              | 独立会话评审：配置 BMad 角色注入评审身份，材料按 git diff / 上游累积产物自动降级，输出 PASS / CONDITIONAL_PASS / FAIL |
+| **关键词智能体节点**   | `keywordAgent`           | 从输入中提取关键词列表，供下游使用                                                                                    |
+| **知识库检索节点**     | `knowledgeRetrieval`     | 基于 embedding 从 Qdrant 向量库检索相关内容                                                                           |
+| **知识库存储节点**     | `knowledgeStore`         | 文档入库：embedding 分块写入 Qdrant 向量库                                                                            |
+| **Lark 文档节点**      | `lark`                   | 读取/写入/创建飞书文档，通过 lark-cli 操作                                                                            |
+| **Lark 模板节点**      | `larkTemplate`           | 读取飞书文档作为内容模板，传递给下游                                                                                  |
+| **Lark Wiki 遍历节点** | `larkWikiTraversal`      | 遍历飞书知识库节点层级并读取文档内容                                                                                  |
+| **记忆节点**           | `memory`                 | 读写持久化记忆文件（markdown 格式），跨工作流传递上下文                                                               |
+| **Skill 节点**         | `skill`                  | 执行 BMad Skill（分析师/开发者等角色技能）                                                                            |
+| **回答节点**           | `answer`                 | 工作流暂停，等待用户输入后继续                                                                                        |
+| **AI 输出节点**        | `aiOutput`               | 展示最终输出结果                                                                                                      |
+| **判断节点**           | `if` / `ifCondition`     | 条件分支，根据上游输出匹配关键词或 AI 判断选择路径                                                                    |
+| **循环节点**           | `loop` / `loopCondition` | 循环迭代，支持计数器模式和上游数据驱动模式                                                                            |
+| **重试节点**           | `retry`                  | 捕获上游错误，支持关键词匹配和 AI 判断两种重试条件                                                                    |
 
 ### 3. 节点操作
+
 - **添加节点** — 每个节点右侧的 `+` 按钮，下拉选择节点类型，自动生成连线到新节点
 - **删除节点** — 编辑面板底部「删除」按钮，同时清理关联连线
 - **节点属性编辑** — 右侧编辑面板，点击节点即切换
@@ -100,6 +98,7 @@ npm run runner
 - **节点拖拽** — 自由拖拽调整布局
 
 ### 4. 执行引擎
+
 - **DAG 执行引擎** — 拓扑排序（Kahn 算法）确定执行顺序，分层并行（`Promise.all`），检测循环依赖
 - **Pipeline 数据流** — 上游节点 output 自动传递为下游节点 input
 - **上下文累积** — 每个节点执行时 BFS 收集全部上游祖先节点，按节点类型提取"规范摘要"组成 `input.upstreams`，保证线性链路中途不丢数据、无需手动补线
@@ -119,27 +118,32 @@ npm run runner
 - **节点输出固定（PIN）** — 保存节点执行结果到文件（按工作流分目录），支持从 PIN 节点开始执行，避免重复运行上游节点，并恢复该节点执行时的累积上下文
 
 ### 5. 本地工具执行
+
 - **Runner 探测** — 编辑面板的「本地工具」下拉由 Runner `GET /tools` 探测用户本机已安装的 CLI（Claude Code / Codex / DeepSeek），未安装的置灰
 - **异步任务** — AI 类节点提交 `POST /agent-cli` 返回任务 ID，前端轮询 `GET /task/:id` 实时拉取日志增量，直到完成/失败/超时
 - **权限模式** — 只读场景（analyze / 评审 / 拆解 / 关键词）用安全模式；需要写文件的 batch 编码用 auto 模式（权限放开），`auto` 经 Runner 映射到工具的权限参数（claude → `--permission-mode acceptEdits`、codex → `--full-auto`、deepseek → `--auto`）
 
 ### 6. 提示词管理
+
 - **提示词编辑** — 独立 Tab 页面，支持修改 CodeAgent 系统提示词等模板
 - **持久化** — 保存到 `prompts/` 目录
 
 ### 7. 工作流导入/导出/模板
+
 - **导入** — 弹窗支持粘贴 JSON 或拖拽上传 JSON 文件
 - **导出** — 弹窗展示 JSON（可复制）或下载为 `.json` 文件
 - **保存模板** — 保存到 `workflows/` 目录，持久化存储
 - **工作流管理** — 独立 Tab 页面，列表展示所有已保存模板，支持加载/删除
 
 ### 8. 节点输出固定（PIN）
+
 - **PIN 按钮** — 每个节点执行后点击 📌 保存输出到 `workflows/result/.pin/<工作流名>/nodeType_nodeId.json`（按工作流目录隔离，不同工作流相同 nodeId 不互相覆盖）
 - **上下文随 PIN 保存** — 对运行过的节点 PIN 时，从执行记录中提取该节点执行时看到的累积上下文（上游祖先输出）一并保存；从中间 PIN 运行时可恢复完整上下文（如原始需求 + 最终交付物的比对）
 - **Load 加载** — 编辑面板可选择已保存的 PIN 数据加载到内存，按 nodeId 精确注入，同一类型不同节点互不干扰；当前工作流的 PIN 排在前面，其他工作流排后面并标注归属
 - **从 PIN 执行** — 执行面板 Select 选择 PIN 节点后运行，跳过上流节点，从该节点下游开始；未运行过的节点 PIN 无累积上下文，直接运行（不累积）
 
 ### 9. 状态管理
+
 - **Zustand** 全局状态管理
 - **Immer** 不可变数据更新（`patchCurrentNode`），避免深层 spread
 - **NodeBuilder** 工厂模式构建节点，自动生成 UUID 和位置偏移
@@ -155,12 +159,12 @@ BMad CLI（`npx bmad-method install` 部署的完整框架）定位是 AI IDE �
 
 **角色资产与目录结构**
 
-| 路径 | 内容 | 用途 |
-|------|------|------|
-| `.bmad/_bmad/config.toml` | 角色注册表（7 个：analyst / pm / ux-designer / architect / dev + tech-writer / tea） | 角色库数据源，`/api/bmad/agents` 解析 |
-| `.bmad/agents/<id>/SKILL.md` | 清洗后的角色 persona 指令（自包含、无运行时协议） | **注入用**，规则页可直接编辑 |
-| `.bmad/agents/<id>/customize.toml` | 官方 persona 源（role / identity / communication_style / principles） | 源参考，清洗时提炼 |
-| `.bmad/plan/` | 官方 plan 技能（PRD / spec / architecture / ux 等）备份 | 暂不接入执行，保留作方法论参考 |
+| 路径                               | 内容                                                                                 | 用途                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------- |
+| `.bmad/_bmad/config.toml`          | 角色注册表（7 个：analyst / pm / ux-designer / architect / dev + tech-writer / tea） | 角色库数据源，`/api/bmad/agents` 解析 |
+| `.bmad/agents/<id>/SKILL.md`       | 清洗后的角色 persona 指令（自包含、无运行时协议）                                    | **注入用**，规则页可直接编辑          |
+| `.bmad/agents/<id>/customize.toml` | 官方 persona 源（role / identity / communication_style / principles）                | 源参考，清洗时提炼                    |
+| `.bmad/plan/`                      | 官方 plan 技能（PRD / spec / architecture / ux 等）备份                              | 暂不接入执行，保留作方法论参考        |
 
 **为什么要「清洗」**
 
@@ -183,16 +187,16 @@ config.toml → /api/bmad/agents（解析角色 + 附 skillContent = SKILL.md �
 
 **对比 BMad CLI：取舍分析**
 
-| 维度 | 本项目（persona 注入 + 自建编排） | BMad CLI（完整框架） |
-|------|---------------------------------|----------------------|
-| 编排方式 | 可视化 DAG 自由编排，可组合知识库 / Lark / 记忆 / 条件 / 循环等自有节点 | 内置固定 SDLC 流程（PRD→UX→架构→故事→开发→评审→测试），交互式会话驱动 |
-| 运行时依赖 | 无：只读 `.bmad/` 下配置与指令，不需要 install 产物 / python 脚本 / config.yaml | 需 install 部署 Core / BMM / TEA / BMB，依赖 uv / python 脚本 |
-| 角色能力 | 提炼 persona（身份 / 沟通风格 / 行为准则 / 任务约束），注入为 system prompt | 完整交互式 Agent（激活步骤 / 持久事实 / 菜单技能派发 / 多 Agent 协同） |
-| 流程方法深度 | 目前只注入角色人格；plan 流程模板仅保留未接入 | 完整方法论（PRD Discovery/Finalize、架构 spine、Reviewer Gate、测试策略、CI 门禁） |
-| 可调试性 | 单节点执行 / PIN / 日志 / 上下文预算可控，所见即所得 | CLI 交互黑盒，流程不可拆分调试 |
-| 可扩展性 | 自定义角色可视化创建 + 指令内编辑，与模型管理（多供应商）集成 | BMB 元开发可搓新 Agent / 工作流，但仍在框架内 |
-| 维护成本 | 官方更新需手动同步 `.bmad/` 并重新清洗 | 每次 install 自动拉最新，但受框架约束 |
-| 适用场景 | 把「角色 / 多视角」嵌入自研工作流编排，轻量、本地、可调试 | 直接采用 BMad Method 完整流程，接受固定编排 |
+| 维度         | 本项目（persona 注入 + 自建编排）                                               | BMad CLI（完整框架）                                                               |
+| ------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 编排方式     | 可视化 DAG 自由编排，可组合知识库 / Lark / 记忆 / 条件 / 循环等自有节点         | 内置固定 SDLC 流程（PRD→UX→架构→故事→开发→评审→测试），交互式会话驱动              |
+| 运行时依赖   | 无：只读 `.bmad/` 下配置与指令，不需要 install 产物 / python 脚本 / config.yaml | 需 install 部署 Core / BMM / TEA / BMB，依赖 uv / python 脚本                      |
+| 角色能力     | 提炼 persona（身份 / 沟通风格 / 行为准则 / 任务约束），注入为 system prompt     | 完整交互式 Agent（激活步骤 / 持久事实 / 菜单技能派发 / 多 Agent 协同）             |
+| 流程方法深度 | 目前只注入角色人格；plan 流程模板仅保留未接入                                   | 完整方法论（PRD Discovery/Finalize、架构 spine、Reviewer Gate、测试策略、CI 门禁） |
+| 可调试性     | 单节点执行 / PIN / 日志 / 上下文预算可控，所见即所得                            | CLI 交互黑盒，流程不可拆分调试                                                     |
+| 可扩展性     | 自定义角色可视化创建 + 指令内编辑，与模型管理（多供应商）集成                   | BMB 元开发可搓新 Agent / 工作流，但仍在框架内                                      |
+| 维护成本     | 官方更新需手动同步 `.bmad/` 并重新清洗                                          | 每次 install 自动拉最新，但受框架约束                                              |
+| 适用场景     | 把「角色 / 多视角」嵌入自研工作流编排，轻量、本地、可调试                       | 直接采用 BMad Method 完整流程，接受固定编排                                        |
 
 **结论**
 
@@ -203,6 +207,7 @@ config.toml → /api/bmad/agents（解析角色 + 附 skillContent = SKILL.md �
 ---
 
 ## 技术栈
+
 - **框架**: React 19 + TypeScript 6 + Vite 8
 - **路由**: TanStack Router（文件路由 + API 路由）
 - **UI**: Ant Design 6 + Radix UI Icons + Lucide Icons
@@ -316,19 +321,6 @@ src/
 
 ---
 
-## 本地开发
-
-```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器（端口 3030）
-npm run dev:all
-
-# 生成路由（新增 API/页面路由后需要）
-npm run generate-routes
-```
-
 ### 依赖服务
 
 ```bash
@@ -349,7 +341,9 @@ lark-cli auth login
 ## 核心节点详解
 
 ### CodeAgent 节点
+
 用本机 AI CLI（Claude Code / Codex / DeepSeek）在项目目录直接编码，CLI 自身就是编码 agent（读写文件、跑命令、git），平台不再维护工具调用循环：
+
 - **analyze 模式（默认）** — CLI 在项目目录只读分析，产出技术方案文档（CLI 安全模式，不写文件）
 - **batch 模式** — 按 tasks.md 批次实现代码（CLI auto 模式，权限放开允许写文件），指令中要求 CLI 每完成一个任务在 tasks.md 打勾（`- [ ]` → `- [x]`）
 - **配置**：本地工具、项目路径（作为 `cwd` 传给 Runner）、Git 分支、执行指令、模式切换（analyze/batch）
@@ -357,7 +351,9 @@ lark-cli auth login
 - **cwd 执行** — 项目路径经 Runner 校验后作为命令工作目录，CLI 直接访问该项目的代码与 git
 
 ### 自检 Agent 节点（selfCheck）
+
 独立会话 · 独立上下文 · 不共享编码 Agent 记忆（防"自己给自己打分"的确认偏差），由本机 CLI 以独立进程评审：
+
 - **身份注入** — 编辑面板「视角 (BMad)」从 BMad 角色库选择一个角色，直接注入该角色 SKILL 作为评审系统提示词；**一个节点一个角色**，多视角检验 = 创建多个自检节点各配一个角色
 - **材料自动降级**（Runner 在用户本地收集）：
   1. **上游为 codeAgent（编码场景）** → Runner 在项目目录预执行 `git diff HEAD` 附进 prompt（ground truth，CLI 无需执行任何命令，安全模式即可评审；缺项目路径时报错引导配置）
@@ -366,27 +362,36 @@ lark-cli auth login
 - **结论** — 从评审报告中宽松提取 PASS / FAIL / NEEDS_ATTENTION，节点显示对应的标签 + 视角角色
 
 ### 任务拆解节点（taskPlanner）
+
 把上游概设节点输出的 plan（技术方案）拆解为可独立执行的 batch 任务清单，由本机 CLI 生成：
+
 - **输出** — tasks.md 全文（`## Batch N` + `- [ ]` 任务），CLI 按系统提示词（prompts/taskPlanner.md）组织；batchCount / taskCount 用正则宽松统计
 - **消费** — 供 codeAgent batch 模式按批次实现代码
 
 ### Spec 标记模式（只标记，不产文件）
+
 - 节点通过脚印按钮（StepMarkNode）手动标记输出属于哪个工作流阶段（spec/plan/tasks/report/…），画布左侧 StepLinePanel 汇总已标记步骤并提示缺失的必选项（spec/plan/tasks）
 - 标记随工作流持久化，**平台不产出任何 spec 文件**——导出 `workflow.yml` 后由 openspec / speckit 等 spec 框架生成 `specs/` 目录
 - 执行前检测执行范围内至少一个节点被标记，否则中止（保证编排携带阶段信息）
 
 ### 条件分支（if）
+
 支持两种判断模式：
+
 - **关键词匹配** — 定义多个关键词，上游输出中包含任一关键词则命中
 - **AI 判断** — 让 AI 模型判断上游内容是否需要进入改分支
 
 ### 循环（loop）
+
 两种循环模式：
+
 - **固定次数** — 指定迭代次数
 - **上游数据驱动** — 根据上游节点输出的数据数组长度决定循环次数
 
 ### PIN 功能
+
 用于调试场景，避免重复执行上游节点：
+
 1. 执行节点后点击 📌 保存结果（连同该节点执行时看到的累积上下文，按工作流分目录落盘）
 2. 执行面板 Select 选择已固定的 PIN 节点（当前工作流的 PIN 排在前面）
 3. 点击「运行」→ 引擎注入 PIN 输出（并恢复其累积上下文），从下游节点继续执行
@@ -397,33 +402,38 @@ lark-cli auth login
 ## 处理策略与优化手段
 
 ### 上下文累积（引擎级）
+
 - 节点输入 = 直接前驱输出合并 + `upstreams`（全部祖先节点的规范摘要，BFS 从近到远收集）
 - 保证线性链路中任意位置都能拿到整条链路的上下文，无需手动补线；链路中间节点不丢上游数据
 
 ### 按节点类型的字段提取（Token 优化）
-| 节点类型 | 累积字段 | 丢弃字段 |
-|---------|---------|---------|
-| agent / codeAgent | `response` | model / usage / passThrough |
-| keywordAgent | `keywords` | queries / raw |
-| knowledgeRetrieval | `retrievalContent` | results 数组 / count / collectionNames |
-| userInput | `text` / `prompt` | files / urls |
-| larkTemplate | `templateContent` | templateUrl |
-| lark / larkWikiTraversal | `result` | action / url / success |
-| memory | `content` | — |
-| bmadAgent | `instructions` | role / agentId |
-| 其他类型 | 内容类字段回退 | 执行元数据 |
+
+| 节点类型                 | 累积字段           | 丢弃字段                               |
+| ------------------------ | ------------------ | -------------------------------------- |
+| agent / codeAgent        | `response`         | model / usage / passThrough            |
+| keywordAgent             | `keywords`         | queries / raw                          |
+| knowledgeRetrieval       | `retrievalContent` | results 数组 / count / collectionNames |
+| userInput                | `text` / `prompt`  | files / urls                           |
+| larkTemplate             | `templateContent`  | templateUrl                            |
+| lark / larkWikiTraversal | `result`           | action / url / success                 |
+| memory                   | `content`          | —                                      |
+| bmadAgent                | `instructions`     | role / agentId                         |
+| 其他类型                 | 内容类字段回退     | 执行元数据                             |
 
 ### 内容块优先级与预算截断
+
 - agent 节点把上游内容按优先级拼入 system prompt：需求分析(10) → 指令(20) → 关键词(30) → 模板(40) → 其他内容(50) → 知识库检索结果(60)
 - 预算 = `min(tokenMax × 1.2, 150K 字符)`；超预算时按优先级保留高价值块的开头（检索结果按相关度排序，开头最相关），而非整块丢弃
 - 用户消息兜底 `JSON.stringify` 时排除 `upstreams`，避免与 system prompt 内容块重复打包
 
 ### 知识库检索优化
+
 - **结果清洗** — 检索结果只保留 `score` + `content` 两个字段，降低 payload
 - **双重去重** — 按 `collectionName:id` 去重 → 内容包含去重（保留较长者），避免语义重复结果灌入上下文
 - **Qdrant 写入** — upsert 使用 `wait=true` 同步确认，20 points/批量，失败即时暴露
 
 ### 安全与健壮性
+
 - **平台不持有模型凭据** — AI 执行全部走用户本机 CLI，平台侧无 API Key / model.conf；工作流 JSON 里也不再落任何模型敏感字段（`modal` 仅保留目录别名等非敏感信息）
 - **Runner 本地隔离** — 只绑定 `127.0.0.1`，CORS `Origin` 白名单（默认任意 localhost 端口 + `RUNNER_ALLOWED_ORIGINS` 可配部署域），阻止任意网页指挥本机 Runner
 - **命令模板化** — Runner 只按注册表 adapter 拼命令（不接收任意 shell 字符串），并预先收集 git diff / 指定 cwd，CLI 无权限需求
@@ -432,6 +442,7 @@ lark-cli auth login
 - **向量维度强校验** — 与 embedding 模型匹配（64-16384），避免 Qdrant 静默丢弃不匹配向量
 
 ### PIN 调试机制
+
 - 文件存储 `workflows/result/.pin/<工作流名>/nodeType_nodeId.json`，**按工作流目录隔离**（不同工作流相同 nodeId 不互相覆盖）；注入按 `nodeId` 精确匹配，同一类型不同节点互不干扰
 - PIN 保存时记录该节点执行时的累积上下文（`context.upstreams`）；从中间 PIN 部分运行时一并注入，下游节点可恢复完整上下文累积
 - 加载列表按"当前工作流优先"排序并标注归属；旧格式（根目录文件）仍兼容读取
