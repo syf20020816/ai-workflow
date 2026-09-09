@@ -323,13 +323,10 @@ src/
 npm install
 
 # 启动开发服务器（端口 3030）
-npm run dev
+npm run dev:all
 
 # 生成路由（新增 API/页面路由后需要）
 npm run generate-routes
-
-# 构建
-npm run build
 ```
 
 ### 依赖服务
