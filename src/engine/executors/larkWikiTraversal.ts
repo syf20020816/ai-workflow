@@ -51,7 +51,7 @@ export const larkWikiTraversalExecutor: NodeExecutor = {
       const totalChars = (documents || []).reduce((sum: number, d: any) => sum + (d.content?.length || 0), 0)
       logs.push(`遍历完成: 共 ${totalDocs || 0} 个文档, 合计 ${totalChars} 字符`)
 
-      // 将文档列表和拼接文本一起输出，下游 knowledgeStore 可消费
+      // 将文档列表和拼接文本一起输出，供下游节点消费
       const allContent = (documents || []).map((d: any) => d.content).join('\n\n---\n\n')
 
       return {

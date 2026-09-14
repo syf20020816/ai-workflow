@@ -19,7 +19,9 @@ export const useSkillStore = create<SkillState>((set, get) => ({
   fetchSkills: async () => {
     set({ loading: true })
     try {
-      const res = await fetch(API_BASE)
+      // rescan=true：先扫描 workflows/skills/ 目录，把 file-editor 等直接新建的
+      // SKILL.md 目录同步进 index.json，再返回最新列表
+      const res = await fetch(`${API_BASE}?rescan=true`)
       const skills: Skill[] = await res.json()
       set({ skills, loading: false })
     } catch (err) {

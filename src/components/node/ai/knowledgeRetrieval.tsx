@@ -7,15 +7,21 @@ export const KnowledgeRetrievalNode = (
   props: NodeProps<NKnowledgeRetrieval>,
 ) => {
   const { data } = props
-  const collectionName = data.collectionName || ''
-  const topK = data.topK || 5
+  const mode = data.mode || 'local'
 
   return (
     <UNode node={props}>
-      {collectionName && (
-        <Tag color="cyan">
-          {collectionName} (top {topK})
-        </Tag>
+      {mode === 'api' ? (
+        data.url && (
+          <Tag color="cyan">
+            {data.method || 'GET'} {data.url}
+          </Tag>
+        )
+      ) : (
+        <>
+          {data.skillName && <Tag color="purple">技能: {data.skillName}</Tag>}
+          {data.tool && <Tag color="blue">本地: {data.tool}</Tag>}
+        </>
       )}
     </UNode>
   )

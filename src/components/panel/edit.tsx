@@ -30,7 +30,6 @@ import { EditSkill } from './edit/skill'
 import { EditCodeAgent } from './edit/codeAgent'
 import { EditLarkTemplate } from './edit/larkTemplate'
 import { EditKnowledgeRetrieval } from './edit/knowledgeRetrieval'
-import { EditKnowledgeStore } from './edit/knowledgeStore'
 import { EditKeywordAgent } from './edit/keywordAgent'
 import { EditTaskPlanner } from './edit/taskPlanner'
 import { EditSelfCheck } from './edit/selfCheck'
@@ -138,9 +137,6 @@ export const EditPanel = (props: PanelProps) => {
                 )}
                 {currentNode.type === NodeTypes.KNOWLEDGE_RETRIEVAL && (
                   <EditKnowledgeRetrieval />
-                )}
-                {currentNode.type === NodeTypes.KNOWLEDGE_STORE && (
-                  <EditKnowledgeStore />
                 )}
                 {currentNode.type === NodeTypes.KEYWORD_AGENT && (
                   <EditKeywordAgent />

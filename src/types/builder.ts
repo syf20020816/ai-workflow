@@ -200,25 +200,8 @@ export class NodeBuilder {
       type: NodeTypes.KNOWLEDGE_RETRIEVAL,
       data: {
         title: '知识库检索节点',
-        collectionName: '',
+        mode: 'local',
         query: '',
-        topK: 5,
-        scoreThreshold: 0,
-        vectorSize: 1536,
-        maxRetrievals: 40,
-      },
-    }
-  }
-
-  static knowledgeStore(pos: Position): AppNode {
-    return {
-      ...NodeBuilder.basicProps(pos.x, pos.y),
-      type: NodeTypes.KNOWLEDGE_STORE,
-      data: {
-        title: '知识库写入节点',
-        collectionName: '',
-        chunkSize: 800,
-        chunkOverlap: 100,
       },
     }
   }

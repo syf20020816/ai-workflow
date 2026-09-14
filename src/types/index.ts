@@ -18,7 +18,6 @@ export const NodeTypes = {
   LARK_TEMPLATE: 'larkTemplate',
   MEMORY: 'memory',
   KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
-  KNOWLEDGE_STORE: 'knowledgeStore',
   LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
   KEYWORD_AGENT: 'keywordAgent',
   TASK_PLANNER: 'taskPlanner',
@@ -237,57 +236,37 @@ export type NLarkTemplateData = NNode & {
 
 export type NLarkTemplate = Node<NLarkTemplateData, typeof NodeTypes.LARK_TEMPLATE>
 
-/** 知识库检索节点：从 Qdrant 向量数据库进行语义搜索 */
+/** 知识库检索节点：查询用户自己的外部知识库，不依赖平台数据库（双模式） */
 export type NKnowledgeRetrievalData = NNode & {
-  /** Qdrant 集合名称（兼容旧版） */
-  collectionName?: string
-  /** 多集合名称（新版） */
-  collectionNames?: string[]
-  /** 搜索查询文本（留空则使用上游输入或 AI 自动生成） */
+  /** 检索模式：local=本地工具（用户配置 MCP 的 agent 查自己的库），api=远程 API 请求 */
+  mode?: 'local' | 'api'
+  // ---- local 模式 ----
+  /** 自然语言查询（留空则使用上游输入） */
   query?: string
-  /** 返回结果数量，默认 5 */
-  topK?: number
-  /** 最低相似度分数，默认 0 */
-  scoreThreshold?: number
-  /** 嵌入向量维度（用于创建集合时指定），默认 1536 */
-  vectorSize?: number
-  /** 筛选条件 */
-  filters?: Array<{
-    field: string
-    match: string
-  }>
-  /** 搜索结果 */
-  results?: Array<{
-    id: string | number
-    score: number
-    payload?: Record<string, any>
-  }>
-  /** 最大检索次数（默认 40）：无显式 query 时由 AI 自动生成多种查询进行多次搜索 */
-  maxRetrievals?: number
-  /** 本地 CLI 工具 ID（用于自动生成搜索查询，可选） */
+  /** 本地 CLI 工具 ID（claude/codex 等，通过 Runner 调用） */
   tool?: string
-}
-
-export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
-
-export type NKnowledgeStoreData = NNode & {
-  /** Qdrant 集合名称 */
-  collectionName?: string
-  /** Embedding 模型 ID */
-  modelId?: string
-  /** 分块大小，默认 800 */
-  chunkSize?: number
-  /** 分块重叠，默认 100 */
-  chunkOverlap?: number
-  /** 写入结果统计 */
+  /** 可选 SKILL ID：作为查询指令上下文 */
+  skillId?: string
+  /** SKILL 名称（展示用） */
+  skillName?: string
+  // ---- api 模式 ----
+  /** 请求 URL */
+  url?: string
+  /** 请求方法 */
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+  /** 请求头（键值对） */
+  headers?: Array<{ key: string; value: string }>
+  /** 请求体（JSON 文本，支持 {{field}} 占位符引用上游输出） */
+  body?: string
+  /** 执行结果 */
   result?: {
-    totalChunks: number
-    totalVectors: number
-    collectionName: string
+    retrievalContent: string
+    count: number
+    mode?: 'local' | 'api'
   }
 }
 
-export type NKnowledgeStore = Node<NKnowledgeStoreData, typeof NodeTypes.KNOWLEDGE_STORE>
+export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
 
 export type NLarkWikiTraversalData = NNode & {
   /** 知识库空间 ID（内部使用，由 spaceUrl 自动解析） */
@@ -363,6 +342,6 @@ export type NSelfCheck = Node<NSelfCheckData, typeof NodeTypes.SELF_CHECK>
 export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
-  | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval | NKnowledgeStore
+  | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval
   | NLarkWikiTraversal | NKeywordAgent | NTaskPlanner | NSelfCheck
 > | null

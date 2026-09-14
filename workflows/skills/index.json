@@ -4,5 +4,11 @@
     "name": "前端技术文档编写指南",
     "description": "skill: 前端技术文档编写指南",
     "source": "custom"
+  },
+  {
+    "id": "viki",
+    "name": "\"viki\"",
+    "description": "\"OpenViki skill for MCP\"",
+    "source": "custom"
   }
 ]

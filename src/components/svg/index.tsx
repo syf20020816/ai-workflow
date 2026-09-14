@@ -15,7 +15,6 @@ import {
   Repeat,
   SwatchBook,
   Type,
-  DatabaseArrowUp,
   KeyRound,
   ListTodo,
   ShieldCheck,
@@ -269,11 +268,6 @@ Icon.KnowledgeRetrieval = ({ ...rest }: SVGProps<SVGSVGElement>) =>
     children: <Database {...rest} color="#52c41a" />,
   })
 
-Icon.KnowledgeStore = ({ ...rest }: SVGProps<SVGSVGElement>) =>
-  Icon({
-    children: <DatabaseArrowUp {...rest} color="#52c41a" />,
-  })
-
 Icon.LarkWikiTraversal = ({ ...rest }: SVGProps<SVGSVGElement>) =>
   Icon({
     children: (
@@ -334,7 +328,6 @@ export const NodeIcons = new Map<NodeType, typeof Icon.UserInput>([
   [NodeTypes.CODE_AGENT, Icon.CodeAgent],
   [NodeTypes.MEMORY, Icon.Memory],
   [NodeTypes.KNOWLEDGE_RETRIEVAL, Icon.KnowledgeRetrieval],
-  [NodeTypes.KNOWLEDGE_STORE, Icon.KnowledgeStore],
   [NodeTypes.LARK_WIKI_TRAVERSAL, Icon.LarkWikiTraversal],
   [NodeTypes.KEYWORD_AGENT, Icon.KeywordAgent],
   [NodeTypes.TASK_PLANNER, Icon.TaskPlanner],

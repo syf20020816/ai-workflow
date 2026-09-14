@@ -9,7 +9,7 @@ order: 3
 
 ---
 
-## 一、21 种节点详解
+## 一、20 种节点详解
 
 ### 1.1 输入与输出
 
@@ -36,8 +36,7 @@ order: 3
 
 | 节点类型 | 标识 | 用途 |
 |---------|------|------|
-| 知识库检索 | `knowledgeRetrieval` | 基于 embedding 从 Qdrant 向量库检索相关内容 |
-| 知识库存储 | `knowledgeStore` | 文档入库：embedding 分块写入 Qdrant 向量库 |
+| 知识库检索 | `knowledgeRetrieval` | 双模式：本地模式用本机 AI CLI（经其配置的 MCP）以自然语言查用户自己的知识库，可选挂一个 SKILL 作为查询指令；远程 API 模式编辑请求（URL / 方法 / Headers / Body）直调用户自己的知识库接口 |
 | Lark 文档 | `lark` | 读取/写入/创建飞书文档，通过 lark-cli 操作 |
 | Lark 模板 | `larkTemplate` | 读取飞书文档作为内容模板，传递给下游 |
 | Lark Wiki 遍历 | `larkWikiTraversal` | 遍历飞书知识库节点层级并读取文档内容 |
@@ -77,7 +76,7 @@ agent 节点把上游内容按优先级拼入 system prompt：
 | 60 | 知识库检索结果 |
 
 - 预算 = `min(tokenMax × 1.2, 150K 字符)`
-- 超预算时按优先级保留高价值块的开头（检索结果按相关度排序），而非整块丢弃
+- 超预算时按优先级保留高价值块的开头（检索结果块整体靠前），而非整块丢弃
 - 用户消息兜底 `JSON.stringify` 时排除 `upstreams`，避免与 system prompt 内容块重复打包
 
 ### 2.3 按节点类型字段提取（Token 优化）
@@ -223,16 +222,15 @@ config.toml → /api/bmad/agents（解析角色 + 附 skillContent = SKILL.md �
 
 ## 十、知识库
 
-### 检索优化
+平台**不内置任何数据库**（向量库 / 文档库 / 关系型 / 本地 md 目录都不内置），知识库检索节点只负责把查询交给用户自己的数据源，用户无需迁移数据：
 
-- **结果清洗** — 只保留 `score` + `content` 两个字段，降低 payload
-- **双重去重** — 按 `collectionName:id` 去重 → 内容包含去重（保留较长者），避免语义重复灌入上下文
-- **Qdrant 写入** — upsert 使用 `wait=true` 同步确认，20 points/批量，失败即时暴露
+- **本地模式** — 选择本机 AI CLI 工具（工具需配置访问你知识库的 MCP），以自然语言查询，可选挂一个 SKILL 作为查询指令上下文；AI CLI 经其 MCP 访问用户自己的知识库并返回检索内容
+- **远程 API 模式** — 编辑请求（URL / 方法 / Headers / Body，Body 支持 `{{字段}}` 引用上游输出），由后端 `httpProxy` 代理调用用户配置的知识库接口，返回响应内容
 
-### 写入约束
+### 导出行为
 
-- 文档上传限制 ≤5MB，流式批量处理（8 chunks/embedding batch），避免内存溢出
-- 向量维度强校验（64-16384），与 embedding 模型匹配，避免 Qdrant 静默丢弃不匹配向量
+- 本地模式导出为「使用你的 MCP 连接用户知识库检索」的指令文件，交由外部 AI CLI 执行
+- 远程 API 模式导出为 `curl` 命令（GET 自动忽略 Body），直接请求用户配置的接口
 
 ---
 

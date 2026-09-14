@@ -28,10 +28,6 @@ export interface ExportOptions {
   name?: string
   /** 是否合并完全相同的并行步骤，默认 false */
   mergeParallel?: boolean
-  /** 知识库导出策略，默认 snapshot */
-  knowledgeStrategy?: 'snapshot' | 'api'
-  /** 纯文本快照大小阈值（字节），默认 2MB */
-  snapshotThreshold?: number
 }
 
 export interface ExportResult {
@@ -76,7 +72,6 @@ const INPUT_NODE_TYPES = new Set<string>([
   NodeTypes.MEMORY,
   NodeTypes.BMAD_AGENT,
   NodeTypes.LARK_WIKI_TRAVERSAL,
-  NodeTypes.KNOWLEDGE_RETRIEVAL,
 ])
 
 /** lark 输出节点（action=write）：产物投递目标，非输入源 */
@@ -91,7 +86,7 @@ function isInputNode(node: Node): boolean {
 
 /**
  * 处理类节点：产出「生成型 artifact」，instruction 由节点 data 翻译。
- * （answer 是交互问答，归入 gate；knowledgeStore 是输出型节点）
+ * （answer 是交互问答，归入 gate；输出型节点不产出 artifact）
  */
 const PROCESSING_NODE_TYPES = new Set<string>([
   NodeTypes.AGENT,
@@ -100,6 +95,7 @@ const PROCESSING_NODE_TYPES = new Set<string>([
   NodeTypes.SELF_CHECK,
   NodeTypes.KEYWORD_AGENT,
   NodeTypes.AI_OUTPUT,
+  NodeTypes.KNOWLEDGE_RETRIEVAL,
 ])
 
 /** 处理类节点判定 */
@@ -198,11 +194,6 @@ export function wikiArtifactPath(node: Node): string {
   return `inputs/lark/wiki/${safeSegment(name, 'wiki')}.md`
 }
 
-/** Qdrant 集合快照的导出路径 */
-export function knowledgeArtifactPath(collectionName: string): string {
-  return `knowledge/${safeSegment(collectionName, 'collection')}.md`
-}
-
 /** memory 节点的默认记忆路径 */
 const DEFAULT_MEMORY_PATH = 'memory/memory.md'
 
@@ -210,17 +201,6 @@ const DEFAULT_MEMORY_PATH = 'memory/memory.md'
 export function memoryArtifactPath(node: Node): string {
   const p = ((node.data as any)?.memoryPath || DEFAULT_MEMORY_PATH).replace(/^\/+/, '')
   return p.includes('..') ? DEFAULT_MEMORY_PATH : p
-}
-
-/** 读取知识库检索节点引用的集合名列表 */
-function resolveKnowledgeCollections(node: Node): string[] {
-  const data = node.data as Record<string, any>
-  const names: string[] = data.collectionNames?.length
-    ? data.collectionNames
-    : data.collectionName
-      ? [data.collectionName]
-      : []
-  return names.filter((n): n is string => typeof n === 'string' && Boolean(n))
 }
 
 /** specStep → 运行时拉取产物落盘文件名 */
@@ -271,12 +251,6 @@ function buildFetchStep(node: Node, specStep: SpecStepKey, index: number): Recor
       run = `cp ${wikiArtifactPath(node)} ${fileName}`
       break
     }
-    case NodeTypes.KNOWLEDGE_RETRIEVAL: {
-      const names = resolveKnowledgeCollections(node)
-      if (names.length === 0) return null
-      run = `cat ${names.map(knowledgeArtifactPath).join(' ')} > ${fileName}`
-      break
-    }
     case NodeTypes.USER_INPUT: {
       run = `cp ${userInputArtifactPath(node)} ${fileName}`
       break
@@ -285,6 +259,35 @@ function buildFetchStep(node: Node, specStep: SpecStepKey, index: number): Recor
 
   if (!run) return null
   return { id, type: 'shell', run, timeout: 60 }
+}
+
+/** 知识库检索节点 → shell run 命令（api 用 curl 直调，local 写指令文件供 agent 用 MCP 执行） */
+function buildKnowledgeRetrievalRun(node: Node, fileName: string): string | undefined {
+  const data = node.data as Record<string, any>
+  const mode = data.mode || 'local'
+
+  if (mode === 'api') {
+    const url = data.url
+    if (!url) return undefined
+    const method = data.method || 'GET'
+    const headerArgs = (data.headers || [])
+      .filter((h: any) => h?.key)
+      .map((h: any) => `-H "${h.key}: ${h.value}"`)
+      .join(' ')
+    const bodyArg = method === 'GET' ? '' : data.body ? `-d '${data.body}'` : ''
+    return `curl -sS -X ${method} '${url}' ${headerArgs} ${bodyArg} > ${fileName}`
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  // local：写指令文件（外部 agent 按文件内容用自己配置的 MCP 查用户知识库）
+  const skill = data.skillName || data.skillId || ''
+  const query = data.query || '使用上游输出作为查询内容'
+  return [
+    `cat > ${fileName} << 'PICOP_KB_EOF'`,
+    `使用你的 MCP 连接用户知识库${skill ? `（技能：${skill}）` : ''}检索：${query}`,
+    'PICOP_KB_EOF',
+  ].join('\n')
 }
 
 /** 把节点解析为 workflow.yml step（可能产出多个：gate + 拉取步骤） */
@@ -333,6 +336,15 @@ function nodeToSteps(node: Node, index: number): Record<string, unknown>[] {
     if (!specStep) return []
     const fetch = buildFetchStep(node, specStep, index)
     return fetch ? [fetch] : []
+  }
+
+  // 知识库检索节点：本地 / 远程 API 双模式 → 运行时 shell 步骤
+  if (node.type === NodeTypes.KNOWLEDGE_RETRIEVAL) {
+    const specStep = getSpecStep(node)
+    const fileName = specStep ? SPEC_STEP_TO_ARTIFACT_FILE[specStep] : 'knowledge-retrieval.md'
+    const run = buildKnowledgeRetrievalRun(node, fileName)
+    if (!run) return []
+    return [{ id, type: 'shell', run, timeout: 120 }]
   }
 
   const command = resolveSpeckitCommand(node)
@@ -570,8 +582,6 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir
       return `读取导出的 ${schemaDir}/${bmadArtifactPath(node)} 文件内容并保存为 ${file}。`
     case NodeTypes.LARK_WIKI_TRAVERSAL:
       return `读取导出的 ${schemaDir}/${wikiArtifactPath(node)} 快照内容并保存为 ${file}。`
-    case NodeTypes.KNOWLEDGE_RETRIEVAL:
-      return `读取导出的 ${schemaDir}/knowledge/*.md 快照内容并整理保存为 ${file}。`
     case NodeTypes.USER_INPUT:
       return `读取导出的 ${schemaDir}/${userInputArtifactPath(node)} 内容并整理保存为 ${file}。`
     default:
@@ -619,12 +629,6 @@ function inputNodeRef(node: Node, schemaDir: string): string | undefined {
       return `${schemaDir}/${memoryArtifactPath(node)}（项目记忆）`
     case NodeTypes.LARK_WIKI_TRAVERSAL:
       return `${schemaDir}/${wikiArtifactPath(node)}（Lark Wiki 快照）`
-    case NodeTypes.KNOWLEDGE_RETRIEVAL: {
-      const names = resolveKnowledgeCollections(node)
-      return names.length > 0
-        ? `${schemaDir}/knowledge/*.md（知识库快照：${names.join(', ')}）`
-        : undefined
-    }
     case NodeTypes.USER_INPUT:
       return `${schemaDir}/${userInputArtifactPath(node)}（用户输入）`
     default:
@@ -702,6 +706,28 @@ function buildProcessingInstruction(
           .join('\n'),
       )
       break
+    case NodeTypes.KNOWLEDGE_RETRIEVAL: {
+      const mode = data.mode || 'local'
+      if (mode === 'api') {
+        const method = data.method || 'GET'
+        const headerArgs = (data.headers || [])
+          .filter((h: any) => h?.key)
+          .map((h: any) => `-H "${h.key}: ${h.value}"`)
+          .join(' ')
+        const bodyArg = method === 'GET' ? '' : data.body ? `-d '${data.body}'` : ''
+        parts.push(
+          `调用远程知识库接口：\ncurl -sS -X ${method} '${data.url}' ${headerArgs} ${bodyArg}\n` +
+            `将接口响应内容整理保存为 ${artifactId}.md。`,
+        )
+      } else {
+        parts.push(
+          `使用你的 MCP 连接用户知识库${data.skillName ? `（技能：${data.skillName}）` : ''}检索：` +
+            `${data.query || '使用上游产物内容作为查询'}\n` +
+            `将检索结果整理保存为 ${artifactId}.md。`,
+        )
+      }
+      break
+    }
     default:
       parts.push(data.instruction || data.description || `完成「${title}」并输出 ${artifactId}.md。`)
   }
@@ -811,7 +837,6 @@ function buildArtifactsPipeline(
 
   for (const node of sorted) {
     if (isLarkWriteNode(node)) continue // 已反向挂接 / 降级为独立 delivery artifact
-    if (node.type === NodeTypes.KNOWLEDGE_STORE) continue // 输出型节点，不产出 artifact
     if (node.type === NodeTypes.ANSWER) continue // 交互问答 gate
 
     // userInput + specStep：静态内容直接作为产物
@@ -1048,8 +1073,6 @@ export interface CollectablePlan {
   larkRefs: LarkRef[]
   /** Lark Wiki 遍历节点（全量快照） */
   wikiNodes: Node[]
-  /** Qdrant 集合名 */
-  knowledgeCollections: string[]
 }
 
 /** 收集所有需要真实内容的输入物清单 */
@@ -1060,7 +1083,6 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
   const memoryNodes: Node[] = []
   const larkRefs: LarkRef[] = []
   const wikiNodes: Node[] = []
-  const knowledgeCollections = new Set<string>()
 
   for (const node of nodes) {
     const data = node.data as Record<string, any>
@@ -1082,9 +1104,6 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
       larkRefs.push({ url: data.templateUrl, kind: 'template', title: data.title || node.id })
     }
     if (node.type === NodeTypes.LARK_WIKI_TRAVERSAL && data.spaceUrl) wikiNodes.push(node)
-    if (node.type === NodeTypes.KNOWLEDGE_RETRIEVAL) {
-      for (const name of resolveKnowledgeCollections(node)) knowledgeCollections.add(name)
-    }
   }
 
   return {
@@ -1094,6 +1113,5 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
     memoryNodes,
     larkRefs,
     wikiNodes,
-    knowledgeCollections: [...knowledgeCollections],
   }
 }

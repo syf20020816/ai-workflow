@@ -24,7 +24,6 @@ import { ToolsPanel } from './panel/tools'
 
 import { MemoryNode } from './node/ai/memory'
 import { KnowledgeRetrievalNode } from './node/ai/knowledgeRetrieval'
-import { KnowledgeStoreNode } from './node/ai/knowledgeStore'
 import { KeywordAgentNode } from './node/ai/keywordAgent'
 import { TaskPlannerNode } from './node/ai/taskPlanner'
 import { SelfCheckNode } from './node/ai/selfCheck'
@@ -52,7 +51,6 @@ export const NODE_TYPES = {
   retry: RetryNode,
   memory: MemoryNode,
   knowledgeRetrieval: KnowledgeRetrievalNode,
-  knowledgeStore: KnowledgeStoreNode,
   keywordAgent: KeywordAgentNode,
   taskPlanner: TaskPlannerNode,
   selfCheck: SelfCheckNode,
@@ -76,7 +74,6 @@ export const NODE_COLORS = {
   retry: '#eb2f96',
   memory: '#eb2f96',
   knowledgeRetrieval: '#52c41a',
-  knowledgeStore: '#52c41a',
   larkWikiTraversal: '#1677ff',
   keywordAgent: '#985debff',
   taskPlanner: '#13c2c2',

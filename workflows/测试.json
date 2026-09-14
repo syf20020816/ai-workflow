@@ -1,0 +1,131 @@
+{
+  "name": "测试",
+  "id": "测试",
+  "nodes": [
+    {
+      "id": "f3940c49-5114-486e-9734-ce79d88e47ce",
+      "position": {
+        "x": 67.5,
+        "y": 7
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "userInput",
+      "data": {
+        "title": "用户输入节点",
+        "input": {
+          "label": "告诉我功能列表有哪些"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 58
+      }
+    },
+    {
+      "id": "0486c478-4f1c-42af-8fe5-704ccc4ccc15",
+      "position": {
+        "x": 81,
+        "y": -90
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "lark",
+      "data": {
+        "title": "Lark文档节点",
+        "url": "https://lizhi2021.feishu.cn/wiki/STX0wW6mhiyPzqkTusOc3sqknCf",
+        "action": "read"
+      },
+      "measured": {
+        "width": 160,
+        "height": 89
+      }
+    },
+    {
+      "id": "f46ff713-225e-4fc3-8934-1eaeebcec4fc",
+      "position": {
+        "x": 292,
+        "y": -86
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": true,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "agent",
+      "data": {
+        "title": "智能体节点",
+        "tool": "codex"
+      },
+      "measured": {
+        "width": 160,
+        "height": 39
+      }
+    },
+    {
+      "id": "093a52d5-7aea-4cf5-987c-a0c09adfeb33",
+      "position": {
+        "x": 406.5,
+        "y": -1.5
+      },
+      "deletable": true,
+      "draggable": true,
+      "dragging": false,
+      "selectable": true,
+      "selected": false,
+      "zIndex": 1,
+      "isConnectable": true,
+      "positionAbsoluteX": 200,
+      "positionAbsoluteY": 0,
+      "type": "aiOutput",
+      "data": {
+        "title": "AI输出节点",
+        "outputPath": ""
+      },
+      "measured": {
+        "width": 160,
+        "height": 39
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "f46ff713-225e-4fc3-8934-1eaeebcec4fc",
+      "target": "093a52d5-7aea-4cf5-987c-a0c09adfeb33",
+      "type": "nodeEdge",
+      "id": "xy-edge__f46ff713-225e-4fc3-8934-1eaeebcec4fc-093a52d5-7aea-4cf5-987c-a0c09adfeb33"
+    },
+    {
+      "source": "0486c478-4f1c-42af-8fe5-704ccc4ccc15",
+      "target": "f46ff713-225e-4fc3-8934-1eaeebcec4fc",
+      "type": "nodeEdge",
+      "id": "xy-edge__0486c478-4f1c-42af-8fe5-704ccc4ccc15-f46ff713-225e-4fc3-8934-1eaeebcec4fc"
+    },
+    {
+      "source": "f3940c49-5114-486e-9734-ce79d88e47ce",
+      "target": "f46ff713-225e-4fc3-8934-1eaeebcec4fc",
+      "type": "nodeEdge",
+      "id": "xy-edge__f3940c49-5114-486e-9734-ce79d88e47ce-f46ff713-225e-4fc3-8934-1eaeebcec4fc"
+    }
+  ],
+  "createdAt": "2026-09-10T10:34:58.918Z",
+  "updatedAt": "2026-09-10T10:34:58.918Z"
+}

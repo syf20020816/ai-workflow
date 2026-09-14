@@ -46,7 +46,6 @@ const BUILDER_MAP: Partial<Record<string, (pos: { x: number; y: number }) => App
   [NodeTypes.RETRY]: NodeBuilder.retry,
   [NodeTypes.MEMORY]: NodeBuilder.memory,
   [NodeTypes.KNOWLEDGE_RETRIEVAL]: NodeBuilder.knowledgeRetrieval,
-  [NodeTypes.KNOWLEDGE_STORE]: NodeBuilder.knowledgeStore,
   [NodeTypes.LARK_WIKI_TRAVERSAL]: NodeBuilder.larkWikiTraversal,
   [NodeTypes.KEYWORD_AGENT]: NodeBuilder.keywordAgent,
   [NodeTypes.TASK_PLANNER]: NodeBuilder.taskPlanner,

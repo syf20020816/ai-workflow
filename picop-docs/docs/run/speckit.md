@@ -22,7 +22,6 @@ zip 包内目录结构（根据导出格式使用对应目录）：
 │   ├── skills/lark-cli/SKILL.md       # Lark 使用技能指引
 │   ├── bmad/agents/<agent>.md        # BMad 角色定义
 │   ├── memory/memory.md              # 记忆文件
-│   ├── knowledge/<collection>.md     # Qdrant 知识库快照
 │   └── manifest.json                 # 导出清单
 ```
 
@@ -131,9 +130,9 @@ lark-cli docs +fetch \
 
 `inputs/lark/wiki/<spaceName>.md` 包含知识库全量文档快照（上限 200 篇），可直接引用或全文搜索。
 
-#### Qdrant 知识库快照
+#### 知识库检索产物
 
-`knowledge/<collection>.md` 包含知识库集合的纯文本全量快照，可直接用于 LLM 上下文。
+`knowledge-retrieval.md` 为知识库检索节点的产物：本地模式是使用你本机 AI CLI 的 MCP 连接你自己配置的知识库检索（可挂 SKILL 指令）得到的原始内容；远程 API 模式是直接调用你配置的知识库接口（URL / 方法 / Headers / Body）后整理保存的响应内容。产物保留出处与关键信息，可直接作为下游 LLM 上下文。
 
 ### 高级用法
 

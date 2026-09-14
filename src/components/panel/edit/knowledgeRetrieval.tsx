@@ -1,11 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNodeStore } from '#/store/node'
+import { useSkillStore } from '#/store/skill'
 import type { NKnowledgeRetrieval, NKnowledgeRetrievalData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { Typography, Select, Space, Button, Input, Tooltip, Tag, Divider } from 'antd'
-import { PlusOutlined, DeleteOutlined, FilterOutlined, RobotOutlined } from '@ant-design/icons'
-import { DynEditKV } from './item'
-import type { DynEditKVRow } from './item'
+import {
+  Typography,
+  Select,
+  Space,
+  Button,
+  Input,
+  Segmented,
+  Divider,
+  Tag,
+  Tooltip,
+} from 'antd'
+import { PlusOutlined, DeleteOutlined, RobotOutlined, LinkOutlined } from '@ant-design/icons'
 import { ToolSelect } from '#/components/select'
 
 const { Text } = Typography
@@ -14,238 +23,282 @@ const d = (
   draft: NonNullable<ReturnType<typeof useNodeStore.getState>['currentNode']>,
 ) => draft.data as NKnowledgeRetrievalData
 
+const METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+
 export const EditKnowledgeRetrieval = () => {
   const currentNode = useNodeStore(
     (state) => state.currentNode,
   ) as NodeProps<NKnowledgeRetrieval>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const [collections, setCollections] = useState<string[]>([])
-  const [loadingCollections, setLoadingCollections] = useState(false)
+  const skills = useSkillStore((state) => state.skills)
+  const fetchSkills = useSkillStore((state) => state.fetchSkills)
 
-  // 加载集合列表
   useEffect(() => {
-    const load = async () => {
-      setLoadingCollections(true)
-      try {
-        const res = await fetch('/api/execute/qdrant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'collections' }),
-        })
-        const data = await res.json()
-        if (data.status === 'success') {
-          const names: string[] = data.output?.collections?.map((c: any) => c.name) || []
-          setCollections(names)
-        }
-      } catch { /* 静默 */ }
-      setLoadingCollections(false)
-    }
-    load()
+    fetchSkills()
   }, [])
 
-  // 当前选中的集合列表
-  const selectedNames = currentNode.data.collectionNames?.length
-    ? currentNode.data.collectionNames
-    : currentNode.data.collectionName
-      ? [currentNode.data.collectionName]
-      : []
-
-  // 筛选条件
-  const filters = currentNode.data.filters || []
-
-  const rows: DynEditKVRow[] = [
-    {
-      key: 'collectionNames',
-      label: '目标集合',
-      valueRender: (onChange) => (
-        <Select
-          mode="multiple"
-          placeholder="选择一个或多个集合"
-          loading={loadingCollections}
-          value={selectedNames}
-          onChange={(vals) => onChange(vals)}
-          options={collections.map((c) => ({ value: c, label: c }))}
-          showSearch
-          style={{ width: '100%' }}
-          tagRender={(props) => {
-            const { label, closable, onClose } = props
-            return (
-              <Tag closable={closable} onClose={onClose} style={{ marginInlineEnd: 4 }}>
-                {label}
-              </Tag>
-            )
-          }}
-        />
-      ),
-    },
-    {
-      key: 'query',
-      label: '查询文本',
-      value: currentNode.data.query,
-      placeholder: currentNode.data.tool
-        ? '留空则由本地工具自动生成多种查询进行检索'
-        : '输入搜索关键词，或留空从上游节点获取',
-      inputType: 'textArea',
-      rows: 2,
-    },
-    {
-      key: 'topK',
-      label: '返回数量',
-      value: currentNode.data.topK,
-      placeholder: '5',
-      inputType: 'number',
-      min: 1,
-      max: 50,
-    },
-    {
-      key: 'scoreThreshold',
-      label: '最低分数',
-      value: currentNode.data.scoreThreshold,
-      placeholder: '0',
-      inputType: 'number',
-      min: 0,
-      max: 1,
-      step: 0.05,
-    },
-    {
-      key: 'maxRetrievals',
-      label: '最大检索次数',
-      value: currentNode.data.maxRetrievals,
-      placeholder: '40',
-      inputType: 'number',
-      min: 1,
-      max: 200,
-    },
-  ]
+  const data = currentNode.data
+  const mode = data.mode || 'local'
+  const headers = data.headers || []
 
   return (
     <>
-      <div style={{ marginBottom: 8 }}>
-        <Text type="secondary" style={{ fontSize: 11 }}>
-          从 Qdrant 向量数据库中进行语义检索，支持跨多个集合联合搜索。检索结果作为上下文传递给下游节点。
-        </Text>
+      <div style={{ marginBottom: 12 }}>
+        <Segmented
+          block
+          size="small"
+          value={mode}
+          options={[
+            {
+              label: (
+                <Space size={4}>
+                  <RobotOutlined />
+                  本地
+                </Space>
+              ),
+              value: 'local',
+            },
+            {
+              label: (
+                <Space size={4}>
+                  <LinkOutlined />
+                  远程 API
+                </Space>
+              ),
+              value: 'api',
+            },
+          ]}
+          onChange={(v) => {
+            patchCurrentNode((draft) => {
+              d(draft).mode = v as 'local' | 'api'
+            })
+          }}
+        />
       </div>
 
-      <DynEditKV
-        rows={rows}
-        onChange={(key, value) => {
-          patchCurrentNode((draft) => {
-            const data = d(draft)
-            if (key === 'collectionNames') {
-              data.collectionNames = (value || []) as string[]
-              if (data.collectionNames.length === 1) {
-                data.collectionName = data.collectionNames[0]
-              } else {
-                data.collectionName = undefined
-              }
-            } else if (key === 'query') {
-              data.query = (value || '') as string
-            } else if (key === 'topK') {
-              data.topK = (value ?? 5) as number
-            } else if (key === 'scoreThreshold') {
-              data.scoreThreshold = (value ?? 0) as number
-            } else if (key === 'maxRetrievals') {
-              data.maxRetrievals = (value ?? 40) as number
-            }
-          })
-        }}
-      />
+      {mode === 'local' ? (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              通过本机配置了 MCP 的本地工具，用自然语言查询你自己维护的知识库（向量库 / 文档库 / 关系库 / 本地 md 目录均可）。
+            </Text>
+          </div>
 
-      {/* ===== 本地工具配置 ===== */}
-      <Divider style={{ margin: '12px 0', fontSize: 12 }}>本地工具（自动生成查询）</Divider>
-      <div style={{ marginBottom: 12, padding: '0 4px' }}>
-        <Text type="secondary" style={{ fontSize: 11 }}>
-          选择后，当「查询文本」为空时，本地 AI 工具会根据上游上下文自动生成多种查询进行多次检索
-        </Text>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
-        <Space align="center" style={{ width: '100%' }}>
-          <RobotOutlined style={{ color: '#888', fontSize: 12 }} />
-          <ToolSelect
-            style={{ flex: 1 }}
-            size="small"
-            placeholder="选择本地工具（可选）"
-            value={currentNode.data.tool}
-            onChange={(toolId) => {
-              patchCurrentNode((draft) => {
-                d(draft).tool = toolId || undefined
-              })
-            }}
-          />
-        </Space>
-      </div>
-
-      {/* ===== 筛选条件区域 ===== */}
-      <div style={{ marginTop: 16 }}>
-        <Space style={{ marginBottom: 8 }}>
-          <FilterOutlined style={{ color: '#888' }} />
-          <Text strong style={{ fontSize: 13 }}>
-            筛选条件
-          </Text>
-          <Text type="secondary" style={{ fontSize: 11 }}>
-            按 payload 字段精确匹配（可选）
-          </Text>
-        </Space>
-        {filters.map((f, i) => (
-          <Space key={i} style={{ display: 'flex', marginBottom: 6 }} align="center">
-            <Input
-              size="small"
-              placeholder="字段名"
-              style={{ width: 130 }}
-              value={f.field}
-              onChange={(e) => {
-                const newFilters = [...filters]
-                newFilters[i] = { ...newFilters[i], field: e.target.value }
-                patchCurrentNode((draft) => {
-                  d(draft).filters = newFilters
-                })
-              }}
-            />
-            <Text type="secondary">=</Text>
-            <Input
-              size="small"
-              placeholder="匹配值"
-              style={{ width: 150 }}
-              value={f.match}
-              onChange={(e) => {
-                const newFilters = [...filters]
-                newFilters[i] = { ...newFilters[i], match: e.target.value }
-                patchCurrentNode((draft) => {
-                  d(draft).filters = newFilters
-                })
-              }}
-            />
-            <Tooltip title="删除">
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => {
-                  const newFilters = filters.filter((_, j) => j !== i)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                查询文本
+              </Text>
+              <Input.TextArea
+                rows={2}
+                placeholder="留空则使用上游节点输出作为查询内容"
+                value={data.query}
+                onChange={(e) => {
                   patchCurrentNode((draft) => {
-                    d(draft).filters = newFilters
+                    d(draft).query = e.target.value
+                  })
+                }}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                本地工具
+              </Text>
+              <ToolSelect
+                style={{ width: '100%', marginTop: 4 }}
+                size="small"
+                placeholder="选择本地工具（需配置访问你知识库的 MCP）"
+                value={data.tool}
+                onChange={(toolId) => {
+                  patchCurrentNode((draft) => {
+                    d(draft).tool = toolId || undefined
                   })
                 }}
               />
-            </Tooltip>
-          </Space>
-        ))}
-        <Button
-          size="small"
-          type="dashed"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            const newFilters = [...filters, { field: '', match: '' }]
-            patchCurrentNode((draft) => {
-              d(draft).filters = newFilters
-            })
-          }}
-        >
-          添加条件
-        </Button>
-      </div>
+            </div>
+
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                选择技能
+              </Text>
+              <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                （可选）
+              </Text>
+              <Select
+                allowClear
+                style={{ width: '100%', marginTop: 4 }}
+                size="small"
+                placeholder="选择技能作为查询指令上下文..."
+                value={data.skillId || undefined}
+                notFoundContent="暂无技能，请先在技能管理中创建"
+                options={skills.map((s) => ({
+                  label: `${s.name}${s.description ? ` (${s.description})` : ''}`,
+                  value: s.id,
+                }))}
+                onChange={(value) => {
+                  const skill = skills.find((s) => s.id === value)
+                  patchCurrentNode((draft) => {
+                    const dd = d(draft)
+                    dd.skillId = value || undefined
+                    dd.skillName = skill?.name || undefined
+                  })
+                }}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              请求你自己配置的外部知识库接口（由平台后端代理发起，避免跨域限制）。请求体支持 {'{{字段名}}'} 引用上游节点输出。
+            </Text>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                请求 URL
+              </Text>
+              <Input
+                size="small"
+                placeholder="https://your-knowledge-api.example.com/search"
+                value={data.url}
+                onChange={(e) => {
+                  patchCurrentNode((draft) => {
+                    d(draft).url = e.target.value
+                  })
+                }}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                请求方法
+              </Text>
+              <Select
+                size="small"
+                style={{ width: '100%', marginTop: 4 }}
+                value={data.method || 'GET'}
+                options={METHODS.map((m) => ({ label: m, value: m }))}
+                onChange={(v) => {
+                  patchCurrentNode((draft) => {
+                    d(draft).method = v
+                  })
+                }}
+              />
+            </div>
+
+            {/* ===== 请求头 ===== */}
+            <div>
+              <Space style={{ marginBottom: 4 }}>
+                <Text strong style={{ fontSize: 13 }}>
+                  请求头
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  （可选）
+                </Text>
+              </Space>
+              {headers.map((h, i) => (
+                <Space key={i} style={{ display: 'flex', marginBottom: 6 }} align="center">
+                  <Input
+                    size="small"
+                    placeholder="Header 名"
+                    style={{ width: 130 }}
+                    value={h.key}
+                    onChange={(e) => {
+                      const next = [...headers]
+                      next[i] = { ...next[i], key: e.target.value }
+                      patchCurrentNode((draft) => {
+                        d(draft).headers = next
+                      })
+                    }}
+                  />
+                  <Input
+                    size="small"
+                    placeholder="值（支持 {{字段}}）"
+                    style={{ width: 150 }}
+                    value={h.value}
+                    onChange={(e) => {
+                      const next = [...headers]
+                      next[i] = { ...next[i], value: e.target.value }
+                      patchCurrentNode((draft) => {
+                        d(draft).headers = next
+                      })
+                    }}
+                  />
+                  <Tooltip title="删除">
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => {
+                        patchCurrentNode((draft) => {
+                          d(draft).headers = headers.filter((_, j) => j !== i)
+                        })
+                      }}
+                    />
+                  </Tooltip>
+                </Space>
+              ))}
+              <Button
+                size="small"
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  patchCurrentNode((draft) => {
+                    d(draft).headers = [...headers, { key: '', value: '' }]
+                  })
+                }}
+              >
+                添加请求头
+              </Button>
+            </div>
+
+            {/* ===== 请求体 ===== */}
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                请求体
+              </Text>
+              <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                （JSON，支持 {'{{字段}}'} 占位符）
+              </Text>
+              <Input.TextArea
+                rows={5}
+                placeholder={'{\n  "query": "{{content}}",\n  "topK": 5\n}'}
+                value={data.body}
+                onChange={(e) => {
+                  patchCurrentNode((draft) => {
+                    d(draft).body = e.target.value
+                  })
+                }}
+                style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 12 }}
+              />
+              <Tag style={{ marginTop: 6 }} color="blue">
+                GET 请求时请求体自动忽略
+              </Tag>
+            </div>
+          </div>
+        </>
+      )}
+
+      <Divider style={{ margin: '12px 0', fontSize: 12 }}>执行结果</Divider>
+      {data.result?.retrievalContent ? (
+        <div style={{ padding: '0 4px' }}>
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {data.result.mode === 'api' ? '远程 API' : '本地工具'} 检索到 {data.result.count} 条内容，共{' '}
+            {data.result.retrievalContent.length} 字符
+          </Text>
+        </div>
+      ) : (
+        <Text type="secondary" style={{ fontSize: 11, padding: '0 4px' }}>
+          执行后可在此查看检索结果概览
+        </Text>
+      )}
     </>
   )
 }

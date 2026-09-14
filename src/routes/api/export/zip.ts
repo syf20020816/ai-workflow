@@ -27,8 +27,6 @@ export const Route = createFileRoute('/api/export/zip')({
           const exportOptions: ExportOptions = {
             name,
             mergeParallel: options?.mergeParallel ?? false,
-            knowledgeStrategy: options?.knowledgeStrategy ?? 'snapshot',
-            snapshotThreshold: options?.snapshotThreshold ?? 2 * 1024 * 1024,
           }
 
           const { yaml, workflowPath } = buildWorkflow(target, nodes, edges, exportOptions)
@@ -45,11 +43,8 @@ export const Route = createFileRoute('/api/export/zip')({
           zip.file(workflowPath, yaml)
           logs.push(`已生成 ${workflowPath}`)
 
-          // 2. 收集输入物真实内容（userInput 静态内容 / Skill / Memory / BMad / Lark 引用 / Wiki 快照 / Qdrant 快照）
-          const collected = await collectArtifacts(nodes, {
-            knowledgeStrategy: exportOptions.knowledgeStrategy,
-            snapshotThreshold: exportOptions.snapshotThreshold,
-          })
+          // 2. 收集输入物真实内容（userInput 静态内容 / Skill / Memory / BMad / Lark 引用 / Wiki 快照）
+          const collected = await collectArtifacts(nodes)
 
           // OpenSpec：输入物与 schema.yaml 同级（openspec/schemas/<name>/ 下）
           // Spec：输入物在变更目录（spec/changes/<name>/ 下，md 产物同级）

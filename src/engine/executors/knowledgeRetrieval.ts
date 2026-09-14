@@ -2,420 +2,248 @@ import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/
 import { startAgentCli, pollAgentCliTask } from '#/services/runner'
 import { buildBudgetedContext } from '#/services/upstreamContext'
 
-/** 调用嵌入 API 将文本转为向量 */
-async function doEmbed(text: string): Promise<{ vector: number[]; dimensions: number }> {
-  const res = await fetch('/api/execute/embed', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-  })
-  const result = await res.json()
-  if (result.status !== 'success') {
-    throw new Error(result.error || '向量化失败')
-  }
-  return { vector: result.output.vector, dimensions: result.output.dimensions }
+/**
+ * 知识库检索节点执行器（双模式，平台不内置数据库）
+ *
+ * local 模式：通过 Runner 调用用户本机配置了 MCP 的 CLI agent，
+ *   以自然语言查询用户自己的知识库（向量库/文档库/关系库/本地 md 目录皆可）；
+ *   可选挂载一个 SKILL 作为查询指令上下文。
+ *
+ * api 模式：由后端 httpProxy 代理请求用户配置的外部知识库接口，
+ *   请求 URL / 方法 / 请求头 / 请求体由用户在编辑面板中配置，
+ *   请求体支持 {{field}} 占位符引用上游节点输出。
+ */
+
+/** 解析查询文本：节点配置的 query 优先，否则取上游累积上下文 */
+function resolveQueryText(
+  data: Record<string, any>,
+  input: Record<string, any>,
+): string {
+  if (typeof data.query === 'string' && data.query.trim()) return data.query.trim()
+  const budgeted = buildBudgetedContext(input, 64000)
+  return (
+    budgeted.response ||
+    input.content ||
+    input.text ||
+    input.instruction ||
+    input.query ||
+    input.prompt ||
+    input.result ||
+    ''
+  )
 }
 
-/** 搜索单个集合 */
-async function searchCollection(
-  collectionName: string,
-  vector: number[],
-  topK: number,
-  scoreThreshold: number,
-  filter?: Record<string, any>,
-): Promise<any[]> {
-  const res = await fetch('/api/execute/qdrant', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'search',
-      collectionName,
-      vector,
-      topK,
-      scoreThreshold,
-      filter,
-    }),
-  })
-  const result = await res.json()
-  if (result.status !== 'success') {
-    throw new Error(result.error || '搜索失败')
-  }
-  return (result.output.results || []).map((r: any) => ({ ...r, collectionName }))
-}
-
-/** 调用本地 CLI 生成搜索查询 */
-async function generateQueries(
-  context: string,
-  maxRetrievals: number,
-  tool: string,
-  logs: string[],
-): Promise<string[]> {
-  // 从 prompts/keywordAgent.md 加载系统提示词，支持通过「规则与模型」页面自定义
-  let basePrompt = `You are a knowledge base search query generator. Given a user's text, generate diverse, concise search queries to find relevant information in a vector database.`
+/** 加载 SKILL 内容作为查询指令上下文 */
+async function loadSkill(skillId: string | undefined, logs: string[]): Promise<string> {
+  if (!skillId) return ''
   try {
-    const res = await fetch('/api/prompts?name=keywordAgent.md')
-    const data = await res.json()
-    if (data.status === 'success' && data.data?.content) {
-      basePrompt = data.data.content
+    const res = await fetch(`/api/skill/content?id=${skillId}`)
+    const result = await res.json()
+    if (result.content) {
+      logs.push(`技能内容已加载 (${result.content.length} 字符)`)
     }
+    return result.content || ''
   } catch {
-    // 使用默认提示词
+    return ''
   }
-  // 附加输出格式指令，确保解析兼容
-  const systemPrompt = `${basePrompt}\n\nOutput format:\n- Generate up to ${maxRetrievals} queries, one per line\n- Do NOT number the queries\n- Do NOT add any explanation or commentary\n- Output ONLY the queries, one per line`
+}
 
-  logs.push(`正在调用本地工具生成搜索查询...`)
+/** {{field}} 占位符替换：从上游 input 中取值 */
+function resolveTemplate(template: string, input: Record<string, any>): string {
+  return (template || '').replace(/\{\{(\w+)\}\}/g, (_m, key: string) => {
+    const v = input[key]
+    if (v === undefined || v === null) return ''
+    return typeof v === 'string' ? v : JSON.stringify(v)
+  })
+}
 
-  const userText = `Generate search queries for the following context:\n\n${context.slice(0, 3000)}`
+/** 从 API 响应 JSON 中提取文本内容（兼容常见结构） */
+function extractContent(json: any, depth = 0): string {
+  if (depth > 4) return ''
+  if (typeof json === 'string') return json
+  if (typeof json !== 'object' || json === null) return ''
 
-  let content: string
+  for (const key of ['content', 'text', 'answer', 'result', 'data', 'message', 'retrievalContent', 'output']) {
+    if (json[key] !== undefined && json[key] !== null) {
+      const v = json[key]
+      if (typeof v === 'string') return v
+      if (typeof v === 'object') {
+        const nested = extractContent(v, depth + 1)
+        if (nested) return nested
+      }
+    }
+  }
+
+  if (Array.isArray(json)) {
+    return json
+      .map((item) => {
+        if (typeof item === 'string') return item
+        const nested = extractContent(item, depth + 1)
+        return nested || (typeof item === 'object' ? JSON.stringify(item) : '')
+      })
+      .filter(Boolean)
+      .join('\n')
+  }
+
   try {
-    const taskId = await startAgentCli({
-      tool,
-      prompt: `${systemPrompt}\n\n${userText}`,
-      timeoutMs: 5 * 60_000,
-    })
+    return JSON.stringify(json)
+  } catch {
+    return ''
+  }
+}
+
+/** local 模式：本地 CLI agent 自然语言查询用户自己的知识库 */
+async function runLocal(ctx: NodeExecutionContext): Promise<NodeExecutionResult> {
+  const { config, input } = ctx
+  const data = config.data
+  const logs: string[] = []
+  logs.push(`知识库检索（本地模式）开始执行`)
+
+  const query = resolveQueryText(data, input)
+  if (!query) {
+    return {
+      nodeId: config.nodeId,
+      status: 'success',
+      output: { retrievalContent: '', count: 0, mode: 'local' },
+      logs: [...logs, '未提供查询文本，上游也无上下文，跳过'],
+    }
+  }
+
+  const tool = data.tool
+  if (!tool) {
+    return {
+      nodeId: config.nodeId,
+      status: 'error',
+      output: { retrievalContent: '', count: 0, mode: 'local' },
+      logs: [...logs, '本地模式需要选择本地工具（该工具需配置访问你知识库的 MCP）'],
+      error: '本地模式需要选择本地工具',
+    }
+  }
+
+  const skillContent = await loadSkill(data.skillId, logs)
+  const skillSection = skillContent
+    ? `\n\n请参考以下技能指令来完成查询：\n${skillContent.slice(0, 20000)}`
+    : ''
+
+  const prompt = [
+    '你正在为用户查询他自己配置的知识库。请通过你环境里可用的 MCP 工具 / 数据源访问，',
+    '根据用户的查询检索相关内容，并把检索到的原始内容返回给用户（保留出处与关键信息）。',
+    '如果无法访问知识库，请明确说明失败原因。',
+    '',
+    `用户查询：\n${query}`,
+    skillSection,
+  ].join('\n')
+
+  logs.push(`正在调用本地工具 ${tool} 查询知识库...`)
+  try {
+    const taskId = await startAgentCli({ tool, prompt, timeoutMs: 10 * 60_000 })
     const task = await pollAgentCliTask(taskId)
     if (task.status === 'error') {
       throw new Error(task.error || '本地工具执行失败')
     }
-    content = task.output?.response || ''
+    const content = task.output?.response || ''
+    logs.push(`本地工具返回 ${content.length} 字符`)
+
+    return {
+      nodeId: config.nodeId,
+      status: 'success',
+      output: {
+        retrievalContent: content,
+        count: content ? 1 : 0,
+        mode: 'local',
+        response: content,
+      },
+      logs,
+    }
   } catch (err: any) {
-    throw new Error(`本地工具调用失败: ${err.message}`)
+    logs.push(`本地工具调用失败: ${err.message}`)
+    return {
+      nodeId: config.nodeId,
+      status: 'error',
+      output: { retrievalContent: '', count: 0, mode: 'local' },
+      logs,
+      error: `本地知识库查询失败: ${err.message}`,
+    }
   }
-
-  const queries = content
-    .split('\n')
-    .map((l: string) => l.trim())
-    .filter((l: string) => l.length > 0 && !l.startsWith('#') && !l.startsWith('-'))
-
-  logs.push(`本地工具生成了 ${queries.length} 个查询语句${queries.length > 0 ? `: ${queries.slice(0, 3).map((q: string) => `"${q.slice(0, 40)}"`).join(', ')}${queries.length > 3 ? `...等` : ''}` : ''}`)
-  return queries.slice(0, maxRetrievals)
 }
 
-/** 对一批查询语句逐条执行向量化+搜索，聚合结果 */
-async function executeMultiSearch(
-  queries: string[],
-  collectionNames: string[],
-  topK: number,
-  scoreThreshold: number,
-  qdrantFilter: Record<string, any> | undefined,
-  maxRetrievals: number,
-  logs: string[],
-): Promise<any[]> {
-  const allResults: any[] = []
-  let searchCount = 0
+/** api 模式：后端代理请求用户配置的外部知识库接口 */
+async function runApi(ctx: NodeExecutionContext): Promise<NodeExecutionResult> {
+  const { config, input } = ctx
+  const data = config.data
+  const logs: string[] = []
+  logs.push(`知识库检索（远程 API 模式）开始执行`)
 
-  for (const q of queries) {
-    searchCount++
-    if (searchCount > maxRetrievals) break
-
-    const shortQ = q.length > 50 ? q.slice(0, 50) + '...' : q
-    logs.push(`[${searchCount}/${queries.length}] 搜索: "${shortQ}"`)
-
-    try {
-      const { vector } = await doEmbed(q)
-
-      for (const name of collectionNames) {
-        try {
-          const results = await searchCollection(name, vector, topK, scoreThreshold, qdrantFilter)
-          allResults.push(...results)
-        } catch (e: any) {
-          logs.push(`  集合 "${name}" 搜索失败: ${e.message}`)
-        }
-      }
-    } catch (e: any) {
-      logs.push(`  查询 "${shortQ}" 向量化失败: ${e.message}`)
+  const url = data.url
+  if (!url) {
+    return {
+      nodeId: config.nodeId,
+      status: 'error',
+      output: { retrievalContent: '', count: 0, mode: 'api' },
+      logs: [...logs, '远程 API 模式需要配置请求 URL'],
+      error: '远程 API 模式需要配置请求 URL',
     }
   }
 
-  logs.push(`完成 ${searchCount} 次检索`)
-  return allResults
-}
+  const method = data.method || 'GET'
+  const headers = (data.headers || [])
+    .filter((h: any) => h?.key)
+    .map((h: any) => ({ key: h.key, value: resolveTemplate(h.value, input) }))
+  const body = resolveTemplate(data.body || '', input)
 
-/** 清洗检索结果，只保留 score 和 content，其余字段丢弃 */
-function cleanResults(results: any[]): { score: number; content: string }[] {
-  return results.map((r) => ({
-    score: r.score ?? 0,
-    content: r.payload?.content || r.payload?.text || '',
-  }))
-}
+  logs.push(`请求: ${method} ${url}`)
+  try {
+    const res = await fetch('/api/execute/httpProxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, method, headers, body }),
+    })
+    const result = await res.json()
+    if (result.status !== 'success') {
+      throw new Error(result.error || '代理请求失败')
+    }
 
-/** 将检索结果去重、排序、格式化为文本 */
-function formatResults(allResults: any[], logs: string[]): string {
-  // 第一层去重：按 collectionName:id 去重
-  const seen = new Set<string>()
-  const unique: any[] = []
-  for (const r of allResults) {
-    const key = `${r.collectionName}:${r.id}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      unique.push(r)
+    const out = result.output || {}
+    const { text = '', json = null } = out
+
+    let content = ''
+    if (json && typeof json === 'object') {
+      content = extractContent(json)
+    }
+    if (!content) {
+      content = text
+    }
+
+    logs.push(`检索内容共 ${content.length} 字符 (HTTP ${out.statusCode || '-'})`)
+
+    return {
+      nodeId: config.nodeId,
+      status: 'success',
+      output: {
+        retrievalContent: content,
+        count: content ? 1 : 0,
+        mode: 'api',
+        statusCode: out.statusCode,
+        responseText: text,
+        responseJson: json,
+      },
+      logs,
+    }
+  } catch (err: any) {
+    logs.push(`远程 API 请求失败: ${err.message}`)
+    return {
+      nodeId: config.nodeId,
+      status: 'error',
+      output: { retrievalContent: '', count: 0, mode: 'api' },
+      logs,
+      error: `远程知识库请求失败: ${err.message}`,
     }
   }
-
-  // 第二层去重：内容包含去重 — 若一条结果的内容是另一条的完整子串，保留较长的
-  const contentDeduped = unique
-    .map((r) => ({
-      ...r,
-      _content: (r.payload?.content || r.payload?.text || '').trim(),
-    }))
-    .filter((r) => r._content.length > 0)
-  contentDeduped.sort((a, b) => b.score - a.score)
-
-  const filtered: typeof contentDeduped = []
-  for (const r of contentDeduped) {
-    let isContained = false
-    for (const existing of filtered) {
-      // 检查 r 的内容是否被已保留的结果包含，或包含已保留的结果
-      if (existing._content.includes(r._content)) {
-        isContained = true
-        break
-      }
-      if (r._content.includes(existing._content)) {
-        // r 更长，替换掉已有的较短结果
-        existing._content = r._content
-        existing.payload = r.payload
-        existing.score = r.score
-        isContained = true
-        break
-      }
-    }
-    if (!isContained) {
-      filtered.push(r)
-    }
-  }
-
-  filtered.sort((a, b) => b.score - a.score)
-  logs.push(`共检索到 ${allResults.length} 条结果，ID去重后 ${unique.length} 条，内容去重后 ${filtered.length} 条`)
-
-  return filtered
-    .map(
-      (r: any, i: number) =>
-        `[结果${i + 1}] (相关度: ${(r.score * 100).toFixed(1)}%, 来源: ${r.collectionName})\n${r._content}`,
-    )
-    .join('\n\n')
 }
 
 export const knowledgeRetrievalExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
-    const { config, input } = ctx
-    const data = config.data
-
-    // 支持新旧两种字段：collectionNames（多集合）/ collectionName（兼容单集合）
-    const collectionNames: string[] =
-      data.collectionNames?.length
-        ? data.collectionNames
-        : data.collectionName
-          ? [data.collectionName]
-          : []
-
-    const query = data.query || input.query || ''
-    const queriesFromInput: string[] = Array.isArray(input.queries) ? input.queries : []
-    const topK = data.topK || 5
-    const scoreThreshold = data.scoreThreshold || 0
-    const maxRetrievals = data.maxRetrievals || 40
-    const localTool = data.tool
-    const filters: Array<{ field: string; match: string }> = data.filters || []
-
-    const logs: string[] = []
-    logs.push(`知识库检索节点开始执行`)
-    logs.push(`目标集合: ${collectionNames.length > 0 ? collectionNames.join(', ') : '未指定'}`)
-
-    if (collectionNames.length === 0) {
-      return {
-        nodeId: config.nodeId,
-        status: 'success',
-        output: { results: [], count: 0, error: '未指定集合名称' },
-        logs: [...logs, '未指定集合名称，跳过'],
-      }
-    }
-
-    // 检查是否有任何查询来源
-    const hasExplicitQuery = !!query
-    const hasQueriesList = queriesFromInput.length > 0
-    const hasAutoMode = !!localTool
-
-    if (!hasExplicitQuery && !hasQueriesList && !hasAutoMode) {
-      return {
-        nodeId: config.nodeId,
-        status: 'success',
-        output: { results: [], count: 0, error: '未指定查询文本，上游未提供查询列表，也未选择本地工具' },
-        logs: [...logs, '无法检索：未指定查询文本，上游未提供查询列表，也未选择本地工具'],
-      }
-    }
-
-    // 构建 Qdrant 筛选条件
-    const qdrantFilter: Record<string, any> | undefined =
-      filters.length > 0
-        ? {
-            must: filters
-              .filter((f) => f.field && f.match)
-              .map((f) => ({
-                key: f.field,
-                match: { value: f.match },
-              })),
-          }
-        : undefined
-
-    // ============================================================
-    // 模式 A：显式提供 query → 单次搜索（向后兼容）
-    // ============================================================
-    if (hasExplicitQuery) {
-      logs.push(`使用指定查询文本: ${query.slice(0, 100)}`)
-
-      try {
-        logs.push(`正在向量化查询文本...`)
-        const { vector, dimensions } = await doEmbed(query)
-        logs.push(`向量维度: ${dimensions}`)
-
-        const allResults: any[] = []
-        for (const name of collectionNames) {
-          logs.push(`正在搜索集合 ${name}...`)
-          try {
-            const results = await searchCollection(name, vector, topK, scoreThreshold, qdrantFilter)
-            logs.push(`  集合 "${name}" 返回 ${results.length} 条结果`)
-            allResults.push(...results)
-          } catch (e: any) {
-            logs.push(`  集合 "${name}" 搜索失败: ${e.message}`)
-          }
-        }
-
-        const retrievalContent = formatResults(allResults, logs)
-        logs.push(`检索内容共 ${retrievalContent.length} 字符`)
-
-        return {
-          nodeId: config.nodeId,
-          status: 'success',
-          output: {
-            results: cleanResults(allResults),
-            count: allResults.length,
-            retrievalContent,
-            collectionNames,
-            query,
-          },
-          logs,
-        }
-      } catch (err: any) {
-        logs.push(`知识库检索失败: ${err.message}`)
-        return {
-          nodeId: config.nodeId,
-          status: 'error',
-          output: { results: [], count: 0 },
-          logs,
-          error: `知识库检索失败: ${err.message}`,
-        }
-      }
-    }
-
-    // ============================================================
-    // 模式 C：上游提供 queries 数组 → 逐条搜索
-    // ============================================================
-    if (hasQueriesList) {
-      logs.push(`从上游获取 ${queriesFromInput.length} 个查询语句`)
-
-      try {
-        const allResults = await executeMultiSearch(
-          queriesFromInput, collectionNames, topK, scoreThreshold, qdrantFilter, maxRetrievals, logs,
-        )
-
-        const retrievalContent = formatResults(allResults, logs)
-        logs.push(`检索内容共 ${retrievalContent.length} 字符`)
-
-        return {
-          nodeId: config.nodeId,
-          status: 'success',
-          output: {
-            results: cleanResults(allResults),
-            count: allResults.length,
-            retrievalContent,
-            collectionNames,
-            queriesGenerated: queriesFromInput,
-            queryCount: queriesFromInput.length,
-          },
-          logs,
-        }
-      } catch (err: any) {
-        logs.push(`知识库检索失败: ${err.message}`)
-        return {
-          nodeId: config.nodeId,
-          status: 'error',
-          output: { results: [], count: 0 },
-          logs,
-          error: `知识库检索失败: ${err.message}`,
-        }
-      }
-    }
-
-    // ============================================================
-    // 模式 B：自动模式 — AI 根据上游上下文生成多种查询，多次检索
-    // ============================================================
-    try {
-      // P0-4：优先用「优先级排序 + 预算截断」后的累积上下文（覆盖整条祖先链路），
-      // 无累积时回退平铺单字段提取
-      const budgeted = buildBudgetedContext(input, 64000)
-      const context =
-        budgeted.response ||
-        input.content ||
-        input.text ||
-        input.instruction ||
-        input.query ||
-        input.prompt ||
-        input.result ||
-        ''
-
-      if (!context) {
-        return {
-          nodeId: config.nodeId,
-          status: 'success',
-          output: { results: [], count: 0, error: '上游无上下文输入' },
-          logs: [...logs, '上游无上下文输入，跳过'],
-        }
-      }
-
-      logs.push(`从上游获取上下文: ${context.slice(0, 100)}...`)
-
-      const queries = await generateQueries(context, maxRetrievals, localTool, logs)
-
-      if (queries.length === 0) {
-        logs.push('AI 未生成有效查询，跳过检索')
-        return {
-          nodeId: config.nodeId,
-          status: 'success',
-          output: { results: [], count: 0, retrievalContent: '', collectionNames },
-          logs,
-        }
-      }
-
-      const allResults = await executeMultiSearch(
-        queries, collectionNames, topK, scoreThreshold, qdrantFilter, maxRetrievals, logs,
-      )
-
-      const retrievalContent = formatResults(allResults, logs)
-      logs.push(`检索内容共 ${retrievalContent.length} 字符`)
-
-      return {
-        nodeId: config.nodeId,
-        status: 'success',
-        output: {
-          results: cleanResults(allResults),
-          count: allResults.length,
-          retrievalContent,
-          collectionNames,
-          queriesGenerated: queries,
-          queryCount: queries.length,
-        },
-        logs,
-      }
-    } catch (err: any) {
-      logs.push(`知识库自动检索失败: ${err.message}`)
-      return {
-        nodeId: config.nodeId,
-        status: 'error',
-        output: { results: [], count: 0 },
-        logs,
-        error: `知识库自动检索失败: ${err.message}`,
-      }
-    }
+    const mode = ctx.config.data.mode || 'local'
+    return mode === 'api' ? runApi(ctx) : runLocal(ctx)
   },
 }

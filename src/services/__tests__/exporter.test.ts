@@ -180,4 +180,70 @@ describe('导出物管理', () => {
     // workflow.yaml 路径：spec/changes/<name>/specs/<name>/workflow.yaml
     expect(workflowPath).toBe('spec/changes/音乐人中心/specs/音乐人中心/workflow.yaml')
   })
+
+  it('speckit：knowledgeRetrieval 双模式生成运行时步骤（api→curl / local→指令文件）', () => {
+    // api 模式：curl 直调远程知识库接口
+    const apiNodes = [
+      makeNode('kb-api', 'knowledgeRetrieval', {
+        mode: 'api',
+        url: 'https://kb.example.com/search',
+        method: 'POST',
+        headers: [{ key: 'Authorization', value: 'Bearer x' }],
+        body: '{"query":"{{content}}"}',
+      }),
+    ]
+    const { yaml: apiYaml } = buildSpecKitWorkflow(apiNodes, [], { name: '测试' })
+    // run 值在 YAML 中用单引号包裹，内部单引号会被转义为 ''
+    expect(apiYaml).toContain('curl -sS -X POST')
+    expect(apiYaml).toContain("''https://kb.example.com/search''")
+    expect(apiYaml).toContain('-H "Authorization: Bearer x"')
+    expect(apiYaml).toContain("''{\"query\":\"{{content}}\"}''")
+    expect(apiYaml).toContain('> knowledge-retrieval.md')
+
+    // local 模式：heredoc 写入 MCP 检索指令文件
+    const localNodes = [
+      makeNode('kb-local', 'knowledgeRetrieval', {
+        mode: 'local',
+        tool: 'claude',
+        skillId: 'kb-skill',
+        skillName: '知识库检索指南',
+        query: '最近的发布计划',
+      }),
+    ]
+    const { yaml: localYaml } = buildSpecKitWorkflow(localNodes, [], { name: '测试' })
+    expect(localYaml).toContain('使用你的 MCP 连接用户知识库（技能：知识库检索指南）检索：最近的发布计划')
+
+    // 不再产出 knowledge/*.md 快照引用
+    expect(apiYaml + localYaml).not.toContain('knowledge/*.md')
+  })
+
+  it('openspec：knowledgeRetrieval 作为处理节点产出双模式 instruction，不再引用 knowledge/*.md', () => {
+    const nodes = [
+      makeNode('input-1', 'userInput', { input: { prompt: '需求描述' } }),
+      makeNode('kb-local', 'knowledgeRetrieval', {
+        mode: 'local',
+        skillId: 'kb-skill',
+        skillName: '知识库检索指南',
+        query: '最近发布计划',
+      }),
+      makeNode('kb-api', 'knowledgeRetrieval', {
+        mode: 'api',
+        url: 'https://kb.example.com/search',
+        method: 'POST',
+        body: '{"query":"{{content}}"}',
+      }),
+      makeNode('agent-1', 'agent', { title: '汇总' }),
+    ]
+    const edges = [
+      makeEdge('input-1', 'kb-local'),
+      makeEdge('kb-local', 'kb-api'),
+      makeEdge('kb-api', 'agent-1'),
+    ]
+    const { yaml } = buildOpenSpecWorkflow(nodes, edges, { name: '测试' })
+
+    // local → MCP 检索指令；api → curl 命令
+    expect(yaml).toContain('使用你的 MCP 连接用户知识库（技能：知识库检索指南）检索：最近发布计划')
+    expect(yaml).toContain("curl -sS -X POST 'https://kb.example.com/search'")
+    expect(yaml).not.toContain('knowledge/*.md')
+  })
 })

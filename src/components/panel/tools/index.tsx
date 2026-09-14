@@ -74,7 +74,6 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   const [exportMode, setExportMode] = useState<ExportMode>('yml')
   const [exportName, setExportName] = useState('')
   const [mergeParallel, setMergeParallel] = useState(false)
-  const [knowledgeStrategy, setKnowledgeStrategy] = useState<'snapshot' | 'api'>('snapshot')
 
   const buildExportJson = () => {
     // 导出时剥离 modal 敏感字段，只保留模型 ID 引用
@@ -88,7 +87,6 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     const result = buildWorkflow(target, nodes, edges, {
       name: exportName,
       mergeParallel,
-      knowledgeStrategy,
     })
     return result.yaml
   }
@@ -212,8 +210,6 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           options: {
             name: exportName,
             mergeParallel,
-            knowledgeStrategy,
-            snapshotThreshold: 2 * 1024 * 1024,
           },
         }),
       })
@@ -491,16 +487,9 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
 
             {exportMode === 'zip' && (
               <div>
-                <Text strong style={{ display: 'block', marginBottom: 4 }}>
-                  知识库导出策略
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  知识库检索节点在导出后按节点配置运行（本地 MCP 或远程 API），不随 zip 携带知识库数据。
                 </Text>
-                <Radio.Group
-                  value={knowledgeStrategy}
-                  onChange={(e) => setKnowledgeStrategy(e.target.value)}
-                >
-                  <Radio value="snapshot">纯文本快照（默认，单集合超 2MB 警告）</Radio>
-                  <Radio value="api">HTTPS API 访问</Radio>
-                </Radio.Group>
               </div>
             )}
           </Space>

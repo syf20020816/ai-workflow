@@ -8,7 +8,7 @@
 
 本项目是一个**设计时（Design-time）编排平台**，不是最终工作流的运行时：
 
-1. **编排** — 用可视化 DAG 画布组合 21 种节点（需求分析 / 概设 / 任务拆解 / 编码 / 自检 / 知识库 / Lark 文档…），并在 Spec 模式下用脚印按钮**标记**每个节点的输出属于哪个工作流阶段（功能规格 / 技术方案 / 任务清单 / 自检报告…）。
+1. **编排** — 用可视化 DAG 画布组合 20 种节点（需求分析 / 概设 / 任务拆解 / 编码 / 自检 / 知识库 / Lark 文档…），并在 Spec 模式下用脚印按钮**标记**每个节点的输出属于哪个工作流阶段（功能规格 / 技术方案 / 任务清单 / 自检报告…）。
 2. **验证** — 在画布上运行工作流验证编排是否正确（单节点调试 / PIN 固定 / 断点续跑 / 输出检查）。**AI 类节点的执行交给用户自己本机的 AI CLI 工具**（Claude Code / Codex CLI / DeepSeek Harness），平台不内置也不配置任何模型。
 3. **导出** — 编排与验证通过后，把工作流导出为 `workflow.yml`（类 speckit 格式），用户放入自己的 **Codex / Trae / Claude Code** 中执行。
 
@@ -76,8 +76,7 @@ npm run generate-routes
 | **任务拆解节点**       | `taskPlanner`            | 把上游概设输出的 plan 拆解为可独立执行的 batch 任务清单，产出 tasks.md                                                |
 | **自检 Agent 节点**    | `selfCheck`              | 独立会话评审：配置 BMad 角色注入评审身份，材料按 git diff / 上游累积产物自动降级，输出 PASS / CONDITIONAL_PASS / FAIL |
 | **关键词智能体节点**   | `keywordAgent`           | 从输入中提取关键词列表，供下游使用                                                                                    |
-| **知识库检索节点**     | `knowledgeRetrieval`     | 基于 embedding 从 Qdrant 向量库检索相关内容                                                                           |
-| **知识库存储节点**     | `knowledgeStore`         | 文档入库：embedding 分块写入 Qdrant 向量库                                                                            |
+| **知识库检索节点**     | `knowledgeRetrieval`     | 双模式：本地模式用本机 AI CLI（经其配置的 MCP）以自然语言查用户自己的知识库，可选挂一个 SKILL 作为查询指令；远程 API 模式编辑请求（URL / 方法 / Headers / Body）直调用户自己的知识库接口                                    |
 | **Lark 文档节点**      | `lark`                   | 读取/写入/创建飞书文档，通过 lark-cli 操作                                                                            |
 | **Lark 模板节点**      | `larkTemplate`           | 读取飞书文档作为内容模板，传递给下游                                                                                  |
 | **Lark Wiki 遍历节点** | `larkWikiTraversal`      | 遍历飞书知识库节点层级并读取文档内容                                                                                  |
@@ -227,7 +226,7 @@ runner/
 │                           #   POST /agent-cli（异步 AI CLI 任务，支持 cwd/gitDiff/auto）
 │                           #   GET /task/:id   轮询任务
 │                           #   POST /lark      跑 lark-cli    POST /fs/* 文件读写
-│                           #   GET /models /model + /agent（知识库 embedding 与旧模型路径）
+│                           #   GET /models /model + /agent（遗留模型端点，待下线）
 src/
 ├── engine/
 │   ├── workflow.ts           # DAG 执行引擎（拓扑排序 + 分层并行 + 上下文累积）
@@ -250,8 +249,7 @@ src/
 │       ├── taskPlanner.ts    # 任务拆解
 │       ├── selfCheck.ts      # 自检 Agent（独立会话评审）
 │       ├── keywordAgent.ts   # 关键词提取
-│       ├── knowledgeRetrieval.ts  # 知识库检索
-│       ├── knowledgeStore.ts # 知识库存储
+│       ├── knowledgeRetrieval.ts  # 知识库检索（本地 MCP / 远程 API 双模式）
 │       ├── memory.ts         # 记忆
 │       └── skill.ts          # Skill
 ├── components/
@@ -280,7 +278,6 @@ src/
 │   ├── upstreamContext.ts   # 上游累积上下文构建（优先级排序 + 预算截断）
 │   ├── taskManager.ts       # tasks.md 解析 / 打勾 / 取批次（前后端共用纯函数）
 │   ├── modal.ts             # 旧模型配置 serialize/hydrate（向后兼容，主链路不再用）
-│   └── embedding.ts         # 向量化（getEmbeddings）
 ├── store/
 │   └── node.ts               # Zustand 全局状态
 ├── types/
@@ -306,7 +303,7 @@ src/
 │       │   ├── lark.ts           # Lark CLI
 │       │   ├── larkWikiTraversal.ts  # Lark Wiki 遍历
 │       │   ├── bmad.ts           # BMad（遗留 CLI 路由，已不主用）
-│       │   ├── qdrant.ts / embed.ts / doc-process.ts   # 知识库（检索/向量化/文档处理）
+│       │   ├── httpProxy.ts      # 外部 HTTP 代理（知识库远程 API 模式跨域请求）
 │       │   ├── fileWrite.ts      # 文件写入（路径限定，防 AI 越界）
 │       │   └── models.ts         # 模型执行入口
 │       └── workflow/
@@ -412,7 +409,7 @@ lark-cli auth login
 | ------------------------ | ------------------ | -------------------------------------- |
 | agent / codeAgent        | `response`         | model / usage / passThrough            |
 | keywordAgent             | `keywords`         | queries / raw                          |
-| knowledgeRetrieval       | `retrievalContent` | results 数组 / count / collectionNames |
+| knowledgeRetrieval       | `retrievalContent` | count / mode / response / statusCode / responseJson |
 | userInput                | `text` / `prompt`  | files / urls                           |
 | larkTemplate             | `templateContent`  | templateUrl                            |
 | lark / larkWikiTraversal | `result`           | action / url / success                 |
@@ -423,14 +420,8 @@ lark-cli auth login
 ### 内容块优先级与预算截断
 
 - agent 节点把上游内容按优先级拼入 system prompt：需求分析(10) → 指令(20) → 关键词(30) → 模板(40) → 其他内容(50) → 知识库检索结果(60)
-- 预算 = `min(tokenMax × 1.2, 150K 字符)`；超预算时按优先级保留高价值块的开头（检索结果按相关度排序，开头最相关），而非整块丢弃
+- 预算 = `min(tokenMax × 1.2, 150K 字符)`；超预算时按优先级保留高价值块的开头（检索结果块整体靠前），而非整块丢弃
 - 用户消息兜底 `JSON.stringify` 时排除 `upstreams`，避免与 system prompt 内容块重复打包
-
-### 知识库检索优化
-
-- **结果清洗** — 检索结果只保留 `score` + `content` 两个字段，降低 payload
-- **双重去重** — 按 `collectionName:id` 去重 → 内容包含去重（保留较长者），避免语义重复结果灌入上下文
-- **Qdrant 写入** — upsert 使用 `wait=true` 同步确认，20 points/批量，失败即时暴露
 
 ### 安全与健壮性
 
@@ -438,8 +429,8 @@ lark-cli auth login
 - **Runner 本地隔离** — 只绑定 `127.0.0.1`，CORS `Origin` 白名单（默认任意 localhost 端口 + `RUNNER_ALLOWED_ORIGINS` 可配部署域），阻止任意网页指挥本机 Runner
 - **命令模板化** — Runner 只按注册表 adapter 拼命令（不接收任意 shell 字符串），并预先收集 git diff / 指定 cwd，CLI 无权限需求
 - **路径穿越检测** — 文件读写校验 `..` 穿越
-- **文档上传限制** — ≤5MB，流式批量处理（8 chunks/embedding batch），避免内存溢出
-- **向量维度强校验** — 与 embedding 模型匹配（64-16384），避免 Qdrant 静默丢弃不匹配向量
+- **知识库去平台化** — 平台不内置任何数据库（向量库 / 文档库 / 关系型 / 本地 md 目录都不内置），知识库检索节点只负责把查询交给用户自己的数据源：本地模式经用户本机 AI CLI 的 MCP 访问，远程 API 模式由后端 httpProxy 代理调用用户配置的接口（仅 URL / 方法 / Headers / Body，无凭据落库）；用户无需迁移数据
+- **文档上传限制** — ≤5MB，避免内存溢出
 
 ### PIN 调试机制
 

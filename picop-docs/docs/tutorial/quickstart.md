@@ -379,10 +379,10 @@ Picop自动探测 Runner 是否在线。AI 类节点还需要本机装有 AI CLI
 | 本地工具下拉为空           | 检查本机是否安装了 claude / codex / deepseek 之一，且 Runner 在线（`GET /ping`） |
 | 执行卡在 Answer 节点       | 该节点等待用户输入，编辑面板填写后继续                                     |
 | Lark 节点失败              | 确认 Runner 已启动，且宿主机已 `lark-cli auth login`                         |
-| 知识库检索无结果           | 确认已用「知识库存储」节点写入向量、embedding 模型维度匹配                 |
+| 知识库检索无结果           | 本地模式：确认所选本地工具已配置访问你知识库的 MCP，且 Runner 在线；远程 API 模式：确认请求 URL / 方法 / Headers / Body 配置正确、接口可达       |
 
 ## 下一步
 
 - [项目概览](overview.md) — 平台定位与架构
 
-- [深入指南](detail.md) — 21 种节点、执行引擎、PIN、BMad、优化策略
+- [深入指南](detail.md) — 20 种节点、执行引擎、PIN、BMad、优化策略

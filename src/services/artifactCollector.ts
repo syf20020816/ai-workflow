@@ -8,7 +8,6 @@
  * - Memory 文件
  * - Lark 文档：不拉取全文，导出 URL 清单 + lark-cli 使用技能
  * - Lark Wiki 知识库全量快照
- * - Qdrant 集合纯文本快照
  *
  * 本文件使用 Node.js fs/path 与外部 API，只能被后端 route/service 导入。
  */
@@ -22,7 +21,6 @@ import {
   skillArtifactPath,
   bmadArtifactPath,
   wikiArtifactPath,
-  knowledgeArtifactPath,
   memoryArtifactPath,
   safeSegment,
 } from '#/services/exporter'
@@ -32,7 +30,6 @@ export { openSpecSchemaDir, specChangeDir } from '#/services/exporter'
 
 const SKILLS_DIR = path.resolve(process.cwd(), 'workflows/skills')
 const MEMORY_FILE = path.resolve(process.cwd(), 'memory/memory.md')
-const QDRANT_HOST = process.env.QDRANT_HOST || 'http://localhost:6333'
 
 export interface CollectedArtifact {
   /** zip 包内相对路径 */
@@ -43,11 +40,6 @@ export interface CollectedArtifact {
   source: string
   /** 收集过程中的警告（不影响导出，写入 manifest 日志） */
   warning?: string
-}
-
-export interface CollectOptions {
-  knowledgeStrategy?: 'snapshot' | 'api'
-  snapshotThreshold?: number
 }
 
 /** 读取文件，不存在返回 null */
@@ -407,71 +399,10 @@ function collectLarkWikiSpaces(nodes: Node[]): CollectedArtifact[] {
   return results
 }
 
-// ==================== Qdrant ====================
-
-/** 直接调用 Qdrant scroll API 拉取集合全部 payload.content */
-async function fetchQdrantCollectionContent(collectionName: string): Promise<string> {
-  const allContents: string[] = []
-  let offset: string | number | undefined
-  const batchSize = 100
-
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  while (true) {
-    const res = await fetch(`${QDRANT_HOST}/collections/${encodeURIComponent(collectionName)}/points/scroll`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: batchSize, offset, with_payload: true, with_vector: false }),
-    })
-    if (!res.ok) {
-      throw new Error(`Qdrant scroll failed: ${res.status}`)
-    }
-    const data = await res.json()
-    const points = data.result?.points || []
-    if (points.length === 0) break
-
-    for (const point of points) {
-      const text = point.payload?.content || point.payload?.text || ''
-      if (text) allContents.push(text)
-    }
-
-    if (!data.result?.next_page_offset) break
-    offset = data.result.next_page_offset
-  }
-
-  return allContents.join('\n\n---\n\n')
-}
-
-/** 收集 Qdrant 集合纯文本快照 */
-async function collectKnowledgeSnapshots(
-  collections: string[],
-  threshold: number,
-): Promise<CollectedArtifact[]> {
-  const results: CollectedArtifact[] = []
-  for (const name of collections) {
-    const zipPath = knowledgeArtifactPath(name)
-    try {
-      const content = await fetchQdrantCollectionContent(name)
-      const size = Buffer.byteLength(content, 'utf-8')
-      const warning = size > threshold
-        ? `集合 ${name} 快照大小 ${(size / 1024 / 1024).toFixed(2)}MB，超过阈值 ${(threshold / 1024 / 1024).toFixed(0)}MB`
-        : undefined
-      results.push({ path: zipPath, content, source: `qdrant:${name}`, warning })
-    } catch (err: any) {
-      results.push({
-        path: zipPath,
-        content: `<!-- Qdrant 集合 ${name} 读取失败 -->\n`,
-        source: `qdrant:${name}`,
-        warning: err.message,
-      })
-    }
-  }
-  return results
-}
-
 // ==================== 汇总入口 ====================
 
 /** 收集所有需要真实内容的输入物 */
-export async function collectArtifacts(nodes: Node[], options: CollectOptions = {}): Promise<CollectedArtifact[]> {
+export async function collectArtifacts(nodes: Node[]): Promise<CollectedArtifact[]> {
   const plan = listCollectableArtifacts(nodes)
 
   const results: CollectedArtifact[] = []
@@ -481,11 +412,6 @@ export async function collectArtifacts(nodes: Node[], options: CollectOptions = 
   results.push(...await collectSkills(plan.skills))
   results.push(...await collectMemories(plan.memoryNodes))
   results.push(...collectLarkWikiSpaces(plan.wikiNodes))
-
-  if (options.knowledgeStrategy !== 'api') {
-    const threshold = options.snapshotThreshold ?? 2 * 1024 * 1024
-    results.push(...await collectKnowledgeSnapshots(plan.knowledgeCollections, threshold))
-  }
 
   return results
 }

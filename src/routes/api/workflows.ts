@@ -37,7 +37,6 @@ interface WorkflowMeta {
   updatedAt: string
   nodeCount: number
   edgeCount: number
-  hasKnowledgeStore: boolean
   versionCount: number
 }
 
@@ -104,7 +103,6 @@ export const Route = createFileRoute('/api/workflows')({
             updatedAt: content.updatedAt || '',
             nodeCount: content.nodes?.length || 0,
             edgeCount: content.edges?.length || 0,
-            hasKnowledgeStore: (content.nodes || []).some((n: any) => n.type === 'knowledgeStore'),
             versionCount,
           }
         })

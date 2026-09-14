@@ -6,7 +6,6 @@ import 'antd/dist/antd.css'
 import { ConfigProvider, Menu, Layout, theme, Tooltip, message } from 'antd'
 import type { ThemeConfig } from 'antd'
 import { PromptManager } from '#/components/rule'
-import { KnowledgeManager } from '#/components/knowledge'
 import { Execution } from '#/components/execution'
 import { FileEditor } from '#/components/file-editor'
 import { Logo } from '#/components/logo'
@@ -16,7 +15,6 @@ import {
   Cable,
   FileCode,
   Bot,
-  Database,
   PanelLeftClose,
   PanelLeftOpen,
   ListChecks,
@@ -55,7 +53,6 @@ function App() {
   const baseMenuItems = [
     { label: '工作流编排', key: 'workflow', icon: <Cable size={16} /> },
     { label: '规则与工作流', key: 'prompts', icon: <Bot size={16} /> },
-    { label: '知识库 close', key: 'knowledge', icon: <Database size={16} /> },
     { label: '执行结果', key: 'execution', icon: <ListChecks size={16} /> },
     { label: '编辑器', key: 'editor', icon: <FileCode size={16} /> },
     {
@@ -124,7 +121,6 @@ function App() {
             </div>
           )}
           {activeKey === 'prompts' && <PromptManager />}
-          {activeKey === 'knowledge' && <KnowledgeManager />}
           {activeKey === 'execution' && <Execution />}
           {activeKey === 'editor' && <FileEditor />}
         </Content>

@@ -37,8 +37,7 @@
 | `lark` | Lark文档节点 | 读写飞书文档 | 无额外字段 |
 | `larkTemplate` | Lark模板节点 | 基于飞书模板创建文档 | `templateUrl: string` |
 | `larkWikiTraversal` | Lark知识库节点 | 遍历飞书知识库 | `spaceUrl, spaceId, spaceName: string, maxDocs: number` |
-| `knowledgeRetrieval` | 知识库检索节点 | 向量检索知识库 | `collectionName, query: string, topK: number, scoreThreshold: number` |
-| `knowledgeStore` | 知识库写入节点 | 向知识库写入数据 | `collectionName: string, chunkSize, chunkOverlap: number` |
+| `knowledgeRetrieval` | 知识库检索节点 | 双模式：本地模式用本机 AI CLI 的 MCP 查用户自己的知识库（`mode: 'local'`，可选 `tool, skillId, query`）；远程 API 模式编辑请求直调用户知识库接口（`mode: 'api'`，`url, method, headers: {key,value}[], body` 支持 `{{字段}}` 占位） |
 
 ### 控制节点
 
