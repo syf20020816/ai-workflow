@@ -33,7 +33,6 @@ import { EditKnowledgeRetrieval } from './edit/knowledgeRetrieval'
 import { EditKeywordAgent } from './edit/keywordAgent'
 import { EditTaskPlanner } from './edit/taskPlanner'
 import { EditSelfCheck } from './edit/selfCheck'
-import { EditLarkWikiTraversal } from './edit/larkWikiTraversal'
 import { ExecutionPanel } from '../execution/panel'
 import { OutputPanel } from '../execution/output'
 import { useMemo, useState } from 'react'
@@ -146,9 +145,6 @@ export const EditPanel = (props: PanelProps) => {
                 )}
                 {currentNode.type === NodeTypes.SELF_CHECK && (
                   <EditSelfCheck />
-                )}
-                {currentNode.type === NodeTypes.LARK_WIKI_TRAVERSAL && (
-                  <EditLarkWikiTraversal />
                 )}
               </main>
               {isShrink && (

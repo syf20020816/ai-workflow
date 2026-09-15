@@ -27,7 +27,6 @@ import { KnowledgeRetrievalNode } from './node/ai/knowledgeRetrieval'
 import { KeywordAgentNode } from './node/ai/keywordAgent'
 import { TaskPlannerNode } from './node/ai/taskPlanner'
 import { SelfCheckNode } from './node/ai/selfCheck'
-import { LarkWikiTraversalNode } from './node/ai/larkWikiTraversal'
 import { EditPanel } from './panel/edit'
 import type { NodeType } from '#/types'
 import { GroupPanel } from './panel/tools/group'
@@ -54,7 +53,6 @@ export const NODE_TYPES = {
   keywordAgent: KeywordAgentNode,
   taskPlanner: TaskPlannerNode,
   selfCheck: SelfCheckNode,
-  larkWikiTraversal: LarkWikiTraversalNode,
 }
 
 export const NODE_COLORS = {
@@ -74,7 +72,6 @@ export const NODE_COLORS = {
   retry: '#eb2f96',
   memory: '#eb2f96',
   knowledgeRetrieval: '#52c41a',
-  larkWikiTraversal: '#1677ff',
   keywordAgent: '#985debff',
   taskPlanner: '#13c2c2',
   selfCheck: '#985debff',

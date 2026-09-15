@@ -7,20 +7,17 @@
  * - BMad 角色文件（内容内联在节点 data，生成文件）
  * - Memory 文件
  * - Lark 文档：不拉取全文，导出 URL 清单 + lark-cli 使用技能
- * - Lark Wiki 知识库全量快照
  *
  * 本文件使用 Node.js fs/path 与外部 API，只能被后端 route/service 导入。
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
 import type { Node } from '@xyflow/react'
 import {
   listCollectableArtifacts,
   userInputArtifactPath,
   skillArtifactPath,
   bmadArtifactPath,
-  wikiArtifactPath,
   memoryArtifactPath,
   safeSegment,
 } from '#/services/exporter'
@@ -245,160 +242,6 @@ function collectLarkRefs(
   ]
 }
 
-// ==================== Lark Wiki ====================
-
-/** 对 shell 双引号内的内容进行转义 */
-function escapeShellArg(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\$/g, '\\$')
-    .replace(/`/g, '\\`')
-}
-
-/** 将 wiki URL 解析为数字型 space_id（复制自 larkWikiTraversal.ts） */
-function resolveSpaceId(input: string): { spaceId: string; nodeToken: string } {
-  const trimmed = input.trim()
-  if (!trimmed) throw new Error('链接不能为空')
-
-  let pathSegment = trimmed
-  try {
-    const url = new URL(trimmed)
-    const parts = url.pathname.split('/').filter(Boolean)
-    const wikiIdx = parts.findIndex((p) => p === 'wiki')
-    if (wikiIdx !== -1 && wikiIdx + 1 < parts.length) {
-      const afterWiki = parts[wikiIdx + 1]
-      pathSegment = afterWiki === 'space' && wikiIdx + 2 < parts.length
-        ? parts[wikiIdx + 2]
-        : afterWiki
-    }
-  } catch {
-    pathSegment = trimmed
-  }
-
-  if (/^\d+$/.test(pathSegment)) {
-    return { spaceId: pathSegment, nodeToken: '' }
-  }
-
-  const listCmd = `lark-cli wiki +space-list --as user --format json`
-  const listStdout = execSync(listCmd, { encoding: 'utf-8', timeout: 30000 })
-  const listResult = JSON.parse(listStdout)
-  if (listResult.ok) {
-    const spaces = listResult.data?.items || []
-    if (spaces.length > 0) {
-      const spaceId = spaces[0].space_id || spaces[0].id || ''
-      if (spaceId) return { spaceId, nodeToken: '' }
-    }
-  }
-
-  try {
-    const cmd = `lark-cli wiki +node-get --node-token "${escapeShellArg(trimmed)}" --format json 2>/dev/null`
-    const stdout = execSync(cmd, { encoding: 'utf-8', timeout: 15000 })
-    const result = JSON.parse(stdout)
-    if (result.ok && result.data?.space_id) {
-      return { spaceId: result.data.space_id, nodeToken: result.data.node_token || '' }
-    }
-  } catch {
-    // ignore
-  }
-
-  throw new Error('无法解析知识库链接，请确认链接正确')
-}
-
-/** 调用 lark-cli wiki +node-list 获取指定节点的子节点列表 */
-function listWikiNodes(spaceId: string, parentNodeToken?: string): any[] {
-  let cmd = `lark-cli wiki +node-list --space-id "${escapeShellArg(spaceId)}" --as user --page-all --format json`
-  if (parentNodeToken) {
-    cmd += ` --parent-node-token "${escapeShellArg(parentNodeToken)}"`
-  }
-  const stdout = execSync(cmd, { encoding: 'utf-8', timeout: 60000 })
-  const result = JSON.parse(stdout)
-  if (result.ok === false) {
-    throw new Error(result.error?.message || '获取节点列表失败')
-  }
-  return result.data?.nodes || []
-}
-
-/** 递归遍历知识库节点树 */
-function walkWikiTree(
-  spaceId: string,
-  parentNodeToken?: string,
-  parentPath: string = '',
-): Array<{ nodeToken: string; objToken: string; title: string; path: string }> {
-  const docs: Array<{ nodeToken: string; objToken: string; title: string; path: string }> = []
-  const nodes = listWikiNodes(spaceId, parentNodeToken)
-
-  for (const node of nodes) {
-    const currentPath = parentPath ? `${parentPath} / ${node.title || ''}` : (node.title || '')
-    if (node.obj_type && (node.obj_type.startsWith('doc') || ['bitable', 'sheet', 'slides', 'mindnote'].includes(node.obj_type))) {
-      docs.push({
-        nodeToken: node.node_token || '',
-        objToken: node.obj_token || '',
-        title: node.title || '',
-        path: currentPath,
-      })
-    }
-    if (node.has_child) {
-      docs.push(...walkWikiTree(spaceId, node.node_token, currentPath))
-    }
-  }
-
-  return docs
-}
-
-/** 读取知识库文档内容 */
-function readWikiDocContent(objToken: string): string {
-  const cmd = `lark-cli docs +fetch --doc "${escapeShellArg(objToken)}" --doc-format markdown --format json`
-  const stdout = execSync(cmd, { encoding: 'utf-8', timeout: 30000 })
-  const result = JSON.parse(stdout)
-  if (result.ok === false) {
-    throw new Error(result.error?.message || '读取文档失败')
-  }
-  const document = result.data?.document || result.data || {}
-  let content = document.content || document.text || ''
-  if (!content && typeof document === 'string') content = document
-  return content
-}
-
-/** 收集 Lark Wiki 空间文档全量快照 */
-function collectLarkWikiSpaces(nodes: Node[]): CollectedArtifact[] {
-  const results: CollectedArtifact[] = []
-  const seenPaths = new Set<string>()
-  for (const node of nodes) {
-    const data = node.data as Record<string, any>
-    const zipPath = wikiArtifactPath(node)
-    if (seenPaths.has(zipPath)) continue
-    seenPaths.add(zipPath)
-    try {
-      const { spaceId } = resolveSpaceId(data.spaceUrl)
-      const maxDocs = data.maxDocs || 200
-      const docs = walkWikiTree(spaceId).slice(0, maxDocs)
-      const parts: string[] = [`# Lark 知识库: ${data.spaceUrl}\n`]
-      for (const doc of docs) {
-        try {
-          const content = readWikiDocContent(doc.objToken)
-          parts.push(`## ${doc.title}\n\n路径: ${doc.path}\n\n${content}`)
-        } catch (err: any) {
-          parts.push(`## ${doc.title}\n\n<!-- 读取失败: ${err.message} -->`)
-        }
-      }
-      results.push({
-        path: zipPath,
-        content: parts.join('\n\n---\n\n'),
-        source: `lark-wiki:${data.spaceUrl}`,
-      })
-    } catch (err: any) {
-      results.push({
-        path: zipPath,
-        content: `<!-- Lark 知识库遍历失败: ${data.spaceUrl} -->\n`,
-        source: `lark-wiki:${data.spaceUrl}`,
-        warning: err.message,
-      })
-    }
-  }
-  return results
-}
-
 // ==================== 汇总入口 ====================
 
 /** 收集所有需要真实内容的输入物 */
@@ -411,7 +254,6 @@ export async function collectArtifacts(nodes: Node[]): Promise<CollectedArtifact
   results.push(...collectLarkRefs(plan.larkRefs))
   results.push(...await collectSkills(plan.skills))
   results.push(...await collectMemories(plan.memoryNodes))
-  results.push(...collectLarkWikiSpaces(plan.wikiNodes))
 
   return results
 }

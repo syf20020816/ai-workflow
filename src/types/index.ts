@@ -18,7 +18,6 @@ export const NodeTypes = {
   LARK_TEMPLATE: 'larkTemplate',
   MEMORY: 'memory',
   KNOWLEDGE_RETRIEVAL: 'knowledgeRetrieval',
-  LARK_WIKI_TRAVERSAL: 'larkWikiTraversal',
   KEYWORD_AGENT: 'keywordAgent',
   TASK_PLANNER: 'taskPlanner',
   SELF_CHECK: 'selfCheck',
@@ -270,24 +269,6 @@ export type NKnowledgeRetrievalData = NNode & {
 
 export type NKnowledgeRetrieval = Node<NKnowledgeRetrievalData, typeof NodeTypes.KNOWLEDGE_RETRIEVAL>
 
-export type NLarkWikiTraversalData = NNode & {
-  /** 知识库空间 ID（内部使用，由 spaceUrl 自动解析） */
-  spaceId?: string
-  /** 知识库空间链接（用户在飞书复制粘贴） */
-  spaceUrl?: string
-  /** 知识库空间名称（用于展示） */
-  spaceName?: string
-  /** 最大处理文档数 */
-  maxDocs?: number
-  /** 执行结果 */
-  result?: {
-    totalDocs: number
-    documents: Array<{ title: string; content: string; path: string }>
-  }
-}
-
-export type NLarkWikiTraversal = Node<NLarkWikiTraversalData, typeof NodeTypes.LARK_WIKI_TRAVERSAL>
-
 /** 关键词提取节点：调用本地 AI 工具从上游内容中提取关键词列表 */
 export type NKeywordAgentData = NNode & {
   /** 本地 CLI 工具 ID（如 claude-code/codex/deepseek） */
@@ -345,5 +326,5 @@ export type AppNode = NodeProps<
   | NUserInput | NAgent | NAIOutput | NAnswer | NBMadAgent | NLark
   | NIf | NIfCondition | NLoop | NLoopCondition | NRetry | NCodeAgent
   | NSkill | NLarkTemplate | NMemory | NKnowledgeRetrieval
-  | NLarkWikiTraversal | NKeywordAgent | NTaskPlanner | NSelfCheck
+  | NKeywordAgent | NTaskPlanner | NSelfCheck
 > | null

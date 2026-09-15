@@ -13,7 +13,6 @@ import { memoryExecutor } from './memory'
 import { skillExecutor } from './skill'
 import { larkTemplateExecutor } from './larkTemplate'
 import { knowledgeRetrievalExecutor } from './knowledgeRetrieval'
-import { larkWikiTraversalExecutor } from './larkWikiTraversal'
 import { keywordAgentExecutor } from './keywordAgent'
 import { taskPlannerExecutor } from './taskPlanner'
 import { selfCheckExecutor } from './selfCheck'
@@ -37,7 +36,6 @@ const executorMap: Record<string, NodeExecutor> = {
   [NodeTypes.SKILL]: skillExecutor,
   [NodeTypes.LARK_TEMPLATE]: larkTemplateExecutor,
   [NodeTypes.KNOWLEDGE_RETRIEVAL]: knowledgeRetrievalExecutor,
-  [NodeTypes.LARK_WIKI_TRAVERSAL]: larkWikiTraversalExecutor,
   [NodeTypes.KEYWORD_AGENT]: keywordAgentExecutor,
   [NodeTypes.TASK_PLANNER]: taskPlannerExecutor,
   [NodeTypes.SELF_CHECK]: selfCheckExecutor,
@@ -70,7 +68,6 @@ export {
   memoryExecutor,
   skillExecutor,
   knowledgeRetrievalExecutor,
-  larkWikiTraversalExecutor,
   keywordAgentExecutor,
   taskPlannerExecutor,
   selfCheckExecutor,

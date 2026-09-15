@@ -25,7 +25,6 @@ import { Route as ApiExportZipRouteImport } from './routes/api/export/zip'
 import { Route as ApiExecuteTaskPlannerRouteImport } from './routes/api/execute/taskPlanner'
 import { Route as ApiExecuteSelfCheckRouteImport } from './routes/api/execute/selfCheck'
 import { Route as ApiExecuteModelsRouteImport } from './routes/api/execute/models'
-import { Route as ApiExecuteLarkWikiTraversalRouteImport } from './routes/api/execute/larkWikiTraversal'
 import { Route as ApiExecuteLarkRouteImport } from './routes/api/execute/lark'
 import { Route as ApiExecuteKeywordAgentRouteImport } from './routes/api/execute/keywordAgent'
 import { Route as ApiExecuteHttpProxyRouteImport } from './routes/api/execute/httpProxy'
@@ -118,12 +117,6 @@ const ApiExecuteModelsRoute = ApiExecuteModelsRouteImport.update({
   path: '/api/execute/models',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExecuteLarkWikiTraversalRoute =
-  ApiExecuteLarkWikiTraversalRouteImport.update({
-    id: '/api/execute/larkWikiTraversal',
-    path: '/api/execute/larkWikiTraversal',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiExecuteLarkRoute = ApiExecuteLarkRouteImport.update({
   id: '/api/execute/lark',
   path: '/api/execute/lark',
@@ -198,7 +191,6 @@ export interface FileRoutesByFullPath {
   '/api/execute/httpProxy': typeof ApiExecuteHttpProxyRoute
   '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
-  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
@@ -228,7 +220,6 @@ export interface FileRoutesByTo {
   '/api/execute/httpProxy': typeof ApiExecuteHttpProxyRoute
   '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
-  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
@@ -259,7 +250,6 @@ export interface FileRoutesById {
   '/api/execute/httpProxy': typeof ApiExecuteHttpProxyRoute
   '/api/execute/keywordAgent': typeof ApiExecuteKeywordAgentRoute
   '/api/execute/lark': typeof ApiExecuteLarkRoute
-  '/api/execute/larkWikiTraversal': typeof ApiExecuteLarkWikiTraversalRoute
   '/api/execute/models': typeof ApiExecuteModelsRoute
   '/api/execute/selfCheck': typeof ApiExecuteSelfCheckRoute
   '/api/execute/taskPlanner': typeof ApiExecuteTaskPlannerRoute
@@ -291,7 +281,6 @@ export interface FileRouteTypes {
     | '/api/execute/httpProxy'
     | '/api/execute/keywordAgent'
     | '/api/execute/lark'
-    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
@@ -321,7 +310,6 @@ export interface FileRouteTypes {
     | '/api/execute/httpProxy'
     | '/api/execute/keywordAgent'
     | '/api/execute/lark'
-    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
@@ -351,7 +339,6 @@ export interface FileRouteTypes {
     | '/api/execute/httpProxy'
     | '/api/execute/keywordAgent'
     | '/api/execute/lark'
-    | '/api/execute/larkWikiTraversal'
     | '/api/execute/models'
     | '/api/execute/selfCheck'
     | '/api/execute/taskPlanner'
@@ -382,7 +369,6 @@ export interface RootRouteChildren {
   ApiExecuteHttpProxyRoute: typeof ApiExecuteHttpProxyRoute
   ApiExecuteKeywordAgentRoute: typeof ApiExecuteKeywordAgentRoute
   ApiExecuteLarkRoute: typeof ApiExecuteLarkRoute
-  ApiExecuteLarkWikiTraversalRoute: typeof ApiExecuteLarkWikiTraversalRoute
   ApiExecuteModelsRoute: typeof ApiExecuteModelsRoute
   ApiExecuteSelfCheckRoute: typeof ApiExecuteSelfCheckRoute
   ApiExecuteTaskPlannerRoute: typeof ApiExecuteTaskPlannerRoute
@@ -507,13 +493,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecuteModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/execute/larkWikiTraversal': {
-      id: '/api/execute/larkWikiTraversal'
-      path: '/api/execute/larkWikiTraversal'
-      fullPath: '/api/execute/larkWikiTraversal'
-      preLoaderRoute: typeof ApiExecuteLarkWikiTraversalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/execute/lark': {
       id: '/api/execute/lark'
       path: '/api/execute/lark'
@@ -626,7 +605,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExecuteHttpProxyRoute: ApiExecuteHttpProxyRoute,
   ApiExecuteKeywordAgentRoute: ApiExecuteKeywordAgentRoute,
   ApiExecuteLarkRoute: ApiExecuteLarkRoute,
-  ApiExecuteLarkWikiTraversalRoute: ApiExecuteLarkWikiTraversalRoute,
   ApiExecuteModelsRoute: ApiExecuteModelsRoute,
   ApiExecuteSelfCheckRoute: ApiExecuteSelfCheckRoute,
   ApiExecuteTaskPlannerRoute: ApiExecuteTaskPlannerRoute,

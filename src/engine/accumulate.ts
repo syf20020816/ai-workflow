@@ -57,7 +57,6 @@ export function extractAccumulated(
       break
 
     case NodeTypes.LARK:
-    case NodeTypes.LARK_WIKI_TRAVERSAL:
       if (typeof output.result === 'string') acc.result = output.result
       break
 

@@ -71,7 +71,6 @@ const INPUT_NODE_TYPES = new Set<string>([
   NodeTypes.SKILL,
   NodeTypes.MEMORY,
   NodeTypes.BMAD_AGENT,
-  NodeTypes.LARK_WIKI_TRAVERSAL,
 ])
 
 /** lark 输出节点（action=write）：产物投递目标，非输入源 */
@@ -201,13 +200,6 @@ export function bmadArtifactPath(node: Node): string {
   return `bmad/agents/${safeSegment(name, nodeSlug(node, 'bmad'))}.md`
 }
 
-/** Lark Wiki 快照的导出路径 */
-export function wikiArtifactPath(node: Node): string {
-  const data = node.data as any
-  const name = data?.spaceName || data?.spaceUrl || node.id
-  return `inputs/lark/wiki/${safeSegment(name, 'wiki')}.md`
-}
-
 /** memory 节点的默认记忆路径 */
 const DEFAULT_MEMORY_PATH = 'memory/memory.md'
 
@@ -265,10 +257,6 @@ function buildFetchStep(node: Node, specStep: SpecStepKey, index: number): Recor
     }
     case NodeTypes.BMAD_AGENT: {
       run = `cp ${bmadArtifactPath(node)} ${fileName}`
-      break
-    }
-    case NodeTypes.LARK_WIKI_TRAVERSAL: {
-      run = `cp ${wikiArtifactPath(node)} ${fileName}`
       break
     }
     case NodeTypes.USER_INPUT: {
@@ -606,8 +594,6 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir
       return `读取导出的 ${schemaDir}/${memoryArtifactPath(node)} 文件内容并保存为 ${file}。`
     case NodeTypes.BMAD_AGENT:
       return `读取导出的 ${schemaDir}/${bmadArtifactPath(node)} 文件内容并保存为 ${file}。`
-    case NodeTypes.LARK_WIKI_TRAVERSAL:
-      return `读取导出的 ${schemaDir}/${wikiArtifactPath(node)} 快照内容并保存为 ${file}。`
     case NodeTypes.USER_INPUT:
       return `读取导出的 ${schemaDir}/${userInputArtifactPath(node)} 内容并整理保存为 ${file}。`
     default:
@@ -654,8 +640,6 @@ function inputNodeRef(node: Node, schemaDir: string): string | undefined {
         : `${schemaDir}/${skillArtifactPath(String(data.skillId))}（技能指引：${data.skillName || data.skillId}）`
     case NodeTypes.MEMORY:
       return `${schemaDir}/${memoryArtifactPath(node)}（项目记忆）`
-    case NodeTypes.LARK_WIKI_TRAVERSAL:
-      return `${schemaDir}/${wikiArtifactPath(node)}（Lark Wiki 快照）`
     case NodeTypes.USER_INPUT:
       return `${schemaDir}/${userInputArtifactPath(node)}（用户输入）`
     default:
@@ -1098,8 +1082,6 @@ export interface CollectablePlan {
   memoryNodes: Node[]
   /** Lark 文档/模板引用 */
   larkRefs: LarkRef[]
-  /** Lark Wiki 遍历节点（全量快照） */
-  wikiNodes: Node[]
 }
 
 /** 收集所有需要真实内容的输入物清单 */
@@ -1109,7 +1091,6 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
   const bmadNodes: Node[] = []
   const memoryNodes: Node[] = []
   const larkRefs: LarkRef[] = []
-  const wikiNodes: Node[] = []
 
   for (const node of nodes) {
     const data = node.data as Record<string, any>
@@ -1133,7 +1114,6 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
     if (node.type === NodeTypes.LARK_TEMPLATE && data.templateUrl) {
       larkRefs.push({ url: data.templateUrl, kind: 'template', title: data.title || node.id })
     }
-    if (node.type === NodeTypes.LARK_WIKI_TRAVERSAL && data.spaceUrl) wikiNodes.push(node)
   }
 
   return {
@@ -1142,6 +1122,5 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
     bmadNodes,
     memoryNodes,
     larkRefs,
-    wikiNodes,
   }
 }
