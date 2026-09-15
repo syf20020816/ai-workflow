@@ -1,5 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { startAgentCli, pollAgentCliTask } from '#/services/runner'
+import { startAgentCli, pollAgentCliTask, fetchLocalToolSkillContent } from '#/services/runner'
 import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /**
@@ -33,9 +33,34 @@ function resolveQueryText(
   )
 }
 
-/** 加载 SKILL 内容作为查询指令上下文 */
+/**
+ * 加载 SKILL 内容作为查询指令上下文
+ * 支持两种来源：
+ *  - 本机技能：skillId 形如 `local:<tool>:<skillName>`，由 Runner 读取用户本机 SKILL.md
+ *  - 平台技能：skillId 为平台技能 ID，从 workflows/skills/{id}/SKILL.md 读取
+ */
 async function loadSkill(skillId: string | undefined, logs: string[]): Promise<string> {
   if (!skillId) return ''
+
+  // 本机技能（local:<tool>:<skillName>）
+  if (skillId.startsWith('local:')) {
+    const rest = skillId.slice('local:'.length)
+    const sep = rest.indexOf(':')
+    if (sep === -1) return ''
+    const tool = rest.slice(0, sep)
+    const name = rest.slice(sep + 1)
+    try {
+      const content = await fetchLocalToolSkillContent(tool, name)
+      if (content) {
+        logs.push(`本机技能内容已加载 (${content.length} 字符)`)
+      }
+      return content
+    } catch {
+      return ''
+    }
+  }
+
+  // 平台技能
   try {
     const res = await fetch(`/api/skill/content?id=${skillId}`)
     const result = await res.json()

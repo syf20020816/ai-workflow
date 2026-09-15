@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNodeStore } from '#/store/node'
 import { useSkillStore } from '#/store/skill'
+import { fetchLocalToolSkills } from '#/services/runner'
+import type { LocalToolSkill } from '#/services/runner'
 import type { NKnowledgeRetrieval, NKnowledgeRetrievalData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import {
@@ -41,6 +43,59 @@ export const EditKnowledgeRetrieval = () => {
   const data = currentNode.data
   const mode = data.mode || 'local'
   const headers = data.headers || []
+
+  // 所选本地工具的本机 skills（随工具变化加载）
+  const [localSkills, setLocalSkills] = useState<LocalToolSkill[]>([])
+  const [localSkillsLoading, setLocalSkillsLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    if (mode !== 'local' || !data.tool) {
+      setLocalSkills([])
+      return
+    }
+    setLocalSkillsLoading(true)
+    fetchLocalToolSkills(data.tool).then((list) => {
+      if (cancelled) return
+      setLocalSkills(list)
+      setLocalSkillsLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, data.tool])
+
+  // 平台技能 + 本机技能合并：本机标「(个人)」，平台标「(Picop)」
+  // 本机技能 value 用复合 id（local:<tool>:<skill>），避免与平台技能同名冲突
+  const skillOptions = [
+    ...localSkills.map((s) => ({
+      label: `(个人) ${s.name}${s.description ? ` — ${s.description}` : ''}`,
+      value: `local:${data.tool}:${s.id}`,
+    })),
+    ...skills.map((s) => ({
+      label: `(Picop) ${s.name}${s.description ? ` — ${s.description}` : ''}`,
+      value: s.id,
+    })),
+  ]
+
+  const handleSkillChange = (value: string | undefined) => {
+    let skillId: string | undefined
+    let skillName: string | undefined
+    if (value?.startsWith('local:')) {
+      // 本机技能：skillId 存复合 id，skillName 存纯名称（导出/展示用）
+      const local = localSkills.find((s) => `local:${data.tool}:${s.id}` === value)
+      skillId = value
+      skillName = local?.name
+    } else {
+      skillId = value || undefined
+      skillName = skills.find((s) => s.id === value)?.name
+    }
+    patchCurrentNode((draft) => {
+      const dd = d(draft)
+      dd.skillId = skillId
+      dd.skillName = skillName
+    })
+  }
 
   return (
     <>
@@ -133,19 +188,15 @@ export const EditKnowledgeRetrieval = () => {
                 size="small"
                 placeholder="选择技能作为查询指令上下文..."
                 value={data.skillId || undefined}
-                notFoundContent="暂无技能，请先在技能管理中创建"
-                options={skills.map((s) => ({
-                  label: `${s.name}${s.description ? ` (${s.description})` : ''}`,
-                  value: s.id,
-                }))}
-                onChange={(value) => {
-                  const skill = skills.find((s) => s.id === value)
-                  patchCurrentNode((draft) => {
-                    const dd = d(draft)
-                    dd.skillId = value || undefined
-                    dd.skillName = skill?.name || undefined
-                  })
-                }}
+                notFoundContent={
+                  mode === 'local' && !data.tool
+                    ? '请先选择本地工具'
+                    : localSkillsLoading
+                      ? '加载本机技能中...'
+                      : '暂无技能，可先在技能管理中创建'
+                }
+                options={skillOptions}
+                onChange={handleSkillChange}
               />
             </div>
           </div>

@@ -83,6 +83,47 @@ export async function fetchLocalTools(): Promise<LocalTool[]> {
   }
 }
 
+/** 本地工具（Claude Code/Codex 等）本机配置的 skill */
+export interface LocalToolSkill {
+  id: string
+  name: string
+  description?: string
+}
+
+/**
+ * 获取本地工具本机配置的 skills 列表（~/.claude/skills、~/.codex/skills 等，
+ * 用户自己维护，随所选工具加载；Runner 离线或工具不支持时返回空数组）
+ */
+export async function fetchLocalToolSkills(toolId: string): Promise<LocalToolSkill[]> {
+  if (!toolId || !(await pingRunner())) return []
+  try {
+    const res = await fetch(
+      `${RUNNER_BASE}/tool-skills?tool=${encodeURIComponent(toolId)}`,
+    )
+    const data = await res.json()
+    return data?.output?.skills || []
+  } catch {
+    return []
+  }
+}
+
+/** 读取本地工具某技能的内容（SKILL.md，Runner 离线或不存在返回空串） */
+export async function fetchLocalToolSkillContent(
+  toolId: string,
+  skillName: string,
+): Promise<string> {
+  if (!toolId || !skillName || !(await pingRunner())) return ''
+  try {
+    const res = await fetch(
+      `${RUNNER_BASE}/tool-skill-content?tool=${encodeURIComponent(toolId)}&skill=${encodeURIComponent(skillName)}`,
+    )
+    const data = await res.json()
+    return data?.output?.content || ''
+  } catch {
+    return ''
+  }
+}
+
 export interface AgentCliTaskState {
   id: string
   tool: string

@@ -22,6 +22,7 @@
  */
 
 import http from 'node:http'
+import os from 'node:os'
 import { execSync, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -212,6 +213,8 @@ const CLI_TOOLS = [
     id: 'claude-code',
     name: 'Claude Code',
     cmd: 'claude',
+    // Claude Code 的本机 skills 目录（~/.claude/skills，每个子目录一个含 SKILL.md 的技能）
+    skillsDir: '~/.claude/skills',
     // -p 无头模式；--output-format json 返回单个 JSON（result 字段为回答）
     buildArgs: (prompt, opts) => [
       '-p',
@@ -237,6 +240,8 @@ const CLI_TOOLS = [
     id: 'codex',
     name: 'Codex CLI',
     cmd: 'codex',
+    // Codex CLI 的本机 skills 目录（~/.codex/skills）
+    skillsDir: '~/.codex/skills',
     // exec 非交互模式；--json 输出 JSONL 事件流，最终回答在 item.completed 的 agent_message
     // --skip-git-repo-check：允许在非 git 目录执行（Runner 的 cwd 不一定是 repo）
     buildArgs: (prompt, opts) => [
@@ -306,6 +311,94 @@ function isToolInstalled(tool) {
   }
   toolProbeCache.set(tool.cmd, { available, at: Date.now() })
   return available
+}
+
+// === 本机工具技能（~/.claude/skills、~/.codex/skills 等）===
+
+// 公共个人技能目录（各 agent 工具的通用约定，如 lark-* / viki 等）
+const AGENT_SKILLS_DIR = '~/.agents/skills'
+
+/**
+ * 某工具的本机技能目录列表：
+ *  - 工具自己的 skillsDir（~/.claude/skills、~/.codex/skills 等，从注册表固定取值）
+ *  - 公共个人技能目录 ~/.agents/skills（各工具通用）
+ * 去重后返回（不接受任意路径参数）
+ */
+function toolSkillsDirs(tool) {
+  const dirs = []
+  if (tool?.skillsDir) dirs.push(tool.skillsDir.replace(/^~/, os.homedir()))
+  dirs.push(AGENT_SKILLS_DIR.replace(/^~/, os.homedir()))
+  return [...new Set(dirs)]
+}
+
+/** 解析 SKILL.md 的 YAML front matter，提取 name/description（与平台一致） */
+function parseSkillFrontMatter(content) {
+  const lines = content.split('\n')
+  if (lines.length < 2 || lines[0].trim() !== '---') return {}
+  const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---')
+  if (end === -1) return {}
+  const fm = {}
+  for (let i = 1; i < end; i++) {
+    const m = lines[i].match(/^(\w+):\s*(.+)/)
+    if (m) fm[m[1]] = m[2].replace(/^>-\s*/, '').trim()
+  }
+  return { name: fm.name, description: fm.description }
+}
+
+/** 扫描某工具本机 skills 目录，返回 [{ id, name, description }] */
+function scanToolSkills(toolId) {
+  const tool = CLI_TOOLS.find((t) => t.id === toolId)
+  if (!tool) return { error: `未知工具: ${toolId}`, skills: [], supported: false }
+
+  const skills = []
+  const seen = new Set()
+
+  for (const dir of toolSkillsDirs(tool)) {
+    let entries = []
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue // 目录不存在或不可读，跳过
+    }
+    for (const entry of entries) {
+      // 用 statSync（跟随符号链接）：~/.codex/skills/viki 常是指向 ~/.agents/skills/viki 的链接
+      let st
+      try {
+        st = fs.statSync(path.join(dir, entry.name))
+      } catch {
+        continue
+      }
+      if (!st.isDirectory()) continue
+
+      const skillMd = path.join(dir, entry.name, 'SKILL.md')
+      if (!fs.existsSync(skillMd)) continue
+      // 同名技能去重：工具自身目录优先，公共目录补充
+      if (seen.has(entry.name)) continue
+      seen.add(entry.name)
+
+      const fm = parseSkillFrontMatter(fs.readFileSync(skillMd, 'utf-8'))
+      skills.push({
+        id: entry.name,
+        name: fm.name || entry.name,
+        description: fm.description || '',
+      })
+    }
+  }
+  return { skills, supported: true }
+}
+
+/** 读取某工具本机技能内容（在多目录中查找，仅限注册表内 skillsDir + 公共目录，防目录穿越） */
+function readToolSkillContent(toolId, skillName) {
+  const tool = CLI_TOOLS.find((t) => t.id === toolId)
+  if (!tool || !skillName) return null
+  for (const dir of toolSkillsDirs(tool)) {
+    const base = path.resolve(dir)
+    const fp = path.resolve(path.join(base, skillName, 'SKILL.md'))
+    // 字符串前缀校验：symlink 不会被 path.resolve 展开，无法借链接名逃出扫描目录
+    if (!fp.startsWith(base + path.sep)) continue
+    if (fs.existsSync(fp)) return fs.readFileSync(fp, 'utf-8')
+  }
+  return null
 }
 
 // === 异步任务队列（CLI agent 一跑几分钟，不能同步等待）===
@@ -615,6 +708,28 @@ const server = http.createServer(async (req, res) => {
         available: isToolInstalled(t),
       }))
       json(res, req, 200, { status: 'success', output: { tools } })
+      return
+    }
+
+    // 本地 CLI 工具的本机 skills 列表（~/.claude/skills 等，用户自己配置的 agent 技能）
+    if (req.method === 'GET' && pathname === '/tool-skills') {
+      const tool = parsedUrl.searchParams.get('tool')
+      const result = scanToolSkills(tool)
+      json(res, req, 200, {
+        status: result.error ? 'error' : 'success',
+        output: { skills: result.skills || [], supported: result.supported ?? false },
+        ...(result.error ? { error: result.error } : {}),
+      })
+      return
+    }
+
+    // 读取本地工具技能内容（供执行时拼入 prompt；仅限注册表内 skillsDir，防穿越）
+    if (req.method === 'GET' && pathname === '/tool-skill-content') {
+      const content = readToolSkillContent(
+        parsedUrl.searchParams.get('tool'),
+        parsedUrl.searchParams.get('skill'),
+      )
+      json(res, req, 200, { status: 'success', output: { content: content || '' } })
       return
     }
 
