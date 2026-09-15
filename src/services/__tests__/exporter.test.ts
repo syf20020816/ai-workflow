@@ -246,4 +246,49 @@ describe('导出物管理', () => {
     expect(yaml).toContain("curl -sS -X POST 'https://kb.example.com/search'")
     expect(yaml).not.toContain('knowledge/*.md')
   })
+
+  it('speckit：skill 节点本机技能生成指令文件，平台技能仍 cp 导出文件', () => {
+    // 本机工具技能（local: 前缀）：写指令文件，不产出生效的 cp 路径
+    const localSkill = [
+      makeNode('skill-local', 'skill', {
+        specStep: 'plan',
+        tool: 'codex',
+        skillId: 'local:codex:viki',
+        skillName: 'viki',
+      }),
+    ]
+    const { yaml: localYaml } = buildSpecKitWorkflow(localSkill, [], { name: '测试' })
+    expect(localYaml).toContain('使用你本机工具的本机技能「viki」完成对应工作。')
+    expect(localYaml).not.toContain('skills/local:codex:viki/SKILL.md')
+
+    // 平台技能：行为不变，仍 cp 随 zip 导出的技能文件
+    const platformSkill = [
+      makeNode('skill-p', 'skill', {
+        specStep: 'plan',
+        skillId: '前端技术文档编写指南',
+      }),
+    ]
+    const { yaml: pYaml } = buildSpecKitWorkflow(platformSkill, [], { name: '测试' })
+    expect(pYaml).toContain('cp skills/前端技术文档编写指南/SKILL.md plan.md')
+  })
+
+  it('openspec：skill 节点本机技能引用本机技能指令，不引用 skills/ 导出路径', () => {
+    const nodes = [
+      makeNode('input-1', 'userInput', { input: { prompt: '需求' } }),
+      makeNode('skill-local', 'skill', {
+        specStep: 'plan',
+        tool: 'codex',
+        skillId: 'local:codex:viki',
+        skillName: 'viki',
+      }),
+      makeNode('agent-1', 'agent', { title: '汇总' }),
+    ]
+    const edges = [
+      makeEdge('input-1', 'skill-local'),
+      makeEdge('skill-local', 'agent-1'),
+    ]
+    const { yaml } = buildOpenSpecWorkflow(nodes, edges, { name: '测试' })
+    expect(yaml).toContain('本机工具技能「viki」')
+    expect(yaml).not.toContain('skills/local:codex:viki')
+  })
 })

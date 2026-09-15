@@ -1,5 +1,6 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
-import { startAgentCli, pollAgentCliTask, fetchLocalToolSkillContent } from '#/services/runner'
+import { startAgentCli, pollAgentCliTask } from '#/services/runner'
+import { loadSkillInstruction } from '#/services/skill'
 import { buildBudgetedContext } from '#/services/upstreamContext'
 
 /**
@@ -34,43 +35,15 @@ function resolveQueryText(
 }
 
 /**
- * 加载 SKILL 内容作为查询指令上下文
- * 支持两种来源：
- *  - 本机技能：skillId 形如 `local:<tool>:<skillName>`，由 Runner 读取用户本机 SKILL.md
- *  - 平台技能：skillId 为平台技能 ID，从 workflows/skills/{id}/SKILL.md 读取
+ * 加载 SKILL 内容作为查询指令上下文（平台技能 / 本机工具技能 local:<tool>:<skill>）
  */
 async function loadSkill(skillId: string | undefined, logs: string[]): Promise<string> {
   if (!skillId) return ''
-
-  // 本机技能（local:<tool>:<skillName>）
-  if (skillId.startsWith('local:')) {
-    const rest = skillId.slice('local:'.length)
-    const sep = rest.indexOf(':')
-    if (sep === -1) return ''
-    const tool = rest.slice(0, sep)
-    const name = rest.slice(sep + 1)
-    try {
-      const content = await fetchLocalToolSkillContent(tool, name)
-      if (content) {
-        logs.push(`本机技能内容已加载 (${content.length} 字符)`)
-      }
-      return content
-    } catch {
-      return ''
-    }
+  const content = await loadSkillInstruction(skillId)
+  if (content) {
+    logs.push(`技能内容已加载 (${content.length} 字符)`)
   }
-
-  // 平台技能
-  try {
-    const res = await fetch(`/api/skill/content?id=${skillId}`)
-    const result = await res.json()
-    if (result.content) {
-      logs.push(`技能内容已加载 (${result.content.length} 字符)`)
-    }
-    return result.content || ''
-  } catch {
-    return ''
-  }
+  return content
 }
 
 /** {{field}} 占位符替换：从上游 input 中取值 */
@@ -161,7 +134,9 @@ async function runLocal(ctx: NodeExecutionContext): Promise<NodeExecutionResult>
 
   logs.push(`正在调用本地工具 ${tool} 查询知识库...`)
   try {
-    const taskId = await startAgentCli({ tool, prompt, timeoutMs: 10 * 60_000 })
+    // auto: 用户配置了 MCP 的知识库查询需访问网络/本机文件，
+    // 必须以全权模式执行（codex → --full-auto），否则沙箱默认禁网、MCP 工具无法挂载
+    const taskId = await startAgentCli({ tool, prompt, auto: true, timeoutMs: 10 * 60_000 })
     const task = await pollAgentCliTask(taskId)
     if (task.status === 'error') {
       throw new Error(task.error || '本地工具执行失败')

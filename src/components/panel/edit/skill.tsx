@@ -1,9 +1,7 @@
 import { useNodeStore } from '#/store/node'
-import { useSkillStore } from '#/store/skill'
 import type { NSkill, NSkillData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
-import { useEffect } from 'react'
-import { Select } from 'antd'
+import { SkillSelect, ToolSelect } from '#/components/select'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { EditButton } from '#/components/button'
@@ -18,35 +16,41 @@ export const EditSkill = () => {
   ) as NodeProps<NSkill>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const skills = useSkillStore((state) => state.skills)
-  const fetchSkills = useSkillStore((state) => state.fetchSkills)
-
-  useEffect(() => {
-    fetchSkills()
-  }, [])
-
   const skillId = currentNode.data.skillId || ''
 
   const rows: DynEditKVRow[] = [
+    {
+      key: 'tool',
+      label: '本地工具',
+      value: currentNode.data.tool || '',
+      valueRender: (onChange) => (
+        <ToolSelect
+          style={{ width: '100%' }}         
+          placeholder="选择本地工具（可选，用于加载该工具的本机技能）"
+          value={currentNode.data.tool || undefined}
+          onChange={(v) => {
+            patchCurrentNode((draft) => {
+              d(draft).tool = v || undefined
+            })
+            onChange(v)
+          }}
+        />
+      ),
+    },
     {
       key: 'skill',
       label: '选择技能',
       value: skillId,
       valueRender: (onChange) => (
-        <Select
+        <SkillSelect
           style={{ width: '100%' }}
           placeholder="选择技能..."
+          tool={currentNode.data.tool}
           value={currentNode.data.skillId || undefined}
-          notFoundContent="暂无技能，请先在技能管理中添加"
-          options={skills.map((s) => ({
-            label: `${s.name}${s.description ? ` (${s.description})` : ''}`,
-            value: s.id,
-          }))}
-          onChange={(value) => {
-            const skill = skills.find((s) => s.id === value)
+          onChange={(value, skill) => {
             patchCurrentNode((draft) => {
               const data = d(draft)
-              data.skillId = value
+              data.skillId = value || ''
               data.skillName = skill?.name || ''
             })
             onChange(value)

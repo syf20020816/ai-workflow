@@ -208,7 +208,9 @@ export type NCodeAgent = Node<NCodeAgentData, typeof NodeTypes.CODE_AGENT>
 
 /** Skill节点：加载技能指令并传递到下游 */
 export type NSkillData = NNode & {
-  /** 关联的技能ID */
+  /** 本地 CLI 工具 ID（可选）：选择后技能可来自该工具的本机 skills */
+  tool?: string
+  /** 关联的技能ID（平台技能为原始 ID；本机技能为 local:<tool>:<skill> 复合 id） */
   skillId?: string
   /** 技能名称（展示用） */
   skillName?: string

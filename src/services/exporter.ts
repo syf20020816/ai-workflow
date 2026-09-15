@@ -180,6 +180,20 @@ export function skillArtifactPath(skillId: string): string {
   return `skills/${safeSegment(skillId, 'skill')}/SKILL.md`
 }
 
+/** 判断是否为本机工具技能（skillId 形如 local:<tool>:<skillName>，由 Runner 读取用户本机 SKILL.md） */
+export function isLocalSkillId(skillId: string): boolean {
+  return skillId.startsWith('local:')
+}
+
+/** 本机技能导出为指令文件：外部 agent 用自己工具的本机技能执行（与平台技能 cp 文件区分） */
+function localSkillInstructionRun(fileName: string, skillName: string): string {
+  return [
+    `cat > ${fileName} << 'PICOP_SKILL_EOF'`,
+    `使用你本机工具的本机技能「${skillName}」完成对应工作。`,
+    'PICOP_SKILL_EOF',
+  ].join('\n')
+}
+
 /** BMad 角色文件的导出路径 */
 export function bmadArtifactPath(node: Node): string {
   const data = node.data as any
@@ -235,8 +249,14 @@ function buildFetchStep(node: Node, specStep: SpecStepKey, index: number): Recor
       break
     }
     case NodeTypes.SKILL: {
-      if (!data.skillId) return null
-      run = `cp ${skillArtifactPath(data.skillId)} ${fileName}`
+      const skillId = data.skillId
+      if (!skillId) return null
+      // 本机工具技能：不随 zip 导出，写指令文件（外部 agent 用自己工具的本机技能执行）
+      if (isLocalSkillId(skillId)) {
+        run = localSkillInstructionRun(fileName, data.skillName || skillId)
+      } else {
+        run = `cp ${skillArtifactPath(skillId)} ${fileName}`
+      }
       break
     }
     case NodeTypes.MEMORY: {
@@ -574,8 +594,14 @@ function buildOpenSpecFetchInstruction(node: Node, artifactId: string, schemaDir
       if (!url) return `Create the ${file} document for this change.`
       return `使用 lark-cli 拉取文档内容（lark-cli docs +fetch --doc "${url}" --doc-format markdown）并原样保存为 ${file}，不要自行生成或改写内容。`
     }
-    case NodeTypes.SKILL:
-      return `读取导出的 ${schemaDir}/${skillArtifactPath(String(data.skillId || ''))} 文件内容并保存为 ${file}。`
+    case NodeTypes.SKILL: {
+      const skillId = String(data.skillId || '')
+      if (!skillId) return `Create the ${file} document for this change.`
+      if (isLocalSkillId(skillId)) {
+        return `使用你本机工具的本机技能「${data.skillName || skillId}」完成对应工作并保存为 ${file}。`
+      }
+      return `读取导出的 ${schemaDir}/${skillArtifactPath(skillId)} 文件内容并保存为 ${file}。`
+    }
     case NodeTypes.MEMORY:
       return `读取导出的 ${schemaDir}/${memoryArtifactPath(node)} 文件内容并保存为 ${file}。`
     case NodeTypes.BMAD_AGENT:
@@ -622,9 +648,10 @@ function inputNodeRef(node: Node, schemaDir: string): string | undefined {
       return `Lark 文档「${data.title || url}」：${url}（lark-cli docs +fetch --doc "${url}" --doc-format markdown 拉取）`
     }
     case NodeTypes.SKILL:
-      return data.skillId
-        ? `${schemaDir}/${skillArtifactPath(String(data.skillId))}（技能指引：${data.skillName || data.skillId}）`
-        : undefined
+      if (!data.skillId) return undefined
+      return isLocalSkillId(String(data.skillId))
+        ? `本机工具技能「${data.skillName || data.skillId}」`
+        : `${schemaDir}/${skillArtifactPath(String(data.skillId))}（技能指引：${data.skillName || data.skillId}）`
     case NodeTypes.MEMORY:
       return `${schemaDir}/${memoryArtifactPath(node)}（项目记忆）`
     case NodeTypes.LARK_WIKI_TRAVERSAL:
@@ -1092,7 +1119,10 @@ export function listCollectableArtifacts(nodes: Node[]): CollectablePlan {
     ) {
       userInputNodes.push(node)
     }
-    if (node.type === NodeTypes.SKILL && data.skillId) skills.add(data.skillId)
+    // 本机工具技能（local: 前缀）不随 zip 导出，跳过文件收集
+    if (node.type === NodeTypes.SKILL && data.skillId && !isLocalSkillId(String(data.skillId))) {
+      skills.add(data.skillId)
+    }
     if (node.type === NodeTypes.BMAD_AGENT && (data.role || data.roleDescription || data.systemPrompt)) {
       bmadNodes.push(node)
     }

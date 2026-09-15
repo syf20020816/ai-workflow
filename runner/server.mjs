@@ -249,7 +249,9 @@ const CLI_TOOLS = [
       prompt,
       '--json',
       '--skip-git-repo-check',
-      ...(opts.auto ? ['--full-auto'] : []),
+      // auto: 全权模式。新版 codex 已移除 --full-auto，改用 --sandbox danger-full-access
+      // （解除文件系统/网络沙箱限制，MCP 服务器才能正常连接）
+      ...(opts.auto ? ['--sandbox', 'danger-full-access'] : []),
     ],
     parse: (stdout) => {
       let response = ''

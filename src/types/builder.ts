@@ -163,6 +163,7 @@ export class NodeBuilder {
       type: NodeTypes.SKILL,
       data: {
         title: 'Skill节点',
+        tool: '',
         skillId: '',
         skillName: '',
       },

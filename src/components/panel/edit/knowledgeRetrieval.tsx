@@ -1,8 +1,4 @@
-import { useEffect, useState } from 'react'
 import { useNodeStore } from '#/store/node'
-import { useSkillStore } from '#/store/skill'
-import { fetchLocalToolSkills } from '#/services/runner'
-import type { LocalToolSkill } from '#/services/runner'
 import type { NKnowledgeRetrieval, NKnowledgeRetrievalData } from '#/types'
 import type { NodeProps } from '@xyflow/react'
 import {
@@ -12,12 +8,16 @@ import {
   Button,
   Input,
   Segmented,
-  Divider,
   Tag,
   Tooltip,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, RobotOutlined, LinkOutlined } from '@ant-design/icons'
-import { ToolSelect } from '#/components/select'
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  RobotOutlined,
+  LinkOutlined,
+} from '@ant-design/icons'
+import { SkillSelect, ToolSelect } from '#/components/select'
 
 const { Text } = Typography
 
@@ -33,76 +33,15 @@ export const EditKnowledgeRetrieval = () => {
   ) as NodeProps<NKnowledgeRetrieval>
   const patchCurrentNode = useNodeStore((state) => state.patchCurrentNode)
 
-  const skills = useSkillStore((state) => state.skills)
-  const fetchSkills = useSkillStore((state) => state.fetchSkills)
-
-  useEffect(() => {
-    fetchSkills()
-  }, [])
-
   const data = currentNode.data
   const mode = data.mode || 'local'
   const headers = data.headers || []
-
-  // 所选本地工具的本机 skills（随工具变化加载）
-  const [localSkills, setLocalSkills] = useState<LocalToolSkill[]>([])
-  const [localSkillsLoading, setLocalSkillsLoading] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    if (mode !== 'local' || !data.tool) {
-      setLocalSkills([])
-      return
-    }
-    setLocalSkillsLoading(true)
-    fetchLocalToolSkills(data.tool).then((list) => {
-      if (cancelled) return
-      setLocalSkills(list)
-      setLocalSkillsLoading(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [mode, data.tool])
-
-  // 平台技能 + 本机技能合并：本机标「(个人)」，平台标「(Picop)」
-  // 本机技能 value 用复合 id（local:<tool>:<skill>），避免与平台技能同名冲突
-  const skillOptions = [
-    ...localSkills.map((s) => ({
-      label: `(个人) ${s.name}${s.description ? ` — ${s.description}` : ''}`,
-      value: `local:${data.tool}:${s.id}`,
-    })),
-    ...skills.map((s) => ({
-      label: `(Picop) ${s.name}${s.description ? ` — ${s.description}` : ''}`,
-      value: s.id,
-    })),
-  ]
-
-  const handleSkillChange = (value: string | undefined) => {
-    let skillId: string | undefined
-    let skillName: string | undefined
-    if (value?.startsWith('local:')) {
-      // 本机技能：skillId 存复合 id，skillName 存纯名称（导出/展示用）
-      const local = localSkills.find((s) => `local:${data.tool}:${s.id}` === value)
-      skillId = value
-      skillName = local?.name
-    } else {
-      skillId = value || undefined
-      skillName = skills.find((s) => s.id === value)?.name
-    }
-    patchCurrentNode((draft) => {
-      const dd = d(draft)
-      dd.skillId = skillId
-      dd.skillName = skillName
-    })
-  }
 
   return (
     <>
       <div style={{ marginBottom: 12 }}>
         <Segmented
           block
-          size="small"
           value={mode}
           options={[
             {
@@ -136,11 +75,20 @@ export const EditKnowledgeRetrieval = () => {
         <>
           <div style={{ marginBottom: 8 }}>
             <Text type="secondary" style={{ fontSize: 11 }}>
-              通过本机配置了 MCP 的本地工具，用自然语言查询你自己维护的知识库（向量库 / 文档库 / 关系库 / 本地 md 目录均可）。
+              通过本机配置了 MCP
+              的本地工具，用自然语言查询你自己维护的知识库（向量库 / 文档库 /
+              关系库 / 本地 md 目录均可）。
             </Text>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              padding: '0 4px',
+            }}
+          >
             <div>
               <Text strong style={{ fontSize: 13 }}>
                 查询文本
@@ -164,7 +112,6 @@ export const EditKnowledgeRetrieval = () => {
               </Text>
               <ToolSelect
                 style={{ width: '100%', marginTop: 4 }}
-                size="small"
                 placeholder="选择本地工具（需配置访问你知识库的 MCP）"
                 value={data.tool}
                 onChange={(toolId) => {
@@ -182,21 +129,18 @@ export const EditKnowledgeRetrieval = () => {
               <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
                 （可选）
               </Text>
-              <Select
-                allowClear
+              <SkillSelect
                 style={{ width: '100%', marginTop: 4 }}
-                size="small"
                 placeholder="选择技能作为查询指令上下文..."
-                value={data.skillId || undefined}
-                notFoundContent={
-                  mode === 'local' && !data.tool
-                    ? '请先选择本地工具'
-                    : localSkillsLoading
-                      ? '加载本机技能中...'
-                      : '暂无技能，可先在技能管理中创建'
-                }
-                options={skillOptions}
-                onChange={handleSkillChange}
+                tool={data.tool}
+                value={data.skillId}
+                onChange={(value, skill) => {
+                  patchCurrentNode((draft) => {
+                    const dd = d(draft)
+                    dd.skillId = value || undefined
+                    dd.skillName = skill?.name
+                  })
+                }}
               />
             </div>
           </div>
@@ -205,17 +149,24 @@ export const EditKnowledgeRetrieval = () => {
         <>
           <div style={{ marginBottom: 8 }}>
             <Text type="secondary" style={{ fontSize: 11 }}>
-              请求你自己配置的外部知识库接口（由平台后端代理发起，避免跨域限制）。请求体支持 {'{{字段名}}'} 引用上游节点输出。
+              请求你自己配置的外部知识库接口（由平台后端代理发起，避免跨域限制）。请求体支持{' '}
+              {'{{字段名}}'} 引用上游节点输出。
             </Text>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              padding: '0 4px',
+            }}
+          >
             <div>
               <Text strong style={{ fontSize: 13 }}>
                 请求 URL
               </Text>
               <Input
-                size="small"
                 placeholder="https://your-knowledge-api.example.com/search"
                 value={data.url}
                 onChange={(e) => {
@@ -232,7 +183,6 @@ export const EditKnowledgeRetrieval = () => {
                 请求方法
               </Text>
               <Select
-                size="small"
                 style={{ width: '100%', marginTop: 4 }}
                 value={data.method || 'GET'}
                 options={METHODS.map((m) => ({ label: m, value: m }))}
@@ -255,9 +205,12 @@ export const EditKnowledgeRetrieval = () => {
                 </Text>
               </Space>
               {headers.map((h, i) => (
-                <Space key={i} style={{ display: 'flex', marginBottom: 6 }} align="center">
+                <Space
+                  key={i}
+                  style={{ display: 'flex', marginBottom: 6 }}
+                  align="center"
+                >
                   <Input
-                    size="small"
                     placeholder="Header 名"
                     style={{ width: 130 }}
                     value={h.key}
@@ -270,7 +223,6 @@ export const EditKnowledgeRetrieval = () => {
                     }}
                   />
                   <Input
-                    size="small"
                     placeholder="值（支持 {{字段}}）"
                     style={{ width: 150 }}
                     value={h.value}
@@ -284,7 +236,6 @@ export const EditKnowledgeRetrieval = () => {
                   />
                   <Tooltip title="删除">
                     <Button
-                      size="small"
                       danger
                       icon={<DeleteOutlined />}
                       onClick={() => {
@@ -297,7 +248,6 @@ export const EditKnowledgeRetrieval = () => {
                 </Space>
               ))}
               <Button
-                size="small"
                 type="dashed"
                 icon={<PlusOutlined />}
                 onClick={() => {
@@ -337,19 +287,20 @@ export const EditKnowledgeRetrieval = () => {
         </>
       )}
 
-      <Divider style={{ margin: '12px 0', fontSize: 12 }}>执行结果</Divider>
+      {/* <Divider style={{ margin: '12px 0', fontSize: 12 }}>执行结果</Divider>
       {data.result?.retrievalContent ? (
         <div style={{ padding: '0 4px' }}>
           <Text type="secondary" style={{ fontSize: 11 }}>
-            {data.result.mode === 'api' ? '远程 API' : '本地工具'} 检索到 {data.result.count} 条内容，共{' '}
-            {data.result.retrievalContent.length} 字符
+            {data.result.mode === 'api' ? '远程 API' : '本地工具'} 检索到{' '}
+            {data.result.count} 条内容，共 {data.result.retrievalContent.length}{' '}
+            字符
           </Text>
         </div>
       ) : (
         <Text type="secondary" style={{ fontSize: 11, padding: '0 4px' }}>
           执行后可在此查看检索结果概览
         </Text>
-      )}
+      )} */}
     </>
   )
 }

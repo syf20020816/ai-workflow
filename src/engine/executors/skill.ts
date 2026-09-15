@@ -1,4 +1,5 @@
 import type { NodeExecutionContext, NodeExecutionResult, NodeExecutor } from '#/types/engine'
+import { loadSkillInstruction, isLocalSkillId } from '#/services/skill'
 
 export const skillExecutor: NodeExecutor = {
   execute: async (ctx: NodeExecutionContext): Promise<NodeExecutionResult> => {
@@ -19,20 +20,24 @@ export const skillExecutor: NodeExecutor = {
     }
 
     try {
-      const res = await fetch(`/api/skill/content?id=${skillId}`)
-      const result = await res.json()
+      // 支持平台技能与本机工具技能（local:<tool>:<skill>，由 Runner 读取用户本机 SKILL.md）
+      const content = await loadSkillInstruction(skillId)
 
-      if (!result.content) {
-        logs.push(`技能 ${data.skillName || skillId} 内容为空`)
+      if (!content) {
+        logs.push(
+          isLocalSkillId(skillId)
+            ? `本机技能 ${data.skillName || skillId} 内容为空（Runner 未启动或技能不存在）`
+            : `技能 ${data.skillName || skillId} 内容为空`,
+        )
       } else {
-        logs.push(`技能内容已加载 (${result.content.length} 字符)`)
+        logs.push(`技能内容已加载 (${content.length} 字符)`)
       }
 
       return {
         nodeId: config.nodeId,
         status: 'success',
         output: {
-          instructions: result.content || '',
+          instructions: content,
           skillName: data.skillName || '',
           skillId,
         },
