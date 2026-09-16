@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Node, Edge } from '@xyflow/react'
-import { buildSpecKitWorkflow, buildOpenSpecWorkflow, buildSpecWorkflow } from '#/services/exporter'
+import {
+  buildSpecKitWorkflow,
+  buildOpenSpecWorkflow,
+  buildSpecWorkflow,
+  buildSkillWorkflow,
+} from '#/services/exporter'
 
 /** 构造测试节点 */
 function makeNode(id: string, type: string, data: Record<string, unknown>): Node {
@@ -290,5 +295,57 @@ describe('导出物管理', () => {
     const { yaml } = buildOpenSpecWorkflow(nodes, edges, { name: '测试' })
     expect(yaml).toContain('本机工具技能「viki」')
     expect(yaml).not.toContain('skills/local:codex:viki')
+  })
+
+  it('skill：常规工程导出为 SKILL.md，无需 specStep，prompt 注入首个输入节点', () => {
+    const nodes = [
+      makeNode('input-1', 'userInput', { input: { prompt: '附加提示词' } }),
+      makeNode('kb-local', 'knowledgeRetrieval', { mode: 'local', skillName: '知识库检索指南', query: '最近发布计划' }),
+      makeNode('code-1', 'codeAgent', {
+        instruction: '分析项目代码',
+        projectPath: '/path/to/singer-center',
+        branch: 'master',
+      }),
+      makeNode('skill-1', 'skill', { skillId: '前端技术文档编写指南', skillName: '前端技术文档编写指南' }),
+      makeNode('output-1', 'aiOutput', { outputPath: 'docs/report.md' }),
+    ]
+    const edges = [
+      makeEdge('input-1', 'kb-local'),
+      makeEdge('kb-local', 'code-1'),
+      makeEdge('skill-1', 'code-1'),
+      makeEdge('code-1', 'output-1'),
+    ]
+    const { yaml, workflowPath } = buildSkillWorkflow(nodes, edges, { name: '技术文档工作流' })
+
+    // 路径：skills/<name>/SKILL.md
+    expect(workflowPath).toBe('skills/技术文档工作流/SKILL.md')
+
+    // frontmatter：name + description（自动生成）
+    expect(yaml.startsWith('---\nname: 技术文档工作流\n')).toBe(true)
+    expect(yaml).toContain('description: >-')
+
+    // 首个 userInput → <prompt> 注入
+    expect(yaml).toContain('## 执行步骤')
+    expect(yaml).toContain('用户输入 <prompt>')
+    expect(yaml).toContain('取调用 /技术文档工作流 <prompt> 时的 prompt 内容')
+
+    // 各节点按拓扑序映射为自然语言步骤，不产出 command/step/spec 结构
+    expect(yaml).toContain('使用你的 MCP 连接用户知识库检索：查询内容：最近发布计划')
+    expect(yaml).toContain('/path/to/singer-center')
+    expect(yaml).toContain('使用技能「前端技术文档编写指南」')
+    expect(yaml).toContain('最终产物输出保存到 docs/report.md')
+    expect(yaml).not.toContain('command:')
+    expect(yaml).not.toContain('speckit.')
+  })
+
+  it('skill：用户提供 description 时使用其值，否则自动生成', () => {
+    const nodes = [makeNode('input-1', 'userInput', {}), makeNode('agent-1', 'agent', { instruction: '分析需求' })]
+    const edges = [makeEdge('input-1', 'agent-1')]
+    const auto = buildSkillWorkflow(nodes, edges, { name: 'demo' })
+    expect(auto.yaml).toContain('用 /demo <prompt> 触发')
+
+    const custom = buildSkillWorkflow(nodes, edges, { name: 'demo', description: '用户自定义描述' })
+    expect(custom.yaml).toContain('用户自定义描述')
+    expect(custom.yaml).not.toContain('用 /demo <prompt> 触发')
   })
 })

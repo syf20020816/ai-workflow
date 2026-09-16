@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Node, Edge } from '@xyflow/react'
-import { buildWorkflow } from '#/services/exporter'
+import { buildWorkflow, skillDir } from '#/services/exporter'
 import type { ExportTarget, ExportOptions } from '#/services/exporter'
 
 /**
@@ -48,6 +48,7 @@ export const Route = createFileRoute('/api/export/zip')({
 
           // OpenSpec：输入物与 schema.yaml 同级（openspec/schemas/<name>/ 下）
           // Spec：输入物在变更目录（spec/changes/<name>/ 下，md 产物同级）
+          // Skill：输入物与 SKILL.md 同级（skills/<name>/ 下）
           // Speckit：输入物保持 zip 根目录（shell 步骤相对执行目录引用）
           const workflowName = name || 'picop-workflow'
           const prefix =
@@ -55,7 +56,9 @@ export const Route = createFileRoute('/api/export/zip')({
               ? `${openSpecSchemaDir(workflowName)}/`
               : target === 'spec'
                 ? `${specChangeDir(workflowName)}/`
-                : ''
+                : target === 'skill'
+                  ? `${skillDir(workflowName)}/`
+                  : ''
 
           for (const item of collected) {
             zip.file(prefix + item.path, item.content)

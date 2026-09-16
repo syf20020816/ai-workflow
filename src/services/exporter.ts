@@ -21,13 +21,15 @@ import {
   NODE_TYPE_TO_OPENSPEC,
 } from '#/services/specMap'
 
-export type ExportTarget = 'speckit' | 'openspec' | 'spec'
+export type ExportTarget = 'speckit' | 'openspec' | 'spec' | 'skill'
 
 export interface ExportOptions {
   /** 工作流/变更名称 */
   name?: string
   /** 是否合并完全相同的并行步骤，默认 false */
   mergeParallel?: boolean
+  /** SKILL 导出：frontmatter description（留空则按节点自动生成） */
+  description?: string
 }
 
 export interface ExportResult {
@@ -1049,6 +1051,145 @@ export function buildSpecWorkflow(
   return { yaml, workflowPath }
 }
 
+/** SKILL 形态导出目录（含目录名，SKILL.md 所在处） */
+export function skillDir(workflowName: string): string {
+  return `skills/${toStepId(workflowName, 'picop-skill')}`
+}
+
+/** 从单个非输入节点生成 SKILL 正文的一句/一段指令（自然语言） */
+function skillNodeInstruction(node: Node): string {
+  const data = node.data as Record<string, any>
+  switch (node.type) {
+    case NodeTypes.SKILL:
+      return (data.skillName || data.skillId || '') ? `使用技能「${data.skillName || data.skillId}」完成对应工作。` : ''
+    case NodeTypes.KNOWLEDGE_RETRIEVAL: {
+      const mode = data.mode || 'local'
+      const query = data.query ? `查询内容：${data.query}` : '以上游输出为查询内容'
+      if (mode === 'api') {
+        return `调用远程知识库接口（${data.method || 'GET'} ${data.url}），将接口响应作为检索结果。${query}`
+      }
+      return `使用你的 MCP 连接用户知识库检索：${query}${data.skillName ? `（技能：${data.skillName}）` : ''}`
+    }
+    case NodeTypes.CODE_AGENT: {
+      const target = data.projectPath
+        ? `在项目 ${data.projectPath}${data.branch ? `（分支 ${data.branch}）` : ''}`
+        : '在当前项目'
+      const intent = data.instruction || data.description || '分析 / 修改项目代码'
+      const appMap = data.appMapPath ? `可参考应用映射表 ${data.appMapPath}。` : ''
+      return `${target}执行：${intent}。${appMap}`
+    }
+    case NodeTypes.TASK_PLANNER:
+      return `${data.instruction ? data.instruction + '\n' : ''}基于上游产物拆解出可勾选的实施任务清单（- [ ] 1.x 子任务，含验收标准引用）。`.trim()
+    case NodeTypes.SELF_CHECK:
+      return `${data.instruction ? data.instruction + '\n' : ''}对已产出内容执行跨一致性检查，输出问题清单与修订建议。`.trim()
+    case NodeTypes.KEYWORD_AGENT:
+      return `从上下文提取关键词${
+        data.format ? `（按格式：${data.format}）` : '列表'
+      }。`
+    case NodeTypes.AI_OUTPUT:
+      if (data.outputPath) return `将最终产物输出保存到 ${data.outputPath}。`
+      if (data.content) return data.content
+      return '将总结果汇总输出。'
+    case NodeTypes.BMAD_AGENT:
+      return `以「${data.role || data.agentId || 'BMad Agent'}」身份行事：${data.roleDescription || data.systemPrompt || ''}`.trim()
+    case NodeTypes.MEMORY:
+      return `读取项目记忆文件 ${data.memoryPath || 'memory/memory.md'}。`
+    case NodeTypes.LARK:
+      return data.action === 'write'
+        ? `将产物写入飞书文档：${data.url}`
+        : `读取飞书文档：${data.url}`
+    case NodeTypes.LARK_TEMPLATE:
+      return `获取飞书模板文档：${data.templateUrl}`
+    case NodeTypes.AGENT:
+      return data.instruction || data.description || '调用 AI 完成本步骤。'
+    case NodeTypes.IF:
+    case NodeTypes.IF_CONDITION:
+    case NodeTypes.LOOP:
+    case NodeTypes.LOOP_CONDITION:
+    case NodeTypes.RETRY:
+      return `控制节点（${node.type}），按条件 / 循环 / 重试编排后续步骤，人工判断表达式：${data.expression || data.condition || ''}`.replace(/\s+$/, '') || ''
+    case NodeTypes.ANSWER:
+      return `暂停等待用户回复：${data.question || ''}`
+    default:
+      return data.instruction || data.description || ''
+  }
+}
+
+/** 按节点自动生成 SKILL frontmatter description */
+function autoSkillDescription(name: string, nodes: Node[]): string {
+  const titles = nodes.map((n) => (n.data as any)?.title || n.type).filter(Boolean)
+  const summary = titles.slice(0, 8).join(' → ') + (titles.length > 8 ? ' …' : '')
+  return `需要执行“${name}”工作流时使用。流程共 ${nodes.length} 个节点：${summary}。用 /${toStepId(name, 'picop-skill')} <prompt> 触发后按步骤依次执行。`
+}
+
+/**
+ * 常规工程导出（SKILL 形态）：
+ * 非 spec 模式的普通工作流 → 独立任务指令目录 `skills/<name>/SKILL.md`。
+ * 无需用户标注 specStep，按拓扑序把每个节点映射为一步自然语言指令。
+ * 用户在自己的 codex/Claude 等工具中 `/name <prompt>` 即可执行该工作流。
+ * `<prompt>` 注入拓扑序首个 userInput 节点（作为运行时的用户输入）。
+ */
+export function buildSkillWorkflow(
+  nodes: Node[],
+  edges: Edge[],
+  options: ExportOptions = {},
+): ExportResult {
+  const { sortedIds } = topologicalSort(nodes, edges)
+  const sorted = sortedIds
+    .map((id) => nodes.find((n) => n.id === id))
+    .filter((n): n is Node => Boolean(n))
+
+  const name = options.name?.trim() || '未命名工作流'
+  const slug = toStepId(name, 'picop-skill')
+  const skillRoot = skillDir(name)
+
+  // 拓扑序首个 userInput 作为调用时 prompt 注入点，其余输入节点标注 param2/param3…
+  const userInputIds = sorted
+    .filter((n) => n.type === NodeTypes.USER_INPUT)
+    .map((n) => n.id)
+  const userInputParam = new Map<string, string>()
+  userInputIds.forEach((id, i) => userInputParam.set(id, i === 0 ? 'prompt' : `param${i + 1}`))
+
+  const sections: string[] = []
+  sorted.forEach((node, i) => {
+    const data = node.data as Record<string, any>
+    const title = data?.title || `${node.type} ${i + 1}`
+    let instruction: string
+    if (node.type === NodeTypes.USER_INPUT) {
+      const param = userInputParam.get(node.id)!
+      instruction =
+        param === 'prompt'
+          ? `用户输入 <prompt>：取调用 /${slug} <prompt> 时的 prompt 内容作为本节点输入。${
+              data.input?.prompt ? `\n附加提示词：${data.input.prompt}` : ''
+            }`
+          : `用户输入 ${param}：${data.input?.prompt ? data.input.prompt : '由调用方补充提供'}`
+    } else {
+      instruction = skillNodeInstruction(node)
+    }
+    sections.push(`### ${i + 1}. ${title}\n\n${instruction || '（该节点无额外指令，延续上游输出）'}`)
+  })
+
+  const desc = options.description?.trim() || autoSkillDescription(name, sorted)
+  const md = [
+    '---',
+    `name: ${name}`,
+    'description: >-',
+    `  ${desc.replace(/\n+/g, ' ')}`,
+    '---',
+    '',
+    `# ${name}`,
+    '',
+    `用户以 \`/${slug} <prompt>\` 调用本技能，\`<prompt>\` 激活输入流程。严格按以下步骤顺序执行。`,
+    '',
+    '## 执行步骤',
+    '',
+    ...sections,
+    '',
+  ].join('\n')
+
+  return { yaml: md, workflowPath: `${skillRoot}/SKILL.md` }
+}
+
 /** 解析目标平台生成主工作流文件 */
 export function buildWorkflow(
   target: ExportTarget,
@@ -1058,6 +1199,7 @@ export function buildWorkflow(
 ): ExportResult {
   if (target === 'openspec') return buildOpenSpecWorkflow(nodes, edges, options)
   if (target === 'spec') return buildSpecWorkflow(nodes, edges, options)
+  if (target === 'skill') return buildSkillWorkflow(nodes, edges, options)
   return buildSpecKitWorkflow(nodes, edges, options)
 }
 

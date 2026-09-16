@@ -27,6 +27,7 @@ import { BrushCleaning, Download, Save, Upload as UploadIcon } from 'lucide-reac
 import type { RcFile } from 'antd/es/upload'
 import {
   SPEC_TARGETS,
+  EXPORT_TARGETS,
   parseSpecKitWorkflow,
   parseOpenSpecSchema,
 } from '#/services/specMap'
@@ -73,6 +74,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
   // 导出选项
   const [exportMode, setExportMode] = useState<ExportMode>('yml')
   const [exportName, setExportName] = useState('')
+  const [exportSkillDescription, setExportSkillDescription] = useState('')
   const [mergeParallel, setMergeParallel] = useState(false)
 
   const buildExportJson = () => {
@@ -87,6 +89,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     const result = buildWorkflow(target, nodes, edges, {
       name: exportName,
       mergeParallel,
+      description: exportSkillDescription,
     })
     return result.yaml
   }
@@ -180,8 +183,8 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
     }
 
     const text = exportJson || buildExportText(exportTarget)
-    const ext = SPEC_TARGETS.find((t) => t.key === exportTarget)?.ext || 'json'
-    const mime = ext === 'yml' ? 'application/yaml' : 'application/json'
+    const ext = EXPORT_TARGETS.find((t) => t.key === exportTarget)?.ext || 'json'
+    const mime = ext === 'yml' ? 'application/yaml' : ext === 'md' ? 'text/markdown' : 'application/json'
     const blob = new Blob([text], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -438,7 +441,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           }}
           optionType="button"
           buttonStyle="solid"
-          options={SPEC_TARGETS.map((t) => ({ label: t.label, value: t.key }))}
+          options={EXPORT_TARGETS.map((t) => ({ label: t.label, value: t.key }))}
           style={{ marginBottom: 16 }}
         />
 
@@ -452,7 +455,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
               onChange={(e) => setExportMode(e.target.value as ExportMode)}
               style={{ marginBottom: 16 }}
             >
-              <Radio value="yml">仅导出 workflow.yml</Radio>
+              <Radio value="yml">{exportTarget === 'skill' ? '仅导出 SKILL.md' : '仅导出 workflow.yml'}</Radio>
               <Radio value="zip">全量导出 zip（含输入物）</Radio>
             </Radio.Group>
           </>
@@ -462,7 +465,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           <Text strong>工作流名称</Text>
         </div>
         <Input
-          placeholder="留空则使用 picop-workflow"
+          placeholder={exportTarget === 'skill' ? 'SKILL 目录名（技能名）' : '留空则使用 picop-workflow'}
           value={exportName}
           onChange={(e) => {
             setExportName(e.target.value)
@@ -472,6 +475,23 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
           }}
           style={{ marginBottom: 16 }}
         />
+
+        {exportTarget === 'skill' && (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>Skill 描述（description）</Text>
+            </div>
+            <Input
+              placeholder="留空则根据节点自动生成（触发词/作用简介）"
+              value={exportSkillDescription}
+              onChange={(e) => {
+                setExportSkillDescription(e.target.value)
+                setExportJson(buildExportText(exportTarget))
+              }}
+              style={{ marginBottom: 16 }}
+            />
+          </>
+        )}
 
         {exportTarget !== 'picop' && (
           <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
@@ -530,7 +550,7 @@ export const ToolsPanel = (props: ToolsPanelProps) => {
         >
           {exportMode === 'zip' && exportTarget !== 'picop'
             ? '下载 zip 包'
-            : `下载为 ${exportTarget === 'picop' ? 'JSON' : 'YAML'} 文件`}
+            : `下载为 ${exportTarget === 'picop' ? 'JSON' : (EXPORT_TARGETS.find((t) => t.key === exportTarget)?.ext || 'YAML').toUpperCase()} 文件`}
         </Button>
       </Modal>
 
