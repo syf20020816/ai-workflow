@@ -566,6 +566,16 @@ function json(res, req, statusCode, payload) {
   res.end(JSON.stringify(payload))
 }
 
+/** 校验目标 URL 是否为合法的 http/https 地址（仅允许这两种协议，防止探测内网/非 http 服务） */
+function isValidHttpUrl(raw) {
+  try {
+    const u = new URL(raw)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
   const pathname = parsedUrl.pathname
@@ -732,6 +742,92 @@ const server = http.createServer(async (req, res) => {
         parsedUrl.searchParams.get('skill'),
       )
       json(res, req, 200, { status: 'success', output: { content: content || '' } })
+      return
+    }
+
+    // AI 输出落盘（用户配置的输出路径，写入用户本机磁盘）
+    if (req.method === 'POST' && pathname === '/file-write') {
+      const body = JSON.parse((await readBody(req)) || '{}')
+      const { filePath, content } = body
+      if (!filePath) {
+        json(res, req, 200, { status: 'error', output: {}, error: '缺少 filePath' })
+        return
+      }
+      try {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true })
+        fs.writeFileSync(filePath, content || '', 'utf-8')
+        json(res, req, 200, { status: 'success', output: { filePath } })
+      } catch (err) {
+        json(res, req, 200, {
+          status: 'error',
+          output: { filePath },
+          error: `文件写入失败: ${err.message}`,
+        })
+      }
+      return
+    }
+
+    // 知识库远程 API 代理（仅 http/https，60s 超时，规避浏览器跨域）
+    if (req.method === 'POST' && pathname === '/http-proxy') {
+      const body = JSON.parse((await readBody(req)) || '{}')
+      const { url, method = 'GET', headers = [], body: rawBody } = body
+
+      if (!url || !isValidHttpUrl(url)) {
+        json(res, req, 400, {
+          status: 'error',
+          output: {},
+          error: '请求 URL 缺失或不是合法的 http/https 地址',
+        })
+        return
+      }
+
+      const logs = [`代理请求: ${method} ${url}`]
+      const headerObj = {}
+      for (const h of Array.isArray(headers) ? headers : []) {
+        if (h?.key) headerObj[h.key] = String(h.value ?? '')
+      }
+
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 60_000)
+        const res = await fetch(url, {
+          method,
+          headers: headerObj,
+          body: method === 'GET' || method === 'HEAD' ? undefined : (rawBody || undefined),
+          signal: controller.signal,
+        })
+        clearTimeout(timer)
+
+        const text = await res.text()
+        logs.push(`响应状态: ${res.status} ${res.statusText} (${text.length} 字符)`)
+
+        let parsedJson = null
+        try {
+          parsedJson = JSON.parse(text)
+        } catch {
+          // 非 JSON 响应，保持文本
+        }
+
+        json(res, req, 200, {
+          status: 'success',
+          output: {
+            statusCode: res.status,
+            statusText: res.statusText,
+            text,
+            json: parsedJson,
+            contentType: res.headers.get('content-type') || '',
+          },
+          logs,
+        })
+      } catch (err) {
+        logs.push(`代理请求失败: ${err.message}`)
+        json(res, req, 200, {
+          status: 'error',
+          output: {},
+          logs,
+          error: `外部知识库请求失败: ${err.message}`,
+        })
+      }
       return
     }
 

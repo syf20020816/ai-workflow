@@ -27,7 +27,8 @@ AI Workflow 是一个基于 **BMad Method** + **Lark CLI** 构建的轻量化 **
 浏览器/前端（控制面-编排）──HTTP(127.0.0.1:7523)──► 本地 Runner 服务
                                                     │
                                                     ├─ 子进程跑 lark-cli / claude / codex / deepseek
-                                                    └─ 读写用户本地文件
+                                                    ├─ 写入用户本地文件（AI 输出落盘 /file-write）
+                                                    └─ 代理知识库远程 API 请求（/http-proxy）
 ```
 
 - 平台不持有任何模型凭据、不做 shell 执行、不访问用户文件系统——凭据与订阅全留在用户机器
@@ -40,6 +41,7 @@ AI Workflow 是一个基于 **BMad Method** + **Lark CLI** 构建的轻量化 **
 |------|------|
 | 控制面 / 执行面分离 | 平台只做编排与结果展示，执行统一走本机 Runner |
 | 不配置模型 | AI 类节点复用用户本机的 Claude Code / Codex / DeepSeek，凭据全留本地 |
+| 不存储用户数据 | 平台只保存用户的**工作流定义**（`workflows/` 目录，视为随仓库的本地工程配置），不持有任何业务数据 / API Key / 登录态 |
 | 不重复造 Spec 框架 | 阶段标记（specStep）由平台负责，specs/ 目录由 openspec / speckit 等专业框架生成 |
 | 编辑器即验证台 | 所见即所得，支持单节点调试、PIN 固定、断点续跑 |
 | PIN 机制 | 满足迭代调试场景，避免重复消耗 Token |

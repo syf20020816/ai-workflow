@@ -32,7 +32,7 @@
 ```
 
 - **平台（前端）** 不持有任何模型凭据、不做 shell 执行、不访问用户文件系统——只通过 Runner 提交请求并接收结果。
-- **Runner（本机）** 代用户执行：Lark 节点跑 `lark-cli`、AI 节点跑本机 CLI 工具（Claude Code / Codex / DeepSeek）、文件节点读写本地目录。凭据与订阅全留在用户机器。
+- **Runner（本机）** 代用户执行：Lark 节点跑 `lark-cli`、AI 节点跑本机 CLI 工具（Claude Code / Codex / DeepSeek）、文件节点写入本地目录、知识库远程 API 模式代理外部请求。凭据与订阅全留在用户机器。
 - **部署不含秘密**：服务器只需托管前端静态产物，无 API Key、无 model.conf、无 lark-cli 授权，天然解决多用户共享凭据与服务器无法访问用户本地文件的问题。
 
 ---
@@ -65,7 +65,7 @@ npm run generate-routes
 - **暗色主题** — Ant Design darkAlgorithm + React Flow 暗色适配
 - **节点选中高亮** — 选中节点蓝色边框
 
-### 2. 21 种工作流节点
+### 2.  19种工作流节点
 
 | 节点类型               | 标识                     | 用途                                                                                                                  |
 | ---------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +79,6 @@ npm run generate-routes
 | **知识库检索节点**     | `knowledgeRetrieval`     | 双模式：本地模式用本机 AI CLI（经其配置的 MCP）以自然语言查用户自己的知识库，可选挂一个 SKILL 作为查询指令；远程 API 模式编辑请求（URL / 方法 / Headers / Body）直调用户自己的知识库接口                                    |
 | **Lark 文档节点**      | `lark`                   | 读取/写入/创建飞书文档，通过 lark-cli 操作                                                                            |
 | **Lark 模板节点**      | `larkTemplate`           | 读取飞书文档作为内容模板，传递给下游                                                                                  |
-| **Lark Wiki 遍历节点** | `larkWikiTraversal`      | 遍历飞书知识库节点层级并读取文档内容                                                                                  |
 | **记忆节点**           | `memory`                 | 读写持久化记忆文件（markdown 格式），跨工作流传递上下文                                                               |
 | **Skill 节点**         | `skill`                  | 执行 BMad Skill（分析师/开发者等角色技能）                                                                            |
 | **回答节点**           | `answer`                 | 工作流暂停，等待用户输入后继续                                                                                        |
@@ -303,8 +302,8 @@ src/
 │       │   ├── lark.ts           # Lark CLI
 │       │   ├── larkWikiTraversal.ts  # Lark Wiki 遍历
 │       │   ├── bmad.ts           # BMad（遗留 CLI 路由，已不主用）
-│       │   ├── httpProxy.ts      # 外部 HTTP 代理（知识库远程 API 模式跨域请求）
-│       │   ├── fileWrite.ts      # 文件写入（路径限定，防 AI 越界）
+│       │   ├── httpProxy.ts      # 外部 HTTP 代理（知识库远程 API 跨域；主路径已迁 Runner /http-proxy）
+│       │   ├── fileWrite.ts      # 文件写入（主路径已迁 Runner /file-write）
 │       │   └── models.ts         # 模型执行入口
 │       └── workflow/
 │           ├── pin.ts        # PIN 固定 (GET/POST/DELETE，按工作流分目录)
@@ -429,7 +428,7 @@ lark-cli auth login
 - **Runner 本地隔离** — 只绑定 `127.0.0.1`，CORS `Origin` 白名单（默认任意 localhost 端口 + `RUNNER_ALLOWED_ORIGINS` 可配部署域），阻止任意网页指挥本机 Runner
 - **命令模板化** — Runner 只按注册表 adapter 拼命令（不接收任意 shell 字符串），并预先收集 git diff / 指定 cwd，CLI 无权限需求
 - **路径穿越检测** — 文件读写校验 `..` 穿越
-- **知识库去平台化** — 平台不内置任何数据库（向量库 / 文档库 / 关系型 / 本地 md 目录都不内置），知识库检索节点只负责把查询交给用户自己的数据源：本地模式经用户本机 AI CLI 的 MCP 访问，远程 API 模式由后端 httpProxy 代理调用用户配置的接口（仅 URL / 方法 / Headers / Body，无凭据落库）；用户无需迁移数据
+- **知识库去平台化** — 平台不内置任何数据库（向量库 / 文档库 / 关系型 / 本地 md 目录都不内置），知识库检索节点只负责把查询交给用户自己的数据源：本地模式经用户本机 AI CLI 的 MCP 访问，远程 API 模式由本机 Runner 代理（`/http-proxy`，仅 URL / 方法 / Headers / Body，无凭据落库）；用户无需迁移数据
 - **文档上传限制** — ≤5MB，避免内存溢出
 
 ### PIN 调试机制
