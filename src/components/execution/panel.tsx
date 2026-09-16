@@ -1,5 +1,6 @@
 import { useNodeStore } from '#/store/node'
 import { useGlobalStore } from '#/store/global'
+import { ToolSelect } from '#/components/select'
 import styles from './index.module.scss'
 import { Button, Select, Tooltip } from 'antd'
 import { Play, RotateCcw } from 'lucide-react'
@@ -13,6 +14,8 @@ export const ExecutionPanel = () => {
   const resetExecution = useNodeStore((state) => state.resetExecution)
   const runFromWithPinned = useNodeStore((state) => state.runFromWithPinned)
   const globalMode = useGlobalStore((state) => state.globalMode)
+  const tool = useGlobalStore((state) => state.tool)
+  const setTool = useGlobalStore((state) => state.setTool)
 
   // Spec 模式：执行范围内必须至少有一个节点被标记了阶段，否则禁止运行
   const specDisabled =
@@ -46,15 +49,17 @@ export const ExecutionPanel = () => {
   return (
     <div className={styles.panel} style={{ marginBottom: 8 }}>
       <div className={styles.header}>
-        <Select
-          style={{ width: '100%' }}
-          placeholder="选择固定节点（仅显示已加载到本工作流的 PIN）"
-          value={selectedPinnedKey}
-          onChange={setSelectedPinnedKey}
-          allowClear
-          notFoundContent="当前工作流没有已加载的 PIN（可在节点编辑面板中固定/加载）"
-          options={pinnedOptions}
-        />
+        <div style={{ flex: 1, display: 'flex', gap: 8, minWidth: 0 }}>
+          <Select
+            style={{ flex: 1, minWidth: 0 }}
+            placeholder="选择固定节点（仅显示已加载到本工作流的 PIN）"
+            value={selectedPinnedKey}
+            onChange={setSelectedPinnedKey}
+            allowClear
+            notFoundContent="当前工作流没有已加载的 PIN（可在节点编辑面板中固定/加载）"
+            options={pinnedOptions}
+          />
+        </div>
         {pipelineContext.globalStatus === 'idle' && (
           <Tooltip
             title={
@@ -80,6 +85,11 @@ export const ExecutionPanel = () => {
           </Tooltip>
         )}
       </div>
+      <ToolSelect
+        style={{ flex: 1, minWidth: 0 }}
+        value={tool}
+        onChange={setTool}
+      />
     </div>
   )
 }

@@ -9,8 +9,7 @@ import { DisconnectOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { DynEditKV } from './item'
 import type { DynEditKVRow } from './item'
 import { useEffect } from 'react'
-import { EditButton } from '#/components/button'
-import { ToolSelect } from '#/components/select'
+import { useGlobalStore } from '#/store/global'
 
 const { Text } = Typography
 
@@ -36,8 +35,8 @@ export const EditAgent = () => {
   useEffect(() => {
     fetchAgents()
   }, [])
-
-  const selectedTool = currentNode.data.tool || undefined
+  // 全流程统一执行工具（在执行面板顶部选择）
+  const selectedTool = useGlobalStore((state) => state.tool)
 
   // 查找当前 AgentNode 是否已连线 BMadNode（BMad 为上游，agent 为下游）
   const connectedBmadEdge = edges.find(
@@ -58,25 +57,6 @@ export const EditAgent = () => {
       label: '智能体别名',
       value: currentNode.data.modal?.alias,
       placeholder: '给智能体取一个易记的别名',
-    },
-    {
-      key: 'tool',
-      label: '本地工具',
-      valueRender: (onChange) => (
-        <ToolSelect
-          style={{ width: '100%' }}
-          value={selectedTool}
-          onChange={(toolId) => {
-            patchCurrentNode((draft) => {
-              const data = d(draft)
-              // 节点由本机 CLI 无头模式执行（凭据全留用户机器），平台无模型配置
-              data.tool = toolId || undefined
-            })
-            onChange(toolId)
-          }}
-        />
-      ),
-      actionRender: <EditButton.To url={'prompts'} />,
     },
     {
       key: 'agent',
@@ -170,33 +150,12 @@ export const EditAgent = () => {
         </div>
       )}
 
-      {/* 本地工具模式提示 */}
-      {currentNode.data.tool && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginTop: 8,
-          }}
-        >
+      {/* 本机执行工具提示 */}
+      {selectedTool && (
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
           <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
           <Text type="secondary" style={{ fontSize: 11 }}>
-            本地工具模式：由本机 CLI 执行，优先于上方模型配置
-          </Text>
-        </div>
-      )}
-
-      {/* 本地工具选中提示 */}
-      {selectedTool && (
-        <div
-          style={{
-            fontSize: 11,
-            color: 'var(--xy-edge-stroke-default)',
-            marginTop: 4,
-          }}
-        >
-          <Text type="secondary">
-            执行工具: {selectedTool}（本机 CLI 无头模式）
+            本机 CLI 执行工具：{selectedTool}（在执行面板顶部统一选择）
           </Text>
         </div>
       )}

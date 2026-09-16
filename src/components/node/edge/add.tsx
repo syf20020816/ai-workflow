@@ -84,7 +84,7 @@ export const AddNodeBtn = ({
       children: [
         {
           label: (
-            <NodeHeader kind={NodeTypes.USER_INPUT} title="用户输入节点" />
+            <NodeHeader kind={NodeTypes.USER_INPUT} title="输入节点" />
           ),
           key: NodeTypes.USER_INPUT,
           disabled: isDisabledNode(kind, NodeTypes.USER_INPUT),

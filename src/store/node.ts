@@ -138,6 +138,11 @@ export interface UseNodeStoreProps {
   }) => void
   /** 删除当前 AgentNode 连线的 BMadNode */
   removeConnectedBmad: () => void
+  /** 为当前输入节点创建/更新一个相连的 SKILL 节点（技能联动） */
+  syncSkillForCurrent: (skill: {
+    id?: string
+    name?: string
+  }) => void
 
   // ---- 执行引擎集成 ----
   /** 执行管线上下文 */
@@ -438,6 +443,82 @@ export const useNodeStore = create<UseNodeStoreProps>((set, get) => ({
       edges: get().edges.filter(
         (e) => e.id !== existingEdge.id && e.target !== existingEdge.source,
       ),
+    })
+  },
+
+  /** 为当前输入节点创建/更新一个相连的 SKILL 节点（技能联动） */
+  syncSkillForCurrent: (skill) => {
+    const current = get().currentNode
+    if (!current) return
+    const nodeEntry = get().nodes.find((n) => n.id === current.id)
+    if (!nodeEntry) return
+
+    // 查找当前输入节点已有上游 SKILL 节点（source=SKILL, target=当前输入节点）
+    const existingEdge = get().edges.find(
+      (e) =>
+        e.target === current.id &&
+        get().nodes.find((n) => n.id === e.source)?.type === NodeTypes.SKILL,
+    )
+
+    const skillId = skill.id
+    const skillName = skill.name
+
+    if (existingEdge && skillId) {
+      // 已有连线 SKILL 节点 → 更新其数据
+      const existingNode = get().nodes.find((n) => n.id === existingEdge.source)
+      if (existingNode) {
+        set({
+          nodes: get().nodes.map((n) =>
+            n.id === existingNode.id
+              ? {
+                  ...n,
+                  data: {
+                    ...(n.data as any),
+                    skillId,
+                    skillName,
+                    title: skillName || n.data.title,
+                  },
+                }
+              : n,
+          ),
+        })
+      }
+      return
+    }
+
+    if (!skillId) return
+
+    // 没有已有连线 → 创建新的 SKILL 节点（放在输入节点左侧，作为其上游）
+    const id = uuidv4()
+    const x = nodeEntry.position.x - 260
+    const y = nodeEntry.position.y
+
+    const skillNode = {
+      id,
+      type: NodeTypes.SKILL,
+      position: { x, y },
+      deletable: true,
+      draggable: true,
+      selectable: true,
+      selected: false,
+      data: {
+        title: skillName || '技能',
+        skillId,
+        skillName,
+      },
+    } as unknown as Node
+
+    set({
+      nodes: [...get().nodes, skillNode],
+      edges: [
+        ...get().edges,
+        {
+          id: `${id}-${current.id}`,
+          source: id,
+          target: current.id,
+          type: 'nodeEdge',
+        },
+      ],
     })
   },
 

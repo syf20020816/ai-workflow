@@ -79,6 +79,20 @@ async function fetchPlatformSkills(): Promise<PicopSkill[]> {
   }
 }
 
+/** 合并加载全部技能（本机 + 平台），供 SkillSelect / PicopSender 复用 */
+export async function loadAllSkills(tool?: string): Promise<SkillPick[]> {
+  const p = await fetchPlatformSkills()
+  const l = tool ? await fetchLocalToolSkills(tool) : []
+  return [
+    ...l.map((s) => ({
+      id: `local:${tool}:${s.id}`,
+      name: s.name,
+      source: 'local' as const,
+    })),
+    ...p.map((s) => ({ id: s.id, name: s.name, source: 'picop' as const })),
+  ]
+}
+
 /**
  * 技能选择器：平台技能 + 本机工具技能
  *  - 平台技能标「(Picop)」，本机工具技能标「(个人)」
