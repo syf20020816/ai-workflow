@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=8192' vite dev --port 3030",
     "runner": "node runner/server.mjs",
+    "mcp": "node runner/mcp.mjs",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
