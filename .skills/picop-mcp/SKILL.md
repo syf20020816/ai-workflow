@@ -61,6 +61,7 @@ metadata:
 
 ### 2. 调用 workflow_export
 
+- **产物与画布导出一致**：MCP 与画布共用同一导出核心（`shared/export-core.mjs`），openspec 的 `generates` / `description` / `instruction`（含「输入上下文」引用）与 tasks 自动补全均与画布导出相同。
 - 入参：
   - `workflow`：**必须使用 build 返回的 `workflow` 对象**，不要自行编造或改写节点。
   - `format`：按用户用途选择（见下表）。

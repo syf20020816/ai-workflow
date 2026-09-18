@@ -10,9 +10,36 @@
 
 1. **编排** — 用可视化 DAG 画布组合 20 种节点（需求分析 / 概设 / 任务拆解 / 编码 / 自检 / 知识库 / Lark 文档…），并在 Spec 模式下用脚印按钮**标记**每个节点的输出属于哪个工作流阶段（功能规格 / 技术方案 / 任务清单 / 自检报告…）。
 2. **验证** — 在画布上运行工作流验证编排是否正确（单节点调试 / PIN 固定 / 断点续跑 / 输出检查）。**AI 类节点的执行交给用户自己本机的 AI CLI 工具**（Claude Code / Codex CLI / DeepSeek Harness），平台不内置也不配置任何模型。
-3. **导出** — 编排与验证通过后，把工作流导出为 `workflow.yml`（类 speckit 格式），用户放入自己的 **Codex / Trae / Claude Code** 中执行。
+3. **导出** — 编排与验证通过后，把工作流导出为 4 种可执行产物之一（`speckit` / `openspec` / `spec` / `skill`），用户放入自己的 **Codex / Trae / Claude Code** 中执行。
 
 **Spec 分工（边界清晰）**：平台**不生产 specs/ 目录**——那是 openspec / speckit 等专业 spec 框架的职责。平台只做**阶段标记**（`specStep`），让用户在编排时无需手动输入 `/spec` 指令，导出后的 `workflow.yml` 携带标记，spec 框架据此自动生成 `specs/` 目录。
+
+---
+
+## 零编排成本接入：MCP + SKILL
+
+除了画布编排，用户还可以在自己的工具（Claude Code / Codex / Trae 等）中通过 **MCP + SKILL** 直达平台能力：把自然语言描述的工作流程一步转换为可执行产物并写入用户自己的项目目录——**无需打开画布、无需学习编排**。
+
+```
+用户工具（SKILL 指导 + MCP Client） → stdio MCP Server（runner/mcp.mjs，依赖本地 shared/export-core.mjs） → 本地 Runner（/agent-cli 生成 + /file-write 落盘） → 用户项目
+```
+
+- **`workflow_build`** — 把用户自然语言描述的流程交给本机 AI CLI（Claude Code / Codex / DeepSeek）转换为工作流定义 JSON（复用 `prompts/flowBuilder.md`）
+- **`workflow_export`** — 把工作流定义导出为 4 种产物之一并写入用户项目，与画布导出结构一致：
+  `speckit`（`specify/workflows/<name>/workflow.yml`）/ `openspec`（`openspec/schemas/<name>/schema.yaml`）/ `spec`（`spec/changes/<name>/specs/<name>/workflow.yaml`）/ `skill`（`skills/<name>/SKILL.md`）
+
+**接入方式（一次性）**：
+
+```bash
+# Claude Code
+claude mcp add picop -- node <ai-workflow>/runner/mcp.mjs
+# 其他工具（Codex 等）：在 .mcp.json 中注册，args 用绝对路径
+# { "mcpServers": { "picop": { "command": "node", "args": ["<ai-workflow>/runner/mcp.mjs"] } } }
+```
+
+平台分发技能 [`.skills/picop-mcp/SKILL.md`](.skills/picop-mcp/SKILL.md) 指导工具里的 AI 完成「build → export → 汇报」三步（含路径定位、4 种格式选型、输出物校验）。四零原则全程保持：MCP server 跑在用户本机、无外部依赖，不存数据、不持凭据、不跑运行时，产物只写入用户指定的项目目录。
+
+画布与 MCP 互为补充：MCP 提供零成本入口，画布负责可视化验证与微调（同一工作流 JSON 可导入回画布）。
 
 ---
 
@@ -226,6 +253,16 @@ runner/
 │                           #   GET /task/:id   轮询任务
 │                           #   POST /lark      跑 lark-cli    POST /fs/* 文件读写
 │                           #   GET /models /model + /agent（遗留模型端点，待下线）
+├── mcp.mjs                 # stdio MCP Server（MCP + SKILL 接入入口，仅依赖本地 shared/export-core.mjs）
+│                           #   workflow_build：自然语言 → 工作流定义（复用 flowBuilder + /agent-cli）
+│                           #   workflow_export：工作流定义 → speckit/openspec/spec/skill 4 种产物
+│                           #                    （与画布共用导出核心，/file-write 落盘 + 路径穿越校验）
+shared/
+└── export-core.mjs         # 导出共享核心（纯 JS）：画布 exporter.ts 与 MCP workflow_export 共用，
+                            #   逻辑唯一来源，保证两处产物完全一致（+ export-core.d.mts 类型声明）
+.skills/
+├── picop-install/          # 分发技能：speckit 安装说明
+├── picop-mcp/              # 分发技能：MCP + SKILL 零编排成本接入（build → export → 汇报）
 src/
 ├── engine/
 │   ├── workflow.ts           # DAG 执行引擎（拓扑排序 + 分层并行 + 上下文累积）
@@ -323,13 +360,16 @@ src/
 # 1. 本地 Runner（必要）：AI 类 / Lark / 文件节点的执行都经过它
 npm run runner            # 监听 127.0.0.1:7523
 
-# 2. AI CLI 工具（AI 类节点）：任选其一并完成各自登录/配置
+# 2. MCP Server（可选，MCP + SKILL 接入时）：stdio 模式暴露 workflow_build / workflow_export
+npm run mcp               # 配合分发技能 .skills/picop-mcp/ 使用
+
+# 3. AI CLI 工具（AI 类节点）：任选其一并完成各自登录/配置
 #    claude / codex / deepseek（Runner 会自动探测已安装项）
 
-# 3. Lark CLI（仅当工作流含 Lark 节点）
+# 4. Lark CLI（仅当工作流含 Lark 节点）
 lark-cli auth login
 
-# 4. BMad 无需安装 CLI —— 仅使用 .bmad/ 下的角色配置与指令（见「10. BMad集成与角色使用」）
+# 5. BMad 无需安装 CLI —— 仅使用 .bmad/ 下的角色配置与指令（见「10. BMad集成与角色使用」）
 ```
 
 ---
